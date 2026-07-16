@@ -1,26 +1,26 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-// import SelectPage from "./pages/SelectPage";
-// import AiSetPage from "./pages/AiSetPage";
+import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
+import HomePage from "./pages/HomePage";
+// import LoginPage from "./pages/LoginPage";
+// import SignUpPage from "./pages/SignUpPage";
+import SelectPage from "./pages/SelectPage";
+import AiSetPage from "./pages/AiSetPage";
 
-// function App() {
-//   return (
-//     <BrowserRouter>
-//       <Routes>
-//         <Route path="/" element={<SelectPage />} />
-        
-//         <Route path="/ai-set" element={<AiSetPage />} />
-//       </Routes>
-//     </BrowserRouter>
-//   );
-// }
 
-function App() {
+const App = () => {
   return (
-    <BrowserRouter>
+    <>
       <Navbar />
-    </BrowserRouter>
+
+      <div className="h-screen">
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/select" element={<SelectPage />} />
+          <Route path="/ai-set" element={<AiSetPage />} />
+        </Routes>
+      </div>
+    </>
   );
-}
+};
 
 export default App;
