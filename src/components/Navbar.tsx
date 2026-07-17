@@ -31,7 +31,6 @@ const Navbar = () => {
 
           {/* 오른쪽 */}
           <div className="flex items-center gap-6">
-            {/* 로그인 버튼 -> 모달 열기 */}
             <button
               onClick={() => setIsLoginOpen(true)}
               className="text-sm font-medium text-gray-700 transition hover:text-[#6E8BFF]"
@@ -39,7 +38,6 @@ const Navbar = () => {
               로그인
             </button>
 
-            {/* 회원가입은 나중에 모달로 변경 예정 */}
             <button
               onClick={() => setIsSignupOpen(true)}
               className="rounded-2xl bg-gradient-to-r from-[#6E8BFF] to-[#7A5CFF] px-7 py-3 text-sm font-semibold text-white shadow-md transition hover:scale-105"
@@ -60,6 +58,7 @@ const Navbar = () => {
         }}
       />
 
+      {/* 회원가입 모달 */}
       <Signup
         open={isSignupOpen}
         onClose={() => setIsSignupOpen(false)}
