@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-
-import logo from "../assets/SpeaKO-logo.png";
+import logo from "../assets/SpeaKO-logo.svg";
 import LinkButton from "./LinkButton";
 import Login from "../modals/Login";
 import Signup from "../modals/SignUp";

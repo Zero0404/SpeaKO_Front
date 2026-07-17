@@ -1,1 +1,26 @@
 @import "tailwindcss";
+/* SelectPage.tsx에서 추출한 공통 색상 변수 */
+:root {
+  --color-white: #ffffff;
+  --color-text-heading: #27272a;   /* zinc-800: 제목 텍스트 */
+  --color-text-body: #64748b;      /* slate-500: 설명/본문 텍스트 */
+  --color-brand-primary: #6366f1;  /* indigo-500: 포인트 컬러 (강조 텍스트) */
+  --color-brand-light: #a5b4fc;    /* indigo-300: 연한 포인트 컬러 (배경 블러) */
+
+  /* 그라데이션 */
+  --gradient-brand-active: linear-gradient(to bottom right, #a5b4fc, #6366f1); /* from-indigo-300 to-indigo-500 */
+  --color-inactive-bg: rgba(255, 255, 255, 0.8); /* bg-white/80 */
+  --transition-hover: all 300ms ease; /* transition-all duration-300 */
+}
+
+/* 재사용 가능한 호버 버튼 효과 클래스 */
+.hover-effect-btn {
+  transition: var(--transition-hover);
+  background-color: var(--color-inactive-bg);
+  color: var(--color-text-heading);
+}
+
+.hover-effect-btn.is-active {
+  background-image: var(--gradient-brand-active);
+  color: var(--color-white);
+}
