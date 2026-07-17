@@ -1,8 +1,6 @@
 import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import HomePage from "./pages/HomePage";
-// import LoginPage from "./pages/LoginPage";
-// import SignUpPage from "./pages/SignUpPage";
 import SelectPage from "./pages/SelectPage";
 import AiSetPage from "./pages/AiSetPage";
 

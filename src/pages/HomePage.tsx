@@ -11,11 +11,11 @@ const HomePage = () => {
                         AI Presentation Coach
                     </div>
 
-                    <h1 className="mt-8 text-[64px] font-bold leading-tight text-[#222]">
+                    <h1 className="mt-8 text-[56px] font-bold leading-tight text-[#222]">
                         발표가 두려운 당신을 위한
                     </h1>
 
-                    <h1 className="text-[64px] font-bold leading-tight text-[#5D6CFF]">
+                    <h1 className="text-[56px] font-bold leading-tight text-[#5D6CFF]">
                         AI 코치, SpeaKO
                     </h1>
 
