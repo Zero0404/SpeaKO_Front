@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom";
-import logo from "../assets/SpeaKO-logo.png";
+import logo from "../assets/SpeaKO-logo.svg";
 import LinkButton from "./LinkButton";
 
 const Navbar = () => {
   return (
-    <header className="w-full h-20 border-b border-gray-100 bg-white">
+    <header className="fixed top-0 left-0 w-full h-20 z-50">
       <div className="mx-auto flex h-full max-w-[2000px] items-center justify-between px-12">
         {/* 왼쪽 */}
         <div className="flex items-center gap-16">

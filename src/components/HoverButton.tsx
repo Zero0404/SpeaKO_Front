@@ -23,13 +23,9 @@ const HoverButton: React.FC<HoverButtonProps> = ({
       role="button"
       tabIndex={0}
       onClick={onClick}
-      className={`${className} px-5 py-4 rounded-2xl flex justify-between items-center transition-all duration-300 cursor-pointer ${
-        active ? "bg-gradient-to-br from-indigo-300 to-indigo-500" : "bg-white/80"
-      }`}
+      className={`${className} hover-effect-btn ${active ? "is-active" : ""} px-5 py-4 rounded-2xl flex justify-between items-center cursor-pointer`}
     >
-      <span className={`text-center text-xl font-semibold font-['Pretendard'] leading-5 transition-colors duration-300 ${
-        active ? "text-white" : "text-zinc-800"
-      }`}>
+      <span className="text-center text-xl font-semibold font-['Pretendard'] leading-5">
         {label}
       </span>
       <svg width="28" height="28" viewBox="0 0 28 28" fill="none" className="shrink-0" aria-hidden="true">
