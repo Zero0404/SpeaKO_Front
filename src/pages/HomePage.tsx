@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import img from "../assets/Home Image.png";
+import MainChip from "../components/MainChip";
 
 const HomePage = () => {
     return (
@@ -7,9 +8,7 @@ const HomePage = () => {
             <div className="mx-auto flex min-h-[calc(100vh-80px)] max-w-7xl items-center gap-32 px-20">
                 {/* Left */}
                 <div className="w-[46%]">
-                    <div className="inline-flex rounded-full border border-[#6E8BFF]/30 bg-[#EEF2FF] px-5 py-2 text-sm font-semibold text-[#5D6CFF]">
-                        AI Presentation Coach
-                    </div>
+                    <MainChip text="AI Presentation Coach" />
 
                     <h1 className="mt-8 text-[64px] font-bold leading-tight text-[#222]">
                         발표가 두려운 당신을 위한
