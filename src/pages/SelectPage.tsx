@@ -1,14 +1,16 @@
 import type { FC, KeyboardEvent } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-// 배경/일러스트 에셋 (제공해주신 svg를 src/assets에 아래 이름으로 저장 후 사용하세요)
+// 에셋 import
 import selectPageBackground from "../assets/select-page-background.svg";
 import scriptIllustration from "../assets/feature-script-illustration.svg";
 import coachIllustration from "../assets/feature-coach-illustration.svg";
 
-// TODO: 네비게이션 바는 다른 작업자가 구현할 예정입니다.
-// 완성되면 아래 import와 <div className="w-full h-28" /> 자리를 <Navbar />로 교체해주세요.
-// import Navbar from "../components/Navbar";
+// 컴포넌트 import
+import MainChip from "../components/MainChip";
+import HoverButton from "../components/HoverButton";
+import SubChip from "../components/SubChip";
 
 interface FeatureCardData {
   id: string;
@@ -46,16 +48,9 @@ const FEATURES: FeatureCardData[] = [
   },
 ];
 
-/**
- * 기능 선택 화면
- * HomePage의 "파일 업로드하고 시작하기" 버튼을 눌렀을 때 진입하는 페이지입니다.
- * 사용자가 "AI 대본 생성" 또는 "발표 발음 코칭" 중 하나를 선택합니다.
- *
- * 상단 네비게이션 바는 다른 작업자가 별도로 구현하므로,
- * 같은 높이(h-28 = 112px)만큼 자리를 비워두었습니다.
- */
 const SelectPage: FC = () => {
   const navigate = useNavigate();
+  const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
 
   const handleCardKeyDown = (
     event: KeyboardEvent<HTMLDivElement>,
@@ -87,18 +82,13 @@ const SelectPage: FC = () => {
         className="absolute w-[981.94px] h-[725.37px] left-[-466px] top-[407.23px] origin-top-left rotate-[-37.90deg] bg-radial-[at_55%_63%] from-indigo-300/40 to-white/40 rounded-full blur-[350px] pointer-events-none"
       />
 
-      {/* 상단 네비게이션 바 자리 (다른 작업자 구현 예정) */}
+      {/* 상단 네비게이션 바 자리 */}
       <div className="relative w-full h-28" />
-      {/* <Navbar /> */}
 
       {/* 헤더 영역 */}
       <div className="relative w-full flex flex-col items-center gap-5 px-4 pt-10">
         <div className="w-full flex flex-col items-center gap-6">
-          <div className="px-4 py-2.5 bg-gradient-to-br from-white/25 to-indigo-300/25 rounded-[100px] outline outline-[0.80px] outline-offset-[-0.80px] outline-indigo-500/25 inline-flex items-center gap-2">
-            <span className="text-center text-indigo-500 text-lg font-semibold font-['Pretendard'] leading-4">
-              Welcome To SpeaKO
-            </span>
-          </div>
+          <MainChip text="Welcome To SpeaKO" />
           <h1 className="text-center whitespace-nowrap text-3xl sm:text-5xl lg:text-6xl">
             <span className="text-zinc-800 font-bold font-['Pretendard'] leading-[1.4] lg:leading-[83.70px]">
               오늘 어떤{" "}
@@ -127,15 +117,15 @@ const SelectPage: FC = () => {
             tabIndex={0}
             onClick={() => navigate(feature.route)}
             onKeyDown={(event) => handleCardKeyDown(event, feature.route)}
-            className="group w-full h-96 pl-10 pr-5 py-10 bg-gradient-to-br from-white/10 to-indigo-500/10 hover:bg-none hover:bg-white rounded-[20px] outline outline-1 outline-offset-[-1px] outline-white hover:shadow-xl cursor-pointer transition-all duration-300 -translate-y-0 hover:-translate-y-2 flex justify-between items-center"
+            onMouseEnter={() => setHoveredCardId(feature.id)}
+            onMouseLeave={() => setHoveredCardId(null)}
+            className="group w-full h-96 pl-10 pr-5 py-10 bg-gradient-to-br from-white/10 to-indigo-500/10 hover:bg-white rounded-[20px] outline outline-1 outline-offset-[-1px] outline-white hover:shadow-xl cursor-pointer transition-all duration-300 -translate-y-0 hover:-translate-y-2 flex justify-between items-center"
           >
             <div className="self-stretch flex flex-col justify-between items-start">
               <div className="flex flex-col justify-start items-start gap-7">
-                <div className="px-4 py-2.5 bg-indigo-300/10 backdrop-blur-sm rounded-xl inline-flex justify-start items-center gap-2 border border-white/20">
-                  <span className="text-center text-indigo-500 text-lg font-semibold font-['Pretendard'] leading-4">
-                    {feature.badge}
-                  </span>
-                </div>
+                {/* 배지 디자인 유지 */}
+                <SubChip text={feature.badge} />
+                
                 <div className="flex flex-col justify-start items-start gap-5 pl-1">
                   <h2 className="text-zinc-800 text-4xl font-bold font-['Pretendard'] leading-10">
                     {feature.title}
@@ -146,26 +136,12 @@ const SelectPage: FC = () => {
                 </div>
               </div>
 
-              <div className="w-72 px-5 py-4 bg-white/80 group-hover:bg-gradient-to-br group-hover:from-indigo-300 group-hover:to-indigo-500 rounded-2xl flex justify-between items-center transition-colors duration-300">
-                <span className="text-center text-zinc-800 group-hover:text-white text-xl font-semibold font-['Pretendard'] leading-5 transition-colors duration-300">
-                  {feature.buttonLabel}
-                </span>
-                <svg
-                  width="28"
-                  height="28"
-                  viewBox="0 0 28 28"
-                  fill="none"
-                  className="shrink-0"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M10.5 7L17.5 14L10.5 21"
-                    className="stroke-zinc-800 group-hover:stroke-white transition-colors duration-300"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </div>
+              {/* HoverButton 컴포넌트 적용 */}
+              <HoverButton 
+                label={feature.buttonLabel} 
+                isParentHovered={hoveredCardId === feature.id}
+                onClick={() => navigate(feature.route)} 
+              />
             </div>
 
             <div className="w-72 h-64 p-2.5 flex flex-col justify-center items-center">
