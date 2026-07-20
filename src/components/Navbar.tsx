@@ -33,7 +33,7 @@ const Navbar = () => {
           <div className="flex items-center gap-6">
             <button
               onClick={() => setIsLoginOpen(true)}
-              className="rounded-2xl bg-gradient-to-r from-[#6E8BFF] to-[#7A5CFF] px-7 py-3 text-sm font-semibold text-white shadow-md transition hover:scale-105"
+              className="rounded-2xl hover-effect-btn is-active px-7 py-3 text-sm font-semibold text-white shadow-md transition hover:scale-105"
             >
               로그인
             </button>

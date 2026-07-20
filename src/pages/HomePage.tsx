@@ -27,7 +27,7 @@ const HomePage = () => {
                     <div className="mt-14 flex gap-6">
                         <Link
                             to="/select"
-                            className="rounded-2xl bg-gradient-to-r from-[#6E8BFF] to-[#7A5CFF] px-10 py-5 text-lg font-semibold text-white shadow-xl transition duration-300 hover:scale-105"
+                            className="rounded-2xl hover-effect-btn is-active px-10 py-5 text-lg font-semibold text-white shadow-xl transition duration-300 hover:scale-105"
                         >
                             파일 업로드하고 시작하기
                         </Link>
