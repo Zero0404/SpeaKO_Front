@@ -4,8 +4,8 @@ import MainChip from "../components/MainChip";
 
 const HomePage = () => {
     return (
-        <div className="min-h-[calc(100vh-80px)] bg-gradient-to-br from-white via-[#F5F7FF] to-white">
-            <div className="mx-auto flex min-h-[calc(100vh-80px)] max-w-7xl items-center gap-32 px-20">
+        <div className="min-h-screen bg-gradient-to-br from-white via-[#F5F7FF] to-white">
+            <div className="mx-auto flex min-h-screen items-center gap-32 px-20 pt-20 max-w-7xl">
                 {/* Left */}
                 <div className="w-[46%]">
                     <MainChip text="AI Presentation Coach" />
