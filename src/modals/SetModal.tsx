@@ -13,15 +13,7 @@ interface SetModalProps {
   onConfirm: () => void;
 }
 
-/**
- * AI 대본 생성_최종 확인 화면 (팝업)
- * 피그마 "Ai" 프레임을 기반으로 제작한 모달 컴포넌트입니다.
- *
- * 피그마 원본은 1920x1080 캔버스에 절대좌표(left-[755px] top-[394px])로
- * 배치되어 있었지만, 실제 서비스에서는 화면 크기에 따라 달라지므로
- * 최상위 오버레이만 fixed + 중앙정렬로 바꾸고, 그 안쪽 Frame1380부터는
- * 피그마 클래스를 그대로 유지했습니다.
- */
+
 const SetModal: FC<SetModalProps> = ({
   isOpen,
   time,
