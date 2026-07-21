@@ -15,6 +15,7 @@ import EmailChange from "../modals/EmailChange";
 import PasswordChange from "../modals/PasswordChange";
 import Logout from "../modals/Logout";
 import DeleteAccount from "../modals/DeleteAccount";
+import ViewPageBackground from "../assets/background_gradiant.png";
 
 // ─────────────────────────────────────────────
 // 모달 종류 (실제 모달 컴포넌트는 이따가 modals/ 에 추가 예정)
@@ -35,8 +36,15 @@ const MyPage = () => {
   const closeModal = () => setActiveModal(null);
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-white">
-
+    <div className="relative min-h-screen w-full overflow-hidden bg-white"
+        style={{
+        backgroundImage: `url(${ViewPageBackground})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundAttachment: "fixed",
+        backgroundRepeat: "no-repeat",
+      }}
+      >
       <main className="relative mx-auto w-full max-w-[1519px] px-6 pb-24 pt-16 sm:px-10">
         {/* 타이틀 + 상단 버튼 */}
         <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
