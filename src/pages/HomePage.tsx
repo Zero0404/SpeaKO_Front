@@ -4,8 +4,8 @@ import MainChip from "../components/MainChip";
 
 const HomePage = () => {
     return (
-        <div className="min-h-screen bg-gradient-to-br from-white via-[#F5F7FF] to-white">
-            <div className="mx-auto flex min-h-screen items-center gap-32 px-20 pt-20 max-w-7xl">
+        <div className="min-h-[calc(100vh-80px)] bg-gradient-to-br from-white via-[#F5F7FF] to-white">
+            <div className="mx-auto flex min-h-[calc(100vh-80px)] max-w-7xl items-center gap-32 px-20">
                 {/* Left */}
                 <div className="w-[46%]">
                     <MainChip text="AI Presentation Coach" />
@@ -27,7 +27,7 @@ const HomePage = () => {
                     <div className="mt-14 flex gap-6">
                         <Link
                             to="/select"
-                            className="rounded-2xl hover-effect-btn is-active px-10 py-5 text-lg font-semibold text-white shadow-xl transition duration-300 hover:scale-105"
+                            className="rounded-2xl bg-gradient-to-r from-[#6E8BFF] to-[#7A5CFF] px-10 py-5 text-lg font-semibold text-white shadow-xl transition duration-300 hover:scale-105"
                         >
                             파일 업로드하고 시작하기
                         </Link>
