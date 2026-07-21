@@ -26,6 +26,7 @@ const Navbar = () => {
             <nav className="flex items-center gap-12">
               <LinkButton to="/service">서비스 소개</LinkButton>
               <LinkButton to="/pricing">요금 안내</LinkButton>
+              <LinkButton to="/mypage">마이페이지테스트</LinkButton>
             </nav>
           </div>
 
