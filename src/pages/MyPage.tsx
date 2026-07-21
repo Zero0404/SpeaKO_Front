@@ -9,6 +9,7 @@ import {
   LogOut,
   ChevronRight,
 } from "lucide-react";
+import TaskChip from "../components/TaskChip";
 import ProfileEdit from "../modals/ProfileEdit";
 import EmailChange from "../modals/EmailChange";
 import PasswordChange from "../modals/PasswordChange";
@@ -35,9 +36,6 @@ const MyPage = () => {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-white">
-      {/* 배경 그라디언트 (장식용) */}
-      <div className="pointer-events-none absolute left-1/2 top-[-10%] h-[600px] w-[900px] -translate-x-1/4 rounded-full bg-radial-[at_55%_63%] from-indigo-300/40 to-white/40 blur-[300px]" />
-      <div className="pointer-events-none absolute right-[-10%] top-[30%] h-[600px] w-[800px] rounded-full bg-radial-[at_26%_83%] from-indigo-300/40 to-white/40 blur-[300px]" />
 
       <main className="relative mx-auto w-full max-w-[1519px] px-6 pb-24 pt-16 sm:px-10">
         {/* 타이틀 + 상단 버튼 */}
@@ -52,35 +50,33 @@ const MyPage = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <button
-              type="button"
+            <TaskChip
+              icon={LogOut}
+              label="로그아웃"
               onClick={() => openModal("logout")}
-              className="flex h-12 items-center gap-2 rounded-xl bg-indigo-500/10 py-4 pl-4 pr-5 transition hover:bg-indigo-500/20"
-            >
-              <LogOut size={20} className="text-indigo-500" />
-              <span className="text-center text-lg font-medium leading-4 text-indigo-500 font-['Pretendard']">
-                로그아웃
-              </span>
-            </button>
+            />
 
             <button
               type="button"
               onClick={() => openModal("withdraw")}
-              className="flex h-12 items-center gap-2 rounded-xl bg-rose-500/10 py-4 pl-4 pr-5 transition hover:bg-rose-500/20"
+              className="flex h-12 items-center gap-2 rounded-xl bg-rose-500/10 pl-4 pr-5 text-lg font-medium font-['Pretendard'] leading-4 text-rose-500 transition hover:bg-rose-500/20"
             >
-              <LogOut size={20} className="text-rose-500" />
-              <span className="text-center text-lg font-medium leading-4 text-rose-500 font-['Pretendard']">
-                회원 탈퇴
-              </span>
+              <LogOut size={22} />
+              회원 탈퇴
             </button>
           </div>
         </div>
 
         {/* 프로필 정보 */}
         <div className="mt-14 flex w-full items-center gap-7 rounded-[20px] bg-white p-10 shadow-[0px_0px_15px_0px_rgba(120,165,250,0.10)]">
-          <div className="relative flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-[20px] bg-gradient-to-br from-indigo-300/30 via-indigo-200/15 to-indigo-400/20 outline outline-1 outline-offset-[-1px] outline-white/80 shadow-[0_12px_28px_-8px_rgba(91,108,251,0.5),inset_0_1.5px_1.5px_rgba(255,255,255,0.95),inset_0_-8px_14px_-6px_rgba(91,108,251,0.35)] backdrop-blur-md">
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/70 via-transparent to-indigo-500/10" />
-            <User size={44} className="relative text-indigo-500 drop-shadow-sm" fill="currentColor" />
+          {/* 홍길동 옆 사각 아이콘 박스 */}
+          <div className="relative flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-[20px] glass-icon-box">
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/60 via-transparent to-indigo-500/10" />
+            <User
+              size={44}
+              className="relative text-indigo-500 drop-shadow-sm"
+              fill="currentColor"
+            />
           </div>
 
           <div className="flex flex-1 flex-col items-start gap-3 pl-1">
@@ -88,8 +84,9 @@ const MyPage = () => {
               <span className="text-3xl font-bold leading-7 text-zinc-800 font-['Pretendard']">
                 {MOCK_USER.name}님
               </span>
-              <span className="relative flex h-9 items-center gap-2 overflow-hidden rounded-lg bg-gradient-to-br from-indigo-300/30 via-indigo-200/15 to-indigo-400/20 px-4 py-2.5 outline outline-1 outline-offset-[-1px] outline-white/80 shadow-[0_8px_18px_-6px_rgba(91,108,251,0.45),inset_0_1.5px_1.5px_rgba(255,255,255,0.95),inset_0_-5px_10px_-4px_rgba(91,108,251,0.35)] backdrop-blur-md">
-                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/70 via-transparent to-indigo-500/10" />
+              {/* 일반 회원 뱃지 */}
+              <span className="relative flex h-9 items-center gap-2 overflow-hidden rounded-lg px-4 py-2.5 glass-badge">
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/60 via-transparent to-indigo-500/10" />
                 <span className="relative text-center text-lg font-semibold leading-4 text-indigo-500 font-['Pretendard']">
                   {MOCK_USER.grade}
                 </span>
@@ -238,8 +235,8 @@ const ManageCard = ({ icon, title, description, onClick }: ManageCardProps) => {
           : ""
       }`}
     >
-      <div className="relative flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-[20px] bg-gradient-to-br from-indigo-300/30 via-indigo-200/15 to-indigo-400/20 outline outline-1 outline-offset-[-1px] outline-white/80 shadow-[0_12px_28px_-8px_rgba(91,108,251,0.5),inset_0_1.5px_1.5px_rgba(255,255,255,0.95),inset_0_-8px_14px_-6px_rgba(91,108,251,0.35)] backdrop-blur-md">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/70 via-transparent to-indigo-500/10" />
+      <div className="relative flex size-24 shrink-0 items-center justify-center overflow-hidden rounded-[20px] glass-icon-box backdrop-blur-md">
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/60 via-transparent to-indigo-300/0" />
         <div className="relative drop-shadow-sm">{icon}</div>
       </div>
 
