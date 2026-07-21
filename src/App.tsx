@@ -5,7 +5,6 @@ import SelectPage from "./pages/SelectPage";
 import AiSetPage from "./pages/AiSetPage";
 import CoachSetPage from "./pages/CoachSetPage";
 import CoachViewPage from "./pages/CoachVeiwPage";
-import MyPage from "./pages/MyPage";
 
 
 const App = () => {
@@ -20,7 +19,6 @@ const App = () => {
           <Route path="/ai-set" element={<AiSetPage />} />
           <Route path="/coach-set" element={<CoachSetPage />} />
           <Route path="/coach-view" element={<CoachViewPage />} />
-          <Route path="/mypage" element={<MyPage />}/>
         </Routes>
       </div>
     </>
