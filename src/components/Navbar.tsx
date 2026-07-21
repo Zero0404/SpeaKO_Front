@@ -4,7 +4,6 @@ import logo from "../assets/SpeaKO-logo.svg";
 import LinkButton from "./LinkButton";
 import Login from "../modals/Login";
 import Signup from "../modals/SignUp";
-import { User } from "lucide-react";
 
 const Navbar = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
@@ -17,7 +16,11 @@ const Navbar = () => {
           {/* 왼쪽 */}
           <div className="flex items-center gap-16">
             <Link to="/">
-              <img src={logo} alt="SpeaKO" className="h-11 w-auto" />
+              <img
+                src={logo}
+                alt="SpeaKO"
+                className="h-11 w-auto"
+              />
             </Link>
 
             <nav className="flex items-center gap-12">
@@ -28,13 +31,6 @@ const Navbar = () => {
 
           {/* 오른쪽 */}
           <div className="flex items-center gap-6">
-            <Link
-              to="/mypage"
-              className="flex size-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)]"
-            >
-              <User size={20} className="text-[color:var(--color-white)]" />
-            </Link>
-
             <button
               onClick={() => setIsLoginOpen(true)}
               className="text-sm font-medium text-gray-700 transition hover:text-[#6E8BFF]"
