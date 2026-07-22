@@ -9,14 +9,19 @@ interface EmailChangeProps {
   onSave?: (email: string, password: string) => void; // 필요하다면 password도 전달 가능
 }
 
-const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+const isValidEmail = (value: string) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
-const EmailChange = ({ onClose, currentEmail = "", onSave }: EmailChangeProps) => {
+const EmailChange = ({
+  onClose,
+  currentEmail = "",
+  onSave,
+}: EmailChangeProps) => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState(""); // 💡 현재 비밀번호 상태 추가
+  const [password, setPassword] = useState(""); // 현재 비밀번호 상태
 
   const isEmailValid = isValidEmail(email);
-  const isPasswordValid = password.trim().length > 0; // 비밀번호가 입력되었는지 확인
+  const isPasswordValid = password.trim().length > 0;
 
   // 두 조건이 모두 충족되어야 활성화
   const canSubmit = isEmailValid && isPasswordValid;
@@ -31,7 +36,7 @@ const EmailChange = ({ onClose, currentEmail = "", onSave }: EmailChangeProps) =
     <ModalShell
       onClose={onClose}
       title="이메일 주소 변경"
-      description="로그인에 사용할 새 이메일을 입력하세요."
+      description="로그인에 사용할 새로운 이메일 주소를 입력하세요."
     >
       <div className="flex flex-col gap-6">
         <TextInput
@@ -43,22 +48,29 @@ const EmailChange = ({ onClose, currentEmail = "", onSave }: EmailChangeProps) =
         />
 
         {email.length > 0 && !isEmailValid && (
-          <p className="-mt-4 text-sm text-rose-500">이메일 형식을 확인해주세요.</p>
+          <p className="-mt-4 text-sm text-rose-500">
+            이메일 형식을 확인해주세요.
+          </p>
         )}
 
         <TextInput
           label="현재 비밀번호"
           type="password"
-          value={password} 
-          onChange={setPassword} 
+          value={password}
+          onChange={setPassword}
           placeholder="현재 비밀번호를 입력해주세요."
         />
 
         <div className="flex gap-3">
           <button
             type="button"
-            onClick={onClose}
-            className="flex-1 rounded-xl bg-slate-100 py-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-200"
+            onClick={handleSave}
+            disabled={!canSubmit}
+            className={`flex-1 rounded-xl py-3 text-sm font-semibold transition ${
+              canSubmit
+                ? "bg-[var(--color-brand-primary)] text-white hover:bg-indigo-600"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            }`}
           >
             변경 사항 저장
           </button>

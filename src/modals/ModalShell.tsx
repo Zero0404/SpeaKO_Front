@@ -24,7 +24,7 @@ const ModalShell = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-[440px] rounded-[20px] px-10 py-10 bg-white p-8 shadow-[0px_10px_40px_0px_rgba(91,108,251,0.15)]"
+        className="relative w-full max-w-[440px] rounded-[20px] bg-white px-10 py-10 shadow-[0px_10px_40px_0px_rgba(91,108,251,0.15)]"
       >
         <button
           type="button"
@@ -37,14 +37,14 @@ const ModalShell = ({
 
         <div className="flex flex-col gap-2 pr-6">
           <h2
-            className={`text-2xl font-bold leading-6 font-['Pretendard'] ${
+            className={`whitespace-pre-line text-xl font-bold leading-6 text-zinc-800 font-['Pretendard'] ${
               tone === "danger" ? "text-rose-500" : "text-zinc-800"
             }`}
           >
             {title}
           </h2>
           {description && (
-            <p className="text-lg font-medium leading-5 text-slate-500 font-['Pretendard']">
+            <p className="text-m font-medium leading-5 text-slate-500 font-['Pretendard']">
               {description}
             </p>
           )}
