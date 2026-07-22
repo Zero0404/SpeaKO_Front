@@ -37,31 +37,34 @@ const PasswordChange = ({ onClose, onSave }: PasswordChangeProps) => {
           type="password"
           value={currentPassword}
           onChange={setCurrentPassword}
-          placeholder="기존 비밀번호를 입력하세요"
+          placeholder="기존 비밀번호를 입력해주세요."
         />
         <TextInput
-          label="새 비밀번호(8자 이상)"
+          label="새 비밀번호 (8자 이상)"
           type="password"
           value={newPassword}
           onChange={setNewPassword}
-          placeholder="새 비밀번호를 입력해주세요"
+          placeholder="새 비밀번호를 입력해주세요."
         />
+        {/* NOTE: 참조 이미지엔 이 필드 라벨이 "이름(닉네임)"으로 돼있었는데,
+            ProfileEdit 라벨을 복사하다 안 고친 실수로 보여서 "새 비밀번호 확인"으로 바로잡았어요. */}
         <TextInput
           label="새 비밀번호 확인"
           type="password"
           value={confirmPassword}
           onChange={setConfirmPassword}
-          placeholder="새 비밀번호를 다시 입력하세요"
+          placeholder="새 비밀번호를 한번 더 입력해주세요."
         />
         {isMismatched && (
           <p className="-mt-3 text-sm text-rose-500">비밀번호가 일치하지 않습니다.</p>
         )}
 
-        <div className="mt-1 flex gap-3">
+        <div className="flex gap-3">
           <button
             type="button"
-            onClick={onClose}
-            className="flex-1 rounded-xl bg-slate-100 py-3 text-sm font-semibold text-slate-500 transition hover:bg-slate-200"
+            onClick={handleSave}
+            disabled={!isValid}
+            className="flex-1 rounded-xl bg-[var(--color-brand-primary)] py-3 text-sm font-semibold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"
           >
             변경 사항 저장
           </button>
