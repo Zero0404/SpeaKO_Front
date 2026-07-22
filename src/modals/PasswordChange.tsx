@@ -64,7 +64,11 @@ const PasswordChange = ({ onClose, onSave }: PasswordChangeProps) => {
             type="button"
             onClick={handleSave}
             disabled={!isValid}
-            className="flex-1 rounded-xl bg-[var(--color-brand-primary)] py-3 text-sm font-semibold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"
+            className={`flex-1 rounded-xl py-3 text-sm font-semibold transition ${
+              isValid
+                ? "bg-[var(--color-brand-primary)] text-white hover:bg-indigo-600"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            }`}
           >
             변경 사항 저장
           </button>

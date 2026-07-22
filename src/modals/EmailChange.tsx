@@ -9,9 +9,14 @@ interface EmailChangeProps {
   onSave?: (email: string, password: string) => void; // 필요하다면 password도 전달 가능
 }
 
-const isValidEmail = (value: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+const isValidEmail = (value: string) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
-const EmailChange = ({ onClose, currentEmail = "", onSave }: EmailChangeProps) => {
+const EmailChange = ({
+  onClose,
+  currentEmail = "",
+  onSave,
+}: EmailChangeProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState(""); // 현재 비밀번호 상태
 
@@ -43,7 +48,9 @@ const EmailChange = ({ onClose, currentEmail = "", onSave }: EmailChangeProps) =
         />
 
         {email.length > 0 && !isEmailValid && (
-          <p className="-mt-4 text-sm text-rose-500">이메일 형식을 확인해주세요.</p>
+          <p className="-mt-4 text-sm text-rose-500">
+            이메일 형식을 확인해주세요.
+          </p>
         )}
 
         <TextInput
@@ -59,7 +66,11 @@ const EmailChange = ({ onClose, currentEmail = "", onSave }: EmailChangeProps) =
             type="button"
             onClick={handleSave}
             disabled={!canSubmit}
-            className="flex-1 rounded-xl bg-[var(--color-brand-primary)] py-3 text-sm font-semibold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"
+            className={`flex-1 rounded-xl py-3 text-sm font-semibold transition ${
+              canSubmit
+                ? "bg-[var(--color-brand-primary)] text-white hover:bg-indigo-600"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            }`}
           >
             변경 사항 저장
           </button>
