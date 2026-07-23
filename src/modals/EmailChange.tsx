@@ -13,7 +13,8 @@ const isValidEmail = (value: string) =>
 
 const EmailChange = ({
   onClose,
-  currentEmail: _currentEmail, // <-- 앞에 _를 붙여서 미사용 경고/에러 방지
+  currentEmail: _currentEmail, 
+  //  currentEmail = "",
   onSave,
 }: EmailChangeProps) => {
   const [email, setEmail] = useState("");
