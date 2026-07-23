@@ -11,7 +11,7 @@ const Navbar = () => {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 w-full h-20 transparent-bg">
+      <header className="absolute top-0 left-0 right-0 z-50 w-full h-20 transparent-bg">
         <div className="mx-auto flex h-full max-w-[2000px] items-center justify-between px-12">
           {/* 왼쪽 */}
           <div className="flex items-center gap-16">
