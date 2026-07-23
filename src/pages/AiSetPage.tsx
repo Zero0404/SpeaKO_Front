@@ -18,6 +18,8 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
   const [style, setStyle] = useState<'formal' | 'casual'>('formal');
   const [file, setFile] = useState<File | null>(null);
 
+  // 모달 팝업 상태 및 로딩 상태 관리
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -46,7 +48,8 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
     ],
   };
 
-  const handleStartGenerating = () => {
+  // 대본 생성 버튼 클릭 시 필수값 검사 후 모달 열기
+  const handleOpenModal = () => {
     setErrorMessage('');
 
     if (!file) {
@@ -60,9 +63,16 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
       }
     }
 
+    setIsModalOpen(true);
+  };
+
+  // 모달에서 '네, 맞습니다' 클릭 시 로딩 화면으로 전환
+  const handleConfirmStart = () => {
+    setIsModalOpen(false);
     setIsGenerating(true);
   };
 
+  // 다음 페이지 버튼 클릭 시 이동
   const handleGoNext = () => {
     setIsGenerating(false);
     if (onNext) onNext();
@@ -205,9 +215,8 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
             </div>
           </div>
 
-          {/* 💡 상단 둥근 네모상자 (329x68) + 오른쪽 밑 역삼각형 (32x32) 조합 구조 */}
+          {/* 경고 상자 */}
           <div className="relative self-end md:self-auto shrink-0">
-            {/* 네모 상자 */}
             <div
               className="bg-white border border-red-100 shadow-sm flex flex-col items-start justify-center box-border relative z-10"
               style={{
@@ -226,7 +235,6 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
               </p>
             </div>
 
-            {/* 오른쪽 아래 역삼각형 (32px x 32px) */}
             <div
               className="absolute z-0 pointer-events-none"
               style={{
@@ -236,19 +244,8 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                 right: '24px',
               }}
             >
-              <svg
-                width="32"
-                height="32"
-                viewBox="0 0 32 32"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M16 32L0 0H32L16 32Z"
-                  fill="white"
-                  stroke="#FEE2E2"
-                  strokeWidth="1"
-                />
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                <path d="M16 32L0 0H32L16 32Z" fill="white" stroke="#FEE2E2" strokeWidth="1" />
               </svg>
             </div>
           </div>
@@ -297,7 +294,6 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                 
                 {/* 상단: 발표 주제 + 발표 시간 */}
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4 md:gap-0">
-                  {/* 발표 주제 */}
                   <div className="w-full md:w-auto">
                     <label className="block text-sm font-bold mb-2" style={{ color: 'var(--color-text-heading)' }}>
                       발표 주제 {!file && <span className="text-indigo-500 font-medium">(필수)</span>}
@@ -316,7 +312,6 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                     />
                   </div>
 
-                  {/* 발표 시간 */}
                   <div className="w-full md:w-auto">
                     <label className="block text-sm font-bold mb-2" style={{ color: 'var(--color-text-heading)' }}>
                       발표 시간
@@ -349,7 +344,6 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
 
                 {/* 하단: 목차/가이드라인 + 발표 스타일 & 추천 상자 */}
                 <div className="flex flex-col md:flex-row justify-between items-center gap-6 md:gap-0">
-                  {/* 목차 / 가이드라인 */}
                   <div className="w-full md:w-auto">
                     <label className="block text-sm font-bold mb-2" style={{ color: 'var(--color-text-heading)' }}>
                       목차 / 가이드라인 {!file && <span className="text-indigo-500 font-medium">(필수)</span>}
@@ -367,14 +361,12 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                     />
                   </div>
 
-                  {/* 발표 스타일 상자 및 추천 상자 */}
                   <div className="flex flex-col justify-between w-full md:w-[408px] h-auto md:h-[352px] gap-4 md:gap-0">
                     <div>
                       <label className="block text-sm font-bold mb-2" style={{ color: 'var(--color-text-heading)' }}>
                         발표 스타일
                       </label>
                       <div className="flex gap-3">
-                        {/* 격식체 */}
                         <button
                           type="button"
                           onClick={() => setStyle('formal')}
@@ -401,7 +393,6 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                           </span>
                         </button>
 
-                        {/* 편안한 말투 */}
                         <button
                           type="button"
                           onClick={() => setStyle('casual')}
@@ -430,13 +421,10 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                       </div>
                     </div>
 
-                    {/* 이런 상황에 추천해요 박스 */}
-                    <div
-                      className="w-full md:w-[408px] h-[150px] bg-[#F5F7FF] rounded-[16px] p-4 flex flex-col justify-center"
-                    >
+                    <div className="w-full md:w-[408px] h-[150px] bg-[#F5F7FF] rounded-[16px] p-4 flex flex-col justify-center">
                       <p className="text-sm font-bold mb-2.5 flex items-center gap-2 text-[#4f46e5]">
-                        <svg className="w-4 h-4 text-[#4f46e5] shrink-0" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 2C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7zm-1 12.85V16h2v-1.15l.59-.39C15.01 13.51 16 11.83 16 9c0-2.21-1.79-4-4-4S8 6.79 8 9c0 2.83.99 4.51 2.41 5.46l.59.39zM10 19h4v1c0 .55-.45 1-1 1h-2c-.55 0-1-.45-1-1v-1zm2-12l-1.5 3h1l-1 3.5 3.5-4.5h-1.5l1.5-2z" />
+                        <svg className="w-4 h-4 text-[#4f46e5] shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3a7 7 0 00-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 001 1h6a1 1 0 001-1v-1.26C17.81 14.47 19 12.38 19 10a7 7 0 00-7-7z" />
                         </svg>
                         <span>이런 상황에 추천해요</span>
                       </p>
@@ -465,7 +453,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
           )}
           <button
             type="button"
-            onClick={handleStartGenerating}
+            onClick={handleOpenModal}
             className="hover-effect-btn is-active flex items-center justify-between shadow-lg hover:shadow-xl transition-all cursor-pointer"
             style={{
               width: '250px',
@@ -485,6 +473,72 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
         </div>
 
       </div>
+
+      {/* 확인 모달 팝업 */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div
+            className="bg-white p-7 flex flex-col items-center justify-between text-center box-border animate-fadeIn relative shadow-2xl rounded-[20px]"
+            style={{
+              width: '410px',
+              height: '292px',
+              gap: '24px',
+            }}
+          >
+            <div className="flex flex-col items-center justify-center flex-1 pt-1">
+              {/* 💡 i 로고 크기 확대 적용 */}
+              <div
+                className="w-12 h-12 rounded-full text-white flex items-center justify-center mb-3 shadow-sm shrink-0"
+                style={{ backgroundColor: 'rgba(91, 108, 251, 1)' }}
+              >
+                {/* 확대된 단독 i SVG (28px) */}
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M11 7H13V9H11V7ZM11 11H13V17H11V11Z" fill="white" />
+                </svg>
+              </div>
+
+              <h3 className="text-lg font-bold leading-snug mb-2" style={{ color: 'var(--color-text-heading)' }}>
+                발표 주제, 발표 시간, 말투 스타일<br />모두 알맞게 설정하셨습니까?
+              </h3>
+
+              {/* 💡 요청 타이포그래피 정밀 반영 */}
+              <p
+                style={{
+                  fontFamily: 'Pretendard, -apple-system, sans-serif',
+                  fontWeight: 500,
+                  fontSize: '16px',
+                  lineHeight: '140%',
+                  letterSpacing: '-0.025em',
+                  textAlign: 'center',
+                  color: 'var(--color-text-body)',
+                }}
+              >
+                선택 값: {time} / {style === 'formal' ? '격식체' : '편안한 말투'}
+              </p>
+            </div>
+
+            {/* 버튼 규격 고정 (150px × 40px) */}
+            <div className="flex justify-center gap-3 w-full">
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                style={{ width: '150px', height: '40px' }}
+                className="bg-slate-100 text-slate-600 rounded-xl text-xs font-bold flex items-center justify-center cursor-pointer transition-colors hover:bg-slate-200"
+              >
+                다시 확인하기
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmStart}
+                style={{ width: '150px', height: '40px' }}
+                className="hover-effect-btn is-active text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer flex items-center justify-center"
+              >
+                네, 맞습니다
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
