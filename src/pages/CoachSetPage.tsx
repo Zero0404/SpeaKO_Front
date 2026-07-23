@@ -60,11 +60,11 @@ export const CoachSetPage: React.FC = () => {
       {/* 전체 메인 컨테이너 */}
       <div className="flex flex-col items-start">
 
-        {/* 1. 흰색 배경 박스 상단 스텝 배너 (1cm 간격: mb-8 / 약 32px) */}
+        {/* 1. 흰색 배경 박스 상단 스텝 배너 */}
         <div className="flex items-center gap-6 mb-8 pl-4 select-none">
-          {/* Step 1 (활성화) */}
+          {/* Step 1: 항시 그라데이션 유지 */}
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-[#6C7CFF] text-white font-bold flex items-center justify-center text-base shadow-sm">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-r from-[#6E8BFF] to-[#7A5CFF] text-white font-bold flex items-center justify-center text-base shadow-sm">
               1
             </div>
             <span className="font-bold text-gray-900 text-base">코칭 대본 업로드</span>
@@ -119,7 +119,7 @@ export const CoachSetPage: React.FC = () => {
                 style={{ width: '530px', height: '472px' }}
                 className={`rounded-2xl border-2 border-dashed transition-all duration-200 flex flex-col items-center justify-center p-6 cursor-pointer box-border relative ${
                   isDragging
-                    ? 'border-indigo-500 bg-indigo-50/50'
+                    ? 'border-[#7A5CFF] bg-indigo-50/50'
                     : 'border-indigo-200 bg-[#F8FAFF] hover:bg-indigo-50/30'
                 }`}
               >
@@ -127,7 +127,7 @@ export const CoachSetPage: React.FC = () => {
                   type="file"
                   ref={fileInputRef}
                   onChange={handleFileChange}
-                  accept=".docx,.txt,.pdf"
+                  accept=".docx,.txt,.pdf,.ppt,.pptx"
                   className="hidden"
                 />
 
@@ -143,7 +143,7 @@ export const CoachSetPage: React.FC = () => {
                 {file ? (
                   <div className="text-center">
                     <p className="text-base font-bold text-gray-800 truncate max-w-xs">{file.name}</p>
-                    <p className="text-xs text-indigo-500 mt-1">클릭하여 다른 파일로 변경</p>
+                    <p className="text-xs text-[#7A5CFF] mt-1">클릭하여 다른 파일로 변경</p>
                   </div>
                 ) : (
                   <div className="text-center space-y-2">
@@ -153,9 +153,11 @@ export const CoachSetPage: React.FC = () => {
                     <p className="text-xs text-gray-400">
                       DOCX, TXT, PDF 지원 · 최대 20MB
                     </p>
+                    
+                    {/* [파일 선택] 버튼: 항시 그라데이션 유지 */}
                     <button
                       type="button"
-                      className="mt-4 px-6 py-2.5 bg-[#6C7CFF] text-white text-sm font-medium rounded-xl shadow-sm hover:bg-indigo-600 transition-colors inline-flex items-center gap-2"
+                      className="mt-4 px-8 py-3 bg-gradient-to-r from-[#6E8BFF] to-[#7A5CFF] text-white text-sm font-semibold rounded-xl shadow-md transition-all duration-300 hover:scale-105 active:scale-95 inline-flex items-center gap-2 cursor-pointer"
                     >
                       <span>↑</span>
                       <span>파일 선택</span>
@@ -167,7 +169,7 @@ export const CoachSetPage: React.FC = () => {
               {/* 우측: 대본 입력 상자 (882px x 472px) */}
               <div
                 style={{ width: '882px', height: '472px' }}
-                className="border border-gray-300 rounded-2xl p-6 bg-white box-border focus-within:border-indigo-400 transition-colors"
+                className="border border-gray-300 rounded-2xl p-6 bg-white box-border focus-within:border-[#7A5CFF] transition-colors"
               >
                 <textarea
                   value={scriptText}
@@ -180,15 +182,15 @@ export const CoachSetPage: React.FC = () => {
             </div>
           </main>
 
-          {/* 흰색 배경 바깥쪽 오른쪽 밑에 위치하는 버튼 */}
+          {/* 3. 오른쪽 밑 버튼: 평소 흰색 배경 + 회색 글씨 -> 호버/클릭 시 그라데이션 + 흰색 글씨 */}
           <div className="flex justify-end w-full">
             <button
               type="button"
               onClick={handleStartCoach}
-              className="px-8 py-3.5 bg-[#6C7CFF] hover:bg-indigo-600 text-white font-bold text-base rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0"
+              className="px-10 py-4 bg-white text-gray-500 font-semibold text-base rounded-2xl shadow-sm border border-gray-100 transition-all duration-300 hover:bg-gradient-to-r hover:from-[#6E8BFF] hover:to-[#7A5CFF] hover:text-white hover:border-transparent hover:shadow-xl hover:scale-105 active:scale-95 flex items-center justify-center gap-4 cursor-pointer"
             >
               <span>발음 코칭 받기</span>
-              <span className="text-lg font-normal">&gt;</span>
+              <span className="text-lg font-light">&gt;</span>
             </button>
           </div>
 
