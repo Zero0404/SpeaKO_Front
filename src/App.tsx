@@ -7,7 +7,6 @@ import CoachSetPage from "./pages/CoachSetPage";
 import CoachViewPage from "./pages/CoachVeiwPage";
 import MyPage from "./pages/MyPage";
 
-
 const App = () => {
   return (
     <>
@@ -21,7 +20,9 @@ const App = () => {
           <Route path="/coach-set" element={<CoachSetPage />} />
           <Route path="/coach-view" element={<CoachViewPage />} />
           <Route path="/mypage" element={<MyPage />} />
-        </Routes>
+          <Route path="/coach" element={<CoachSetPage />} />      
+          </Routes>
+
       </div>
     </>
   );
