@@ -10,7 +10,6 @@ interface FileUploadConfig {
   height: string;
 }
 
-// 타입별 규격 및 텍스트 설정
 const TYPE_CONFIG: Record<FileUploadType, FileUploadConfig> = {
   ppt: {
     accept: '.ppt, .pptx, .pdf',
@@ -69,14 +68,13 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     <div
       onDragOver={handleDragOver}
       onDrop={handleDrop}
-      className={`relative flex flex-col items-center justify-center rounded-[24px] border-2 border-dashed border-[#C7D2FE] bg-[#F5F7FF] transition-all duration-300 hover:border-indigo-400 ${className}`}
+      className={`relative flex flex-col items-center justify-center rounded-[20px] border-2 border-dashed border-[#C7D2FE] bg-[#F5F7FF] transition-all duration-300 hover:border-indigo-400 max-w-full ${className}`}
       style={{
         width: config.width,
         height: config.height,
-        maxWidth: '100%',
       }}
     >
-      {/* 3D 폴더/PPT 이미지 */}
+      {/* 3D 로고 일러스트 */}
       <div className="mb-4 flex items-center justify-center">
         <img
           src={featureScriptIllustration}
@@ -85,7 +83,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         />
       </div>
 
-      {/* 안내 텍스트 */}
+      {/* 안내 문구 */}
       <h3
         className="text-[17px] font-bold tracking-tight mb-1.5"
         style={{ color: 'var(--color-text-heading)' }}
@@ -93,7 +91,6 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         파일을 여기에 끌어다 놓거나 클릭하세요
       </h3>
 
-      {/* 서브 설명 문구 */}
       <p
         className="text-[13px] font-normal mb-6"
         style={{ color: 'var(--color-text-body)' }}
@@ -101,7 +98,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         {file ? file.name : config.subText}
       </p>
 
-      {/* 숨겨진 input */}
+      {/* 숨겨진 파일 Input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -110,15 +107,24 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         className="hidden"
       />
 
-      {/* 업로드 버튼 (index.css 호버 및 그라데이션 변수 활용) */}
+      {/* 💡 요청 스펙: 파일 선택 상자 (width: 220, height: 48, radius: 100px, padding: 12px 40px 12px 28px, gap: 8px) */}
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
-        className="hover-effect-btn is-active flex items-center justify-center gap-2 px-6 py-2.5 rounded-full text-sm font-semibold shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer"
+        className="hover-effect-btn is-active flex items-center justify-center shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer"
+        style={{
+          width: '220px',
+          height: '48px',
+          borderRadius: '100px',
+          paddingTop: '12px',
+          paddingRight: '40px',
+          paddingBottom: '12px',
+          paddingLeft: '28px',
+          gap: '8px',
+        }}
       >
-        {/* 업로드 아이콘 */}
         <svg
-          className="w-4 h-4 text-white"
+          className="w-4 h-4 text-white shrink-0"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -130,7 +136,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
           />
         </svg>
-        <span>{file ? '파일 변경' : '파일 선택'}</span>
+        <span className="text-sm font-semibold">{file ? '파일 변경' : '파일 선택'}</span>
       </button>
     </div>
   );
