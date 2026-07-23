@@ -5,6 +5,7 @@ import SelectPage from "./pages/SelectPage";
 import AiSetPage from "./pages/AiSetPage";
 import CoachSetPage from "./pages/CoachSetPage";
 import CoachViewPage from "./pages/CoachVeiwPage";
+import FeedbackPage from './pages/FeedbackPage';
 import MyPage from "./pages/MyPage";
 
 const App = () => {
@@ -16,12 +17,13 @@ const App = () => {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/select" element={<SelectPage />} />
-          <Route path="/ai-set" element={<AiSetPage />} />
           <Route path="/coach-set" element={<CoachSetPage />} />
           <Route path="/coach-view" element={<CoachViewPage />} />
+          <Route path="/ai-set" element={<AiSetPage />} />
           <Route path="/mypage" element={<MyPage />} />
-          <Route path="/coach" element={<CoachSetPage />} />      
-          </Routes>
+          <Route path="/coach" element={<CoachSetPage />} />
+          <Route path="/feedback" element={<FeedbackPage />} />
+        </Routes>
 
       </div>
     </>
