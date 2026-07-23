@@ -46,3 +46,8 @@
     backdrop-filter: blur(12px);
   }
 }
+
+html {
+    scroll-snap-type: y mandatory;
+    scroll-behavior: smooth;
+}
