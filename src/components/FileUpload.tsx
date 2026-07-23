@@ -68,7 +68,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
     <div
       onDragOver={handleDragOver}
       onDrop={handleDrop}
-      className={`relative flex flex-col items-center justify-center rounded-[20px] border-2 border-dashed border-[#C7D2FE] bg-[#F5F7FF] transition-all duration-300 hover:border-indigo-400 max-w-full ${className}`}
+      className={`relative flex flex-col items-center justify-center rounded-[20px] border-2 border-dashed border-[#C7D2FE] bg-[#F5F7FF] transition-all duration-300 hover:border-indigo-400 max-w-full box-border ${className}`}
       style={{
         width: config.width,
         height: config.height,
@@ -107,14 +107,18 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         className="hidden"
       />
 
-      {/* 💡 요청 스펙: 파일 선택 상자 (width: 220, height: 48, radius: 100px, padding: 12px 40px 12px 28px, gap: 8px) */}
+      {/* 💡 강제 고정 규격: width 220px, height 48px (min/max 치수 고정) */}
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}
-        className="hover-effect-btn is-active flex items-center justify-center shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer"
+        className="hover-effect-btn is-active flex items-center justify-center shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer box-border border-0"
         style={{
           width: '220px',
+          minWidth: '220px',
+          maxWidth: '220px',
           height: '48px',
+          minHeight: '48px',
+          maxHeight: '48px',
           borderRadius: '100px',
           paddingTop: '12px',
           paddingRight: '40px',
@@ -136,7 +140,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
             d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
           />
         </svg>
-        <span className="text-sm font-semibold">{file ? '파일 변경' : '파일 선택'}</span>
+        <span className="text-sm font-semibold whitespace-nowrap">{file ? '파일 변경' : '파일 선택'}</span>
       </button>
     </div>
   );
