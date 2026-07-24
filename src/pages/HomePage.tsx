@@ -73,7 +73,7 @@ const FEATURES: FeatureCardData[] = [
         badge: "PRONUNCIATION EVALUATION",
         image: FeatureCard3,
         title: "발음 평가",
-        description: "음성 파일(MP3/MPA)을 업로드하면 AI가 발음 정확도를 0~5점으로 평가하고  실제 인식된 텍스트를 확인할 수 있습니다.",
+        description: "음성 파일(MP3/MPA)을 업로드하면 AI가 발음 정확도를 0~5점으로 평가하고 실제 인식된 텍스트를 확인할 수 있습니다.",
     },
 ];
 
@@ -94,55 +94,57 @@ const HomePage: FC = () => {
     };
 
     return (
-        <div className="w-full pt-20 bg-[var(--color-white)]">
+        // pt-20 제거 (헤더가 absolute로 위를 덮고 첫 번째 섹션 배경이 자연스럽게 비치도록 수정)
+        <div className="w-full bg-[var(--color-white)]">
             {/* Hero Section */}
-            <section className="min-h-[calc(100vh-80px)] w-full snap-start scroll-mt-20 bg-gradient-to-br from-white via-[#F5F7FF] to-white">
-                <div className="mx-auto flex min-h-[calc(100vh-80px)] max-w-[1600px] items-center gap-28 px-28">
-                    {/* Left */}
-                    <div className="w-auto shrink-0">
-                        <MainChip text="AI Presentation Coach" />
+<section className="relative h-screen w-full snap-start flex items-center bg-gradient-to-br from-white via-[#F5F7FF] to-white">
+    {/* h-full과 pt-20을 함께 주어 정확히 화면 높이를 유지하면서 헤더 공간 확보 */}
+    <div className="mx-auto flex h-full w-full max-w-[1600px] items-center justify-between px-28 pt-20">
+        {/* Left */}
+        <div className="w-auto shrink-0">
+            <MainChip text="AI Presentation Coach" />
 
-                        <h1 className="mt-8 whitespace-nowrap text-[56px] font-bold leading-tight text-[var(--color-text-heading)]">
-                            발표가 두려운 당신을 위한
-                        </h1>
+            <h1 className="mt-8 whitespace-nowrap text-[56px] font-bold leading-tight text-[var(--color-text-heading)]">
+                발표가 두려운 당신을 위한
+            </h1>
 
-                        <h1 className="whitespace-nowrap text-[56px] font-bold leading-tight text-[var(--color-brand-primary)]">
-                            AI 코치, SpeaKO
-                        </h1>
+            <h1 className="whitespace-nowrap text-[56px] font-bold leading-tight text-[var(--color-brand-primary)]">
+                AI 코치, SpeaKO
+            </h1>
 
-                        <p className="mt-10 text-xl leading-9 text-[var(--color-text-body)]">
-                            PPT 분석부터 맞춤 대본 생성, 실시간 발음 평가까지
-                            <br />
-                            완벽한 발표를 위한 모든 과정을 도와드려요.
-                        </p>
+            <p className="mt-10 text-xl leading-9 text-[var(--color-text-body)]">
+                PPT 분석부터 맞춤 대본 생성, 실시간 발음 평가까지
+                <br />
+                완벽한 발표를 위한 모든 과정을 도와드려요.
+            </p>
 
-                        <div className="mt-14 flex gap-6">
-                            <Link
-                                to="/select"
-                                className="flex items-center gap-2 rounded-2xl bg-[image:var(--gradient-brand-active)] px-10 py-5 text-lg font-semibold text-white shadow-xl transition-[var(--transition-hover)] hover:scale-105"
-                            >
-                                <Upload size={20} />
-                                파일 업로드하고 시작하기
-                            </Link>
+            <div className="mt-14 flex gap-6">
+                <Link
+                    to="/select"
+                    className="flex items-center gap-2 rounded-2xl bg-[image:var(--gradient-brand-active)] px-10 py-5 text-lg font-semibold text-white shadow-xl transition-[var(--transition-hover)] hover:scale-105"
+                >
+                    <Upload size={20} />
+                    파일 업로드하고 시작하기
+                </Link>
 
-                            <Link
-                                to="/guide"
-                                className="flex items-center gap-2 rounded-2xl bg-[var(--color-white)] px-10 py-5 text-lg font-semibold text-[var(--color-text-heading)] shadow-xl transition-[var(--transition-hover)] hover:scale-105"
-                            >
-                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-brand-primary)]">
-                                    <Play size={11} fill="white" color="white" className="ml-[1px]" />
-                                </span>
-                                서비스 가이드
-                            </Link>
-                        </div>
-                    </div>
+                <Link
+                    to="/guide"
+                    className="flex items-center gap-2 rounded-2xl bg-[var(--color-white)] px-10 py-5 text-lg font-semibold text-[var(--color-text-heading)] shadow-xl transition-[var(--transition-hover)] hover:scale-105"
+                >
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-brand-primary)]">
+                        <Play size={11} fill="white" color="white" className="ml-[1px]" />
+                    </span>
+                    서비스 가이드
+                </Link>
+            </div>
+        </div>
 
-                    {/* Right */}
-                    <div className="flex flex-1 justify-end">
-                        <img src={img} alt="Hero" className="w-[760px] max-w-none" />
-                    </div>
-                </div>
-            </section>
+        {/* Right */}
+        <div className="flex justify-end">
+            <img src={img} alt="Hero" className="w-[760px] max-w-none" />
+        </div>
+    </div>
+</section>
 
             {/* Why SpeaKO Section */}
             <section className="flex min-h-screen w-full snap-start scroll-mt-20 items-center bg-[var(--color-white)] px-28 py-24">
@@ -252,7 +254,6 @@ const HomePage: FC = () => {
 
                 <div className="mx-auto mt-12 flex w-full max-w-[1600px] justify-center gap-12">
                     {FEATURES.map((feature) => {
-
                         return (
                             <div
                                 key={feature.id}
@@ -264,21 +265,15 @@ const HomePage: FC = () => {
                                     flex-col
                                     items-start
                                     rounded-[32px]
-
                                     border
                                     border-[#ECECFF]
-
                                     bg-white/20
                                     backdrop-blur-md
-
                                     px-12
                                     py-12
-
                                     shadow-[0_8px_30px_rgba(120,110,255,0.05)]
-
                                     transition-all
                                     duration-300
-
                                     hover:-translate-y-2
                                     hover:border-[#7A6CFF]
                                     hover:bg-white/45
@@ -303,45 +298,17 @@ const HomePage: FC = () => {
                                 </div>
 
                                 {/* Badge */}
-                                <span
-                                    className="
-                                        mt-8
-                                        text-sm
-                                        font-bold
-                                        tracking-wide
-                                        text-[var(--color-brand-light)]
-                                        transition-colors
-                                        duration-300
-                                    "
-                                >
+                                <span className="mt-8 text-sm font-bold tracking-wide text-[var(--color-brand-light)] transition-colors duration-300">
                                     {feature.badge}
                                 </span>
 
                                 {/* Title */}
-                                <h3
-                                    className="
-                                        mt-5
-                                        text-[42px]
-                                        font-bold
-                                        leading-tight
-                                        transition-colors
-                                        duration-300
-                                    "
-                                >
+                                <h3 className="mt-5 text-[42px] font-bold leading-tight transition-colors duration-300">
                                     {feature.title}
                                 </h3>
 
                                 {/* Description */}
-                                <p
-                                    className="
-                                        mt-6
-                                        text-[20px]
-                                        leading-9
-                                        transition-opacity
-                                        duration-300
-                                        group-hover:opacity-100
-                                    "
-                                >
+                                <p className="mt-6 text-[20px] leading-9 transition-opacity duration-300 group-hover:opacity-100">
                                     {feature.description}
                                 </p>
 
@@ -350,11 +317,9 @@ const HomePage: FC = () => {
                                     <span className="rounded-lg bg-[#EEF1FF] px-4 py-2 text-sm font-semibold text-gray-500">
                                         PPT/PDF
                                     </span>
-
                                     <span className="rounded-lg bg-[#EEF1FF] px-4 py-2 text-sm font-semibold text-gray-500">
                                         TEXT
                                     </span>
-
                                     <span className="rounded-lg bg-[#EEF1FF] px-4 py-2 text-sm font-semibold text-gray-500">
                                         DOCX
                                     </span>
