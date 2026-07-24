@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 // 공통 컴포넌트 불러오기
 import FileUpload from '../components/FileUpload';
+import TextInput from '../components/TextInput';
 
 // 에셋 불러오기
 import bgSvg from '../assets/select-page-background.svg';
@@ -216,6 +217,29 @@ export const CoachSetPage: React.FC = () => {
               </div>
 
               {/* 💡 [완벽 해결] 사진속 피그마 규격대로 완벽하게 구현된 대본 입력창 */}
+              <style>{`
+                .script-input-wrapper > div {
+                  border: none !important;
+                  box-shadow: none !important;
+                  outline: none !important;
+                }
+                .script-input-wrapper textarea,
+                .script-input-wrapper input {
+                  width: 100% !important;
+                  height: 100% !important;
+                  border: none !important;
+                  box-shadow: none !important;
+                  background: transparent !important;
+                  outline: none !important;
+                  resize: none !important;
+                  color: var(--color-text-heading) !important;
+                  font-size: 0.875rem !important;
+                  line-height: 1.625 !important;
+                }
+                .script-input-wrapper ::placeholder {
+                  color: #9CA3AF !important;
+                }
+              `}</style>
               <div
                 style={{
                   width: '882px',
@@ -226,13 +250,13 @@ export const CoachSetPage: React.FC = () => {
                   gap: '10px',
                   opacity: 1,
                 }}
-                className="box-border bg-white flex flex-col focus-within:border-[#7A5CFF] transition-colors"
+                className="box-border bg-white flex flex-col focus-within:border-[#7A5CFF] transition-colors script-input-wrapper"
               >
-                <textarea
+                <TextInput
+                  label=""
                   value={scriptText}
-                  onChange={(e) => setScriptText(e.target.value)}
+                  onChange={setScriptText}
                   placeholder="발표 연습을 진행할 대본 전체를 입력하거나 붙여넣기 해주세요."
-                  className="w-full h-full resize-none border-none outline-none text-sm text-[var(--color-text-heading)] placeholder:text-gray-400 bg-transparent leading-relaxed"
                 />
               </div>
 
@@ -253,6 +277,7 @@ export const CoachSetPage: React.FC = () => {
                 paddingBottom: '16px',
                 paddingLeft: '20px',
                 opacity: 1,
+                color: '#9CA3AF',
               }}
               className="hover-effect-btn flex items-center justify-between font-semibold text-base shadow-sm border border-gray-100 transition-all duration-300 cursor-pointer active:scale-95 box-border"
               onMouseEnter={(e) => {
@@ -261,7 +286,7 @@ export const CoachSetPage: React.FC = () => {
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'var(--color-inactive-bg)';
-                e.currentTarget.style.color = 'var(--color-text-heading)';
+                e.currentTarget.style.color = '#9CA3AF';
               }}
             >
               <span className="text-base font-semibold">발음 코칭 받기</span>
