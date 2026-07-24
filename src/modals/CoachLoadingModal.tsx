@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import bgSvg from '../assets/select-page-background.svg';
+import bgGradient from '../assets/background_gradiant.png';
 import FileUpload from '../components/FileUpload';
-import SetModal from '../modals/SetModal';
+import TextInput from '../components/TextInput';
 
-export interface AiSetPageProps {
+interface AiSetPageProps {
   onNext?: () => void;
 }
 
@@ -18,9 +19,12 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
   const [style, setStyle] = useState<'formal' | 'casual'>('formal');
   const [file, setFile] = useState<File | null>(null);
 
-  const [isSetModalOpen, setIsSetModalOpen] = useState(false);
+  // 모달 및 전체 화면 로딩 상태 관리
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false); // 💡 전체 화면 로딩 상태
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Pretendard 폰트 동적 로드
   useEffect(() => {
     const fontId = 'pretendard-font-cdn';
     if (!document.getElementById(fontId)) {
@@ -45,6 +49,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
     ],
   };
 
+  // 대본 생성 버튼 클릭 시 필수값 검사 후 확인 모달 열기
   const handleOpenModal = () => {
     setErrorMessage('');
 
@@ -59,13 +64,20 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
       }
     }
 
-    setIsSetModalOpen(true);
+    setIsConfirmModalOpen(true);
   };
 
+  // 확인 모달에서 '네, 맞습니다' 클릭 시 전체 로딩 화면으로 전환
   const handleConfirmStart = () => {
-    setIsSetModalOpen(false);
+    setIsConfirmModalOpen(false);
+    setIsGenerating(true); // 💡 모달 창이 아니라 전체 로딩 화면으로 전환
+  };
+
+  // 로딩 화면 하단의 [다음 페이지] 버튼 클릭 시 이동
+  const handleGoNext = () => {
+    setIsGenerating(false);
     if (onNext) onNext();
-    navigate('/ai-loading');
+    navigate('/script-edit');
   };
 
   const fontStyle = {
@@ -76,6 +88,115 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
     border: '1px solid rgba(128, 136, 146, 1)',
   };
 
+  // =========================================================
+  // 1. 전체 화면 로딩 페이지 (모달 창 X, 전체 화면 전환 O)
+  // =========================================================
+  if (isGenerating) {
+    return (
+      <div
+        className="min-h-screen w-full flex flex-col items-center justify-center p-4 md:p-6 bg-cover bg-center bg-no-repeat font-sans select-none overflow-hidden"
+        style={{
+          ...fontStyle,
+          backgroundImage: `url(${bgGradient})`,
+          backgroundColor: '#F8FAFC',
+        }}
+      >
+        <div className="flex flex-col items-center justify-center text-center max-w-2xl mx-auto w-full px-4">
+          
+          {/* 회전 스피너 */}
+          <div className="relative flex items-center justify-center mb-8 md:mb-10">
+            <div
+              className="w-16 h-16 md:w-20 md:h-20 rounded-full border-[5px] border-gray-200/80 border-t-transparent animate-spin"
+              style={{
+                borderTopColor: 'rgba(91, 108, 251, 1)',
+                borderRightColor: 'rgba(91, 108, 251, 0.8)',
+              }}
+            />
+          </div>
+
+          {/* 타이틀 & 문구 */}
+          <div className="space-y-3 mb-12 md:mb-16">
+            <h2 className="text-2xl md:text-3xl font-extrabold text-[var(--color-text-heading)] tracking-tight">
+              AI가 대본을 생성하고 있어요
+            </h2>
+            <p className="text-sm md:text-base font-medium text-[var(--color-text-body)]">
+              슬라이드 내용을 분석하고 슬라이드별 대본을 작성하는 중입니다.
+            </p>
+            <p className="text-xs md:text-sm text-gray-400">
+              잠시만 기다려 주세요. 파일의 용량에 따라 최대 4분까지 소요될 수 있습니다.
+            </p>
+          </div>
+
+          {/* 4단계 프로세스 위젯 */}
+          <div className="flex items-center justify-center gap-3 sm:gap-6 flex-wrap mb-12">
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-[#6E8BFF] to-[#7A5CFF] text-white font-bold flex items-center justify-center text-xs sm:text-sm shadow-md">
+                1
+              </div>
+              <span className="text-xs sm:text-sm font-bold text-gray-900 mt-1">파일 수령</span>
+            </div>
+
+            <span className="text-[#6E8BFF] font-light text-lg sm:text-xl pb-6">≫</span>
+
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-[#6E8BFF] to-[#7A5CFF] text-white font-bold flex items-center justify-center text-xs sm:text-sm shadow-md">
+                2
+              </div>
+              <span className="text-xs sm:text-sm font-bold text-gray-900 mt-1">텍스트 추출</span>
+            </div>
+
+            <span className="text-[#6E8BFF] font-light text-lg sm:text-xl pb-6">≫</span>
+
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-gray-200 border-t-[#6E8BFF] border-r-[#6E8BFF] animate-spin flex items-center justify-center" />
+              <span className="text-xs sm:text-sm font-bold text-gray-900 mt-1">대본 작성 중</span>
+            </div>
+
+            <span className="text-gray-300 font-light text-xl pb-6">≫</span>
+
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-gray-400 text-gray-500 font-medium flex items-center justify-center text-xs sm:text-sm">
+                4
+              </div>
+              <span className="text-xs sm:text-sm font-medium text-gray-400 mt-1">완료</span>
+            </div>
+          </div>
+
+          {/* 하단 [다음 페이지] 버튼 */}
+          <button
+            type="button"
+            onClick={handleGoNext}
+            style={{
+              width: '250px',
+              height: '60px',
+              borderRadius: '16px',
+              paddingTop: '16px',
+              paddingRight: '20px',
+              paddingBottom: '16px',
+              paddingLeft: '20px',
+            }}
+            className="hover-effect-btn flex items-center justify-between font-semibold text-base shadow-md border border-gray-100 transition-all duration-300 cursor-pointer active:scale-95 box-border bg-white"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--gradient-brand-active)';
+              e.currentTarget.style.color = 'var(--color-white)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#ffffff';
+              e.currentTarget.style.color = 'var(--color-text-heading)';
+            }}
+          >
+            <span className="text-base font-semibold">다음 페이지</span>
+            <span className="text-xl font-light">&gt;</span>
+          </button>
+
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================
+  // 2. 대본 설정 및 가이드라인 입력 화면 (평소 화면)
+  // =========================================================
   return (
     <div
       style={{ ...fontStyle, backgroundImage: `url(${bgSvg})` }}
@@ -162,36 +283,17 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
 
           {/* 좌측 패널: PPT / PDF 업로드 */}
           <div
-            className="bg-white shadow-lg flex flex-col justify-start box-border shrink-0 w-full lg:w-[610px] h-auto lg:h-[670px]"
+            className="bg-white shadow-lg border border-white/80 flex flex-col items-center justify-center box-border shrink-0 w-full lg:w-[610px] h-auto lg:h-[670px] min-h-[472px]"
             style={{
               borderRadius: '20px',
-              paddingTop: '50px',
-              paddingRight: '40px',
-              paddingBottom: '60px',
-              paddingLeft: '40px',
+              padding: '30px 20px',
             }}
           >
-            <h2 className="text-2xl font-bold mb-[12px]" style={{ color: 'var(--color-text-heading)' }}>
-              PPT / PDF 업로드
-            </h2>
-            <p className="text-sm mb-[28px]" style={{ color: 'var(--color-text-body)' }}>
-              슬라이드 파일을 업로드하면 AI가 내용을 분석합니다.
-            </p>
-
-            <div className="flex-1 flex flex-col items-center justify-center">
-              <FileUpload
-  type="ppt"
-  file={file}
-  maxSizeMB={20} // 👈 원하는 용량(MB) 설정
-  onFileSelect={(selectedFile) => {
-    setErrorMessage(''); // 이전 에러 초기화
-    setFile(selectedFile);
-  }}
-  onError={(msg) => {
-    setErrorMessage(msg); // 👈 에러 발생 시 페이지 에러 상태에 전달
-  }}
-/>
-            </div>
+            <FileUpload
+              type="ppt"
+              file={file}
+              onFileSelect={(selectedFile) => setFile(selectedFile)}
+            />
           </div>
 
           {/* 우측 패널: 주제 설정 및 가이드라인 */}
@@ -220,20 +322,11 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                 {/* 상단: 발표 주제 + 발표 시간 */}
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4 md:gap-0">
                   <div className="w-full md:w-[352px]">
-                    <label className="block text-sm font-bold mb-2" style={{ color: 'var(--color-text-heading)' }}>
-                      발표 주제 <span className="font-bold text-[#5B6CFB]" style={{ color: 'var(--color-primary-500, #5B6CFB)' }}>(필수)</span>
-                    </label>
-                    <input
-                      type="text"
+                    <TextInput
+                      label={`발표 주제 ${!file ? '(필수)' : ''}`}
                       value={topic}
-                      onChange={(e) => setTopic(e.target.value)}
+                      onChange={(value) => setTopic(value)}
                       placeholder="예) AI 기반 발표 코칭 서비스 기획"
-                      style={{
-                        ...(!file && !topic.trim() && errorMessage ? {} : defaultBorderStyle),
-                      }}
-                      className={`w-full h-[50px] px-4 rounded-xl text-sm font-medium bg-white focus:outline-none shadow-sm placeholder:text-slate-400 ${
-                        !file && !topic.trim() && errorMessage ? 'border-red-400 border' : ''
-                      }`}
                     />
                   </div>
 
@@ -268,21 +361,13 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                 </div>
 
                 {/* 하단: 목차/가이드라인 + 발표 스타일 & 추천 상자 */}
-                <div className="flex flex-col md:flex-row justify-between items-start gap-6 md:gap-0">
-                  <div className="w-full md:w-[352px]">
-                    <label className="block text-sm font-bold mb-2" style={{ color: 'var(--color-text-heading)' }}>
-                      목차 / 가이드라인
-                    </label>
-                    <textarea
+                <div className="flex flex-col md:flex-row justify-between items-center gap-6 md:gap-0">
+                  <div className="w-full md:w-[352px] h-[220px] md:h-[322px]">
+                    <TextInput
+                      label={`목차 / 가이드라인 ${!file ? '(필수)' : ''}`}
                       value={outline}
-                      onChange={(e) => setOutline(e.target.value)}
-                      placeholder={'1. 발표 내용\n2. 설명 대상\n3. 상세한 설명'}
-                      style={{
-                        ...(!file && !outline.trim() && errorMessage ? {} : defaultBorderStyle),
-                      }}
-                      className={`w-full h-[322px] p-4 rounded-2xl text-sm font-medium bg-white resize-none focus:outline-none leading-relaxed shadow-sm placeholder:text-slate-400 ${
-                        !file && !outline.trim() && errorMessage ? 'border-red-400 border' : ''
-                      }`}
+                      onChange={(value) => setOutline(value)}
+                      placeholder="1. 발표 내용&#10;2. 설명 대상&#10;3. 상세한 설명"
                     />
                   </div>
 
@@ -379,7 +464,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
           <button
             type="button"
             onClick={handleOpenModal}
-            className="flex items-center justify-between shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer bg-white text-slate-500 hover:text-white border border-slate-200 hover:border-transparent group"
+            className="hover-effect-btn is-active flex items-center justify-between shadow-lg hover:shadow-xl transition-all cursor-pointer"
             style={{
               width: '250px',
               height: '60px',
@@ -389,23 +474,9 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
               paddingBottom: '16px',
               paddingLeft: '20px',
             }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--gradient-brand-active, linear-gradient(90deg, #6E8BFF 0%, #7A5CFF 100%))';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#ffffff';
-            }}
           >
-            <span className="text-base font-bold transition-colors group-hover:text-white">
-              대본 생성하기
-            </span>
-            <svg
-              className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors shrink-0"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              viewBox="0 0 24 24"
-            >
+            <span className="text-base font-bold">대본 생성하기</span>
+            <svg className="w-5 h-5 text-white shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
           </button>
@@ -413,17 +484,69 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
 
       </div>
 
-      {/* SetModal 호출 */}
-      <SetModal
-        isOpen={isSetModalOpen}
-        onRecheck={() => setIsSetModalOpen(false)}
-        onConfirm={handleConfirmStart}
-        time={time}
-        tone={style == 'casual' ? '편안한 말투' : '격식체'}
-      />
+      {/* 확인 모달 팝업 */}
+      {isConfirmModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div
+            className="bg-white p-7 flex flex-col items-center justify-between text-center box-border animate-fadeIn relative shadow-2xl rounded-[20px]"
+            style={{
+              width: '410px',
+              height: '292px',
+              gap: '24px',
+            }}
+          >
+            <div className="flex flex-col items-center justify-center flex-1 pt-1">
+              <div
+                className="w-12 h-12 rounded-full text-white flex items-center justify-center mb-3 shadow-sm shrink-0"
+                style={{ backgroundColor: 'rgba(91, 108, 251, 1)' }}
+              >
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M11 7H13V9H11V7ZM11 11H13V17H11V11Z" fill="white" />
+                </svg>
+              </div>
+
+              <h3 className="text-lg font-bold leading-snug mb-2" style={{ color: 'var(--color-text-heading)' }}>
+                발표 주제, 발표 시간, 말투 스타일<br />모두 알맞게 설정하셨습니까?
+              </h3>
+
+              <p
+                style={{
+                  fontFamily: 'Pretendard, -apple-system, sans-serif',
+                  fontWeight: 500,
+                  fontSize: '16px',
+                  lineHeight: '140%',
+                  letterSpacing: '-0.025em',
+                  textAlign: 'center',
+                  color: 'var(--color-text-body)',
+                }}
+              >
+                선택 값: {time} / {style === 'formal' ? '격식체' : '편안한 말투'}
+              </p>
+            </div>
+
+            <div className="flex justify-center gap-3 w-full">
+              <button
+                type="button"
+                onClick={() => setIsConfirmModalOpen(false)}
+                style={{ width: '150px', height: '40px' }}
+                className="bg-slate-100 text-slate-600 rounded-xl text-xs font-bold flex items-center justify-center cursor-pointer transition-colors hover:bg-slate-200"
+              >
+                다시 확인하기
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmStart}
+                style={{ width: '150px', height: '40px' }}
+                className="hover-effect-btn is-active text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer flex items-center justify-center"
+              >
+                네, 맞습니다
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
 
 export default AiSetPage;
-
