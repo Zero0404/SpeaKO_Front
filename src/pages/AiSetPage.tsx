@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import bgSvg from '../assets/select-page-background.svg';
 import FileUpload from '../components/FileUpload';
-import TextInput from '../components/TextInput';
-import AiLoadingModal from '../modals/AiLoadingModal';
+import SetModal from '../modals/SetModal';
 
 export interface AiSetPageProps {
   onNext?: () => void;
@@ -19,8 +18,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
   const [style, setStyle] = useState<'formal' | 'casual'>('formal');
   const [file, setFile] = useState<File | null>(null);
 
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [isAiLoadingModalOpen, setIsAiLoadingModalOpen] = useState(false);
+  const [isSetModalOpen, setIsSetModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
@@ -61,12 +59,13 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
       }
     }
 
-    setIsConfirmModalOpen(true);
+    setIsSetModalOpen(true);
   };
 
   const handleConfirmStart = () => {
-    setIsConfirmModalOpen(false);
-    setIsAiLoadingModalOpen(true);
+    setIsSetModalOpen(false);
+    if (onNext) onNext();
+    navigate('/ai-loading');
   };
 
   const fontStyle = {
@@ -163,17 +162,36 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
 
           {/* 좌측 패널: PPT / PDF 업로드 */}
           <div
-            className="bg-white shadow-lg border border-white/80 flex flex-col items-center justify-center box-border shrink-0 w-full lg:w-[610px] h-auto lg:h-[670px] min-h-[472px]"
+            className="bg-white shadow-lg flex flex-col justify-start box-border shrink-0 w-full lg:w-[610px] h-auto lg:h-[670px]"
             style={{
               borderRadius: '20px',
-              padding: '30px 20px',
+              paddingTop: '50px',
+              paddingRight: '40px',
+              paddingBottom: '60px',
+              paddingLeft: '40px',
             }}
           >
-            <FileUpload
-              type="ppt"
-              file={file}
-              onFileSelect={(selectedFile) => setFile(selectedFile)}
-            />
+            <h2 className="text-2xl font-bold mb-[12px]" style={{ color: 'var(--color-text-heading)' }}>
+              PPT / PDF 업로드
+            </h2>
+            <p className="text-sm mb-[28px]" style={{ color: 'var(--color-text-body)' }}>
+              슬라이드 파일을 업로드하면 AI가 내용을 분석합니다.
+            </p>
+
+            <div className="flex-1 flex flex-col items-center justify-center">
+              <FileUpload
+  type="ppt"
+  file={file}
+  maxSizeMB={20} // 👈 원하는 용량(MB) 설정
+  onFileSelect={(selectedFile) => {
+    setErrorMessage(''); // 이전 에러 초기화
+    setFile(selectedFile);
+  }}
+  onError={(msg) => {
+    setErrorMessage(msg); // 👈 에러 발생 시 페이지 에러 상태에 전달
+  }}
+/>
+            </div>
           </div>
 
           {/* 우측 패널: 주제 설정 및 가이드라인 */}
@@ -202,11 +220,20 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                 {/* 상단: 발표 주제 + 발표 시간 */}
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4 md:gap-0">
                   <div className="w-full md:w-[352px]">
-                    <TextInput
-                      label={`발표 주제 ${!file ? '(필수)' : ''}`}
+                    <label className="block text-sm font-bold mb-2" style={{ color: 'var(--color-text-heading)' }}>
+                      발표 주제 <span className="font-bold text-[#5B6CFB]" style={{ color: 'var(--color-primary-500, #5B6CFB)' }}>(필수)</span>
+                    </label>
+                    <input
+                      type="text"
                       value={topic}
-                      onChange={(value) => setTopic(value)}
+                      onChange={(e) => setTopic(e.target.value)}
                       placeholder="예) AI 기반 발표 코칭 서비스 기획"
+                      style={{
+                        ...(!file && !topic.trim() && errorMessage ? {} : defaultBorderStyle),
+                      }}
+                      className={`w-full h-[50px] px-4 rounded-xl text-sm font-medium bg-white focus:outline-none shadow-sm placeholder:text-slate-400 ${
+                        !file && !topic.trim() && errorMessage ? 'border-red-400 border' : ''
+                      }`}
                     />
                   </div>
 
@@ -241,13 +268,21 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                 </div>
 
                 {/* 하단: 목차/가이드라인 + 발표 스타일 & 추천 상자 */}
-                <div className="flex flex-col md:flex-row justify-between items-center gap-6 md:gap-0">
-                  <div className="w-full md:w-[352px] h-[220px] md:h-[322px]">
-                    <TextInput
-                      label={`목차 / 가이드라인 ${!file ? '(필수)' : ''}`}
+                <div className="flex flex-col md:flex-row justify-between items-start gap-6 md:gap-0">
+                  <div className="w-full md:w-[352px]">
+                    <label className="block text-sm font-bold mb-2" style={{ color: 'var(--color-text-heading)' }}>
+                      목차 / 가이드라인
+                    </label>
+                    <textarea
                       value={outline}
-                      onChange={(value) => setOutline(value)}
-                      placeholder="1. 발표 내용&#10;2. 설명 대상&#10;3. 상세한 설명"
+                      onChange={(e) => setOutline(e.target.value)}
+                      placeholder={'1. 발표 내용\n2. 설명 대상\n3. 상세한 설명'}
+                      style={{
+                        ...(!file && !outline.trim() && errorMessage ? {} : defaultBorderStyle),
+                      }}
+                      className={`w-full h-[322px] p-4 rounded-2xl text-sm font-medium bg-white resize-none focus:outline-none leading-relaxed shadow-sm placeholder:text-slate-400 ${
+                        !file && !outline.trim() && errorMessage ? 'border-red-400 border' : ''
+                      }`}
                     />
                   </div>
 
@@ -344,7 +379,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
           <button
             type="button"
             onClick={handleOpenModal}
-            className="hover-effect-btn is-active flex items-center justify-between shadow-lg hover:shadow-xl transition-all cursor-pointer"
+            className="flex items-center justify-between shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer bg-white text-slate-500 hover:text-white border border-slate-200 hover:border-transparent group"
             style={{
               width: '250px',
               height: '60px',
@@ -354,9 +389,23 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
               paddingBottom: '16px',
               paddingLeft: '20px',
             }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--gradient-brand-active, linear-gradient(90deg, #6E8BFF 0%, #7A5CFF 100%))';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#ffffff';
+            }}
           >
-            <span className="text-base font-bold">대본 생성하기</span>
-            <svg className="w-5 h-5 text-white shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+            <span className="text-base font-bold transition-colors group-hover:text-white">
+              대본 생성하기
+            </span>
+            <svg
+              className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors shrink-0"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              viewBox="0 0 24 24"
+            >
               <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
             </svg>
           </button>
@@ -364,80 +413,17 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
 
       </div>
 
-      {/* 확인 모달 팝업 */}
-      {isConfirmModalOpen && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div
-            className="bg-white p-7 flex flex-col items-center justify-between text-center box-border animate-fadeIn relative shadow-2xl rounded-[20px]"
-            style={{
-              width: '410px',
-              height: '292px',
-              gap: '24px',
-            }}
-          >
-            <div className="flex flex-col items-center justify-center flex-1 pt-1">
-              <div
-                className="w-12 h-12 rounded-full text-white flex items-center justify-center mb-3 shadow-sm shrink-0"
-                style={{ backgroundColor: 'rgba(91, 108, 251, 1)' }}
-              >
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M11 7H13V9H11V7ZM11 11H13V17H11V11Z" fill="white" />
-                </svg>
-              </div>
-
-              <h3 className="text-lg font-bold leading-snug mb-2" style={{ color: 'var(--color-text-heading)' }}>
-                발표 주제, 발표 시간, 말투 스타일<br />모두 알맞게 설정하셨습니까?
-              </h3>
-
-              <p
-                style={{
-                  fontFamily: 'Pretendard, -apple-system, sans-serif',
-                  fontWeight: 500,
-                  fontSize: '16px',
-                  lineHeight: '140%',
-                  letterSpacing: '-0.025em',
-                  textAlign: 'center',
-                  color: 'var(--color-text-body)',
-                }}
-              >
-                선택 값: {time} / {style === 'formal' ? '격식체' : '편안한 말투'}
-              </p>
-            </div>
-
-            <div className="flex justify-center gap-3 w-full">
-              <button
-                type="button"
-                onClick={() => setIsConfirmModalOpen(false)}
-                style={{ width: '150px', height: '40px' }}
-                className="bg-slate-100 text-slate-600 rounded-xl text-xs font-bold flex items-center justify-center cursor-pointer transition-colors hover:bg-slate-200"
-              >
-                다시 확인하기
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmStart}
-                style={{ width: '150px', height: '40px' }}
-                className="hover-effect-btn is-active text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer flex items-center justify-center"
-              >
-                네, 맞습니다
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 로딩 화면 모달 */}
-      <AiLoadingModal
-        isOpen={isAiLoadingModalOpen}
-        onClose={() => setIsAiLoadingModalOpen(false)}
-        onNext={() => {
-          setIsAiLoadingModalOpen(false);
-          if (onNext) onNext();
-          navigate('/script-edit');
-        }}
+      {/* SetModal 호출 */}
+      <SetModal
+        isOpen={isSetModalOpen}
+        onRecheck={() => setIsSetModalOpen(false)}
+        onConfirm={handleConfirmStart}
+        time={time}
+        tone={style == 'casual' ? '편안한 말투' : '격식체'}
       />
     </div>
   );
 };
 
 export default AiSetPage;
+
