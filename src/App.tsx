@@ -6,6 +6,8 @@ import AiSetPage from "./pages/AiSetPage";
 import CoachSetPage from "./pages/CoachSetPage";
 import CoachViewPage from "./pages/CoachVeiwPage";
 import MyPage from "./pages/MyPage";
+import FeedbackFileUploadPage from "./pages/FeedbackFileUploadPage";
+import { FeedbackLoadingPage } from "./pages/FeedbackLoadingPage";
 
 
 const App = () => {
@@ -21,6 +23,8 @@ const App = () => {
           <Route path="/coach-set" element={<CoachSetPage />} />
           <Route path="/coach-view" element={<CoachViewPage />} />
           <Route path="/mypage" element={<MyPage />} />
+          <Route path="/feedbackfileupload" element={<FeedbackFileUploadPage />} />
+          <Route path="/feedback-loading" element={<FeedbackLoadingPage />} />
         </Routes>
       </div>
     </>
