@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import bgSvg from '../assets/select-page-background.svg';
 import FileUpload from '../components/FileUpload';
+import TextInput from '../components/TextInput';
 import SetModal from '../modals/SetModal';
 
 export interface AiSetPageProps {
@@ -20,6 +21,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
 
   const [isSetModalOpen, setIsSetModalOpen] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [hasSubmittedWithoutFile, setHasSubmittedWithoutFile] = useState(false);
 
   useEffect(() => {
     const fontId = 'pretendard-font-cdn';
@@ -49,6 +51,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
     setErrorMessage('');
 
     if (!file) {
+      setHasSubmittedWithoutFile(true);
       if (!topic.trim()) {
         setErrorMessage('파일 미업로드 시 발표 주제는 필수 입력 항목입니다.');
         return;
@@ -57,6 +60,8 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
         setErrorMessage('파일 미업로드 시 가이드라인은 필수 입력 항목입니다.');
         return;
       }
+    } else {
+      setHasSubmittedWithoutFile(false);
     }
 
     setIsSetModalOpen(true);
@@ -180,17 +185,18 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
 
             <div className="flex-1 flex flex-col items-center justify-center">
               <FileUpload
-  type="ppt"
-  file={file}
-  maxSizeMB={20} // 👈 원하는 용량(MB) 설정
-  onFileSelect={(selectedFile) => {
-    setErrorMessage(''); // 이전 에러 초기화
-    setFile(selectedFile);
-  }}
-  onError={(msg) => {
-    setErrorMessage(msg); // 👈 에러 발생 시 페이지 에러 상태에 전달
-  }}
-/>
+                type="ppt"
+                file={file}
+                maxSizeMB={20}
+                onFileSelect={(selectedFile) => {
+                  setErrorMessage('');
+                  setFile(selectedFile);
+                  setHasSubmittedWithoutFile(false);
+                }}
+                onError={(msg) => {
+                  setErrorMessage(msg);
+                }}
+              />
             </div>
           </div>
 
@@ -223,18 +229,31 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                     <label className="block text-sm font-bold mb-2" style={{ color: 'var(--color-text-heading)' }}>
                       발표 주제 <span className="font-bold text-[#5B6CFB]" style={{ color: 'var(--color-primary-500, #5B6CFB)' }}>(필수)</span>
                     </label>
-                    <input
-                      type="text"
-                      value={topic}
-                      onChange={(e) => setTopic(e.target.value)}
-                      placeholder="예) AI 기반 발표 코칭 서비스 기획"
+                    <div
                       style={{
-                        ...(!file && !topic.trim() && errorMessage ? {} : defaultBorderStyle),
+                        width: '352px',
+                        height: '50px',
+                        borderRadius: '12px',
+                        borderWidth: '1px',
+                        borderStyle: 'solid',
+                        borderColor: hasSubmittedWithoutFile && !file && !topic.trim() ? 'rgba(255, 118, 118, 1)' : 'rgba(128, 136, 146, 1)',
+                        paddingTop: '10px',
+                        paddingRight: '20px',
+                        paddingBottom: '10px',
+                        paddingLeft: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
                       }}
-                      className={`w-full h-[50px] px-4 rounded-xl text-sm font-medium bg-white focus:outline-none shadow-sm placeholder:text-slate-400 ${
-                        !file && !topic.trim() && errorMessage ? 'border-red-400 border' : ''
-                      }`}
-                    />
+                      className="bg-white shadow-sm box-border overflow-hidden [&>div]:w-full [&_input]:w-full [&_input]:border-0 [&_input]:p-0 [&_input]:bg-transparent"
+                    >
+                      <TextInput
+                        label=""
+                        type="text"
+                        value={topic}
+                        onChange={(value) => setTopic(value)}
+                        placeholder="예) AI 기반 발표 코칭 서비스 기획"
+                      />
+                    </div>
                   </div>
 
                   <div className="w-full md:w-auto">
@@ -277,12 +296,8 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                       value={outline}
                       onChange={(e) => setOutline(e.target.value)}
                       placeholder={'1. 발표 내용\n2. 설명 대상\n3. 상세한 설명'}
-                      style={{
-                        ...(!file && !outline.trim() && errorMessage ? {} : defaultBorderStyle),
-                      }}
-                      className={`w-full h-[322px] p-4 rounded-2xl text-sm font-medium bg-white resize-none focus:outline-none leading-relaxed shadow-sm placeholder:text-slate-400 ${
-                        !file && !outline.trim() && errorMessage ? 'border-red-400 border' : ''
-                      }`}
+                      style={defaultBorderStyle}
+                      className="w-full h-[322px] p-4 rounded-2xl text-sm font-medium bg-white resize-none focus:outline-none leading-relaxed shadow-sm placeholder:text-slate-400"
                     />
                   </div>
 
@@ -373,9 +388,6 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
 
         {/* 3. 하단 대본 생성하기 버튼 */}
         <div className="w-full flex flex-col items-end mt-6">
-          {errorMessage && (
-            <p className="text-xs font-bold text-red-500 mb-2">{errorMessage}</p>
-          )}
           <button
             type="button"
             onClick={handleOpenModal}
@@ -426,4 +438,3 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
 };
 
 export default AiSetPage;
-
