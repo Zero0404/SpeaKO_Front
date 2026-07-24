@@ -1,18 +1,22 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// 에셋 이미지 불러오기 (프로젝트 경로에 맞게 확인해 주세요)
+// 에셋 파일들 (프로젝트 경로에 맞춰 사용)
 import bgSvg from '../assets/select-page-background.svg';
 import featureIllustration from '../assets/feature-script-illustration.svg';
+import bgGradient from '../assets/background_gradiant.png'; // 로딩 배경용
 
 export const CoachSetPage: React.FC = () => {
   const navigate = useNavigate();
+
+  // 상태 관리
   const [file, setFile] = useState<File | null>(null);
   const [scriptText, setScriptText] = useState('');
   const [isDragging, setIsDragging] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // 로딩 화면 전환용 상태
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 드래그 앤 드롭 핸들러
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -40,15 +44,113 @@ export const CoachSetPage: React.FC = () => {
     fileInputRef.current?.click();
   };
 
+  // [발음 코칭 받기] 클릭 시 -> 로딩 상태(true)로 전환!
   const handleStartCoach = () => {
     if (!file && !scriptText.trim()) {
       alert('파일을 업로드하거나 대본을 입력해 주세요.');
       return;
     }
-    // 발음 코칭 실행 페이지로 이동
-    navigate('/coach-view');
+    setIsLoading(true);
   };
 
+  // 로딩 상태가 되면 5초 후 CoachViewPage로 이동
+  useEffect(() => {
+    if (isLoading) {
+      const timer = setTimeout(() => {
+        navigate('/coach-view');
+      }, 5000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading, navigate]);
+
+  // =========================================================
+  // 1. [발음 코칭 받기] 버튼을 눌렀을 때 띄워줄 로딩 화면 (숫자 2 적용)
+  // =========================================================
+  if (isLoading) {
+    return (
+      <div
+        className="min-h-screen w-full flex flex-col items-center justify-center p-6 bg-cover bg-center bg-no-repeat font-sans select-none overflow-hidden"
+        style={{
+          backgroundImage: `url(${bgGradient})`,
+          backgroundColor: '#F8FAFC',
+        }}
+      >
+        <div className="flex flex-col items-center justify-center text-center max-w-2xl mx-auto">
+          
+          {/* 상단 회전 스피너 */}
+          <div className="relative flex items-center justify-center mb-10">
+            <div
+              className="w-20 h-20 rounded-full border-[5px] border-gray-200/80 border-t-transparent animate-spin"
+              style={{
+                borderTopColor: 'rgba(91, 108, 251, 1)',
+                borderRightColor: 'rgba(91, 108, 251, 0.8)',
+              }}
+            />
+          </div>
+
+          {/* 안내 타이틀 & 설명 문구 */}
+          <div className="space-y-3 mb-16">
+            <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+              발음 하이라이팅을 적용하고 있어요
+            </h2>
+            <p className="text-base font-medium text-gray-500">
+              생성된 대본에서 정확한 발음 가이드를 분석 중입니다.
+            </p>
+            <p className="text-sm text-gray-400">
+              잠시만 기다려 주세요. 파일의 용량에 따라 최대 4분까지 소요될 수 있습니다.
+            </p>
+          </div>
+
+          {/* 하단 4단계 위젯 (텍스트 분석 = 숫자 2) */}
+          <div className="flex items-center justify-center gap-6">
+            
+            {/* Step 1: 대본 로드 */}
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#6E8BFF] to-[#7A5CFF] text-white font-bold flex items-center justify-center text-sm shadow-md">
+                1
+              </div>
+              <span className="text-sm font-bold text-gray-900 mt-1">대본 로드</span>
+            </div>
+
+            <span className="text-[#6E8BFF] font-light text-xl pb-6">≫</span>
+
+            {/* Step 2: 텍스트 분석 (숫자 2 적용) */}
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-10 h-10 rounded-full bg-gradient-to-r from-[#6E8BFF] to-[#7A5CFF] text-white font-bold flex items-center justify-center text-sm shadow-md">
+                2
+              </div>
+              <span className="text-sm font-bold text-gray-900 mt-1">텍스트 분석</span>
+            </div>
+
+            <span className="text-[#6E8BFF] font-light text-xl pb-6">≫</span>
+
+            {/* Step 3: 하이라이팅 중 */}
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-10 h-10 rounded-full border-2 border-gray-200 border-t-[#6E8BFF] border-r-[#6E8BFF] animate-spin flex items-center justify-center" />
+              <span className="text-sm font-bold text-gray-900 mt-1">하이라이팅 중</span>
+            </div>
+
+            <span className="text-gray-300 font-light text-xl pb-6">≫</span>
+
+            {/* Step 4: 완료 */}
+            <div className="flex flex-col items-center gap-2">
+              <div className="w-10 h-10 rounded-full border border-gray-400 text-gray-500 font-medium flex items-center justify-center text-sm">
+                4
+              </div>
+              <span className="text-sm font-medium text-gray-400 mt-1">완료</span>
+            </div>
+
+          </div>
+
+        </div>
+      </div>
+    );
+  }
+
+  // =========================================================
+  // 2. 평소 업로드/입력 설정 화면 (SelectPage 누르면 처음 나오는 화면)
+  // =========================================================
   return (
     <div
       className="min-h-screen w-full flex flex-col items-center justify-center p-6 bg-cover bg-center bg-no-repeat font-sans overflow-x-hidden"
@@ -57,23 +159,18 @@ export const CoachSetPage: React.FC = () => {
         backgroundColor: '#F3F4F6',
       }}
     >
-      {/* 전체 메인 컨테이너 */}
       <div className="flex flex-col items-start">
-
-        {/* 1. 흰색 배경 박스 상단 스텝 배너 (1cm 간격: mb-8 / 약 32px) */}
+        {/* 상단 스텝 배너 */}
         <div className="flex items-center gap-6 mb-8 pl-4 select-none">
-          {/* Step 1 (활성화) */}
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-full bg-[#6C7CFF] text-white font-bold flex items-center justify-center text-base shadow-sm">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-r from-[#6E8BFF] to-[#7A5CFF] text-white font-bold flex items-center justify-center text-base shadow-sm">
               1
             </div>
             <span className="font-bold text-gray-900 text-base">코칭 대본 업로드</span>
           </div>
 
-          {/* 화살표 구분자 */}
           <span className="text-gray-400 font-light text-lg">≫</span>
 
-          {/* Step 2 */}
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full border-2 border-gray-400 text-gray-500 font-medium flex items-center justify-center text-base">
               2
@@ -81,10 +178,8 @@ export const CoachSetPage: React.FC = () => {
             <span className="font-medium text-gray-500 text-base">실시간 발음 코칭</span>
           </div>
 
-          {/* 화살표 구분자 */}
           <span className="text-gray-400 font-light text-lg">≫</span>
 
-          {/* Step 3 */}
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full border-2 border-gray-400 text-gray-500 font-medium flex items-center justify-center text-base">
               3
@@ -93,23 +188,18 @@ export const CoachSetPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 2. 메인 박스 + 오른쪽 밑 버튼 영역 */}
+        {/* 메인 1520x670 박스 */}
         <div className="flex flex-col items-end gap-6">
-          
-          {/* 큰 흰색 배경 메인 박스 (1520px x 670px) */}
           <main
             className="bg-white rounded-3xl shadow-lg border border-gray-100 p-10 flex flex-col justify-between box-border"
             style={{ width: '1520px', height: '670px' }}
           >
-            {/* 상단 타이틀 영역 */}
             <div className="mb-4">
               <h1 className="text-2xl font-bold text-gray-900 mb-1">발음 코칭 대본 설정</h1>
               <p className="text-sm text-gray-400">연습할 대본을 넣고 스피치 가이드라인을 세팅하세요.</p>
             </div>
 
-            {/* 두 상자 영역 (530x472 / 882x472) */}
             <div className="flex justify-between items-center w-full">
-              
               {/* 좌측: 파일 업로드 상자 (530px x 472px) */}
               <div
                 onClick={handleBoxClick}
@@ -119,7 +209,7 @@ export const CoachSetPage: React.FC = () => {
                 style={{ width: '530px', height: '472px' }}
                 className={`rounded-2xl border-2 border-dashed transition-all duration-200 flex flex-col items-center justify-center p-6 cursor-pointer box-border relative ${
                   isDragging
-                    ? 'border-indigo-500 bg-indigo-50/50'
+                    ? 'border-[#7A5CFF] bg-indigo-50/50'
                     : 'border-indigo-200 bg-[#F8FAFF] hover:bg-indigo-50/30'
                 }`}
               >
@@ -127,11 +217,10 @@ export const CoachSetPage: React.FC = () => {
                   type="file"
                   ref={fileInputRef}
                   onChange={handleFileChange}
-                  accept=".docx,.txt,.pdf"
+                  accept=".docx,.txt,.pdf,.ppt,.pptx"
                   className="hidden"
                 />
 
-                {/* 중앙 일러스트 로고 */}
                 <div className="w-36 h-36 mb-4 flex items-center justify-center">
                   <img
                     src={featureIllustration}
@@ -143,7 +232,7 @@ export const CoachSetPage: React.FC = () => {
                 {file ? (
                   <div className="text-center">
                     <p className="text-base font-bold text-gray-800 truncate max-w-xs">{file.name}</p>
-                    <p className="text-xs text-indigo-500 mt-1">클릭하여 다른 파일로 변경</p>
+                    <p className="text-xs text-[#7A5CFF] mt-1">클릭하여 다른 파일로 변경</p>
                   </div>
                 ) : (
                   <div className="text-center space-y-2">
@@ -155,7 +244,7 @@ export const CoachSetPage: React.FC = () => {
                     </p>
                     <button
                       type="button"
-                      className="mt-4 px-6 py-2.5 bg-[#6C7CFF] text-white text-sm font-medium rounded-xl shadow-sm hover:bg-indigo-600 transition-colors inline-flex items-center gap-2"
+                      className="mt-4 px-8 py-3 bg-gradient-to-r from-[#6E8BFF] to-[#7A5CFF] text-white text-sm font-semibold rounded-xl shadow-md transition-all duration-300 hover:scale-105 active:scale-95 inline-flex items-center gap-2 cursor-pointer"
                     >
                       <span>↑</span>
                       <span>파일 선택</span>
@@ -167,7 +256,7 @@ export const CoachSetPage: React.FC = () => {
               {/* 우측: 대본 입력 상자 (882px x 472px) */}
               <div
                 style={{ width: '882px', height: '472px' }}
-                className="border border-gray-300 rounded-2xl p-6 bg-white box-border focus-within:border-indigo-400 transition-colors"
+                className="border border-gray-300 rounded-2xl p-6 bg-white box-border focus-within:border-[#7A5CFF] transition-colors"
               >
                 <textarea
                   value={scriptText}
@@ -176,22 +265,20 @@ export const CoachSetPage: React.FC = () => {
                   className="w-full h-full resize-none outline-none text-gray-800 placeholder-gray-400 text-sm leading-relaxed"
                 />
               </div>
-
             </div>
           </main>
 
-          {/* 흰색 배경 바깥쪽 오른쪽 밑에 위치하는 버튼 */}
+          {/* 오른쪽 아래 버튼 */}
           <div className="flex justify-end w-full">
             <button
               type="button"
               onClick={handleStartCoach}
-              className="px-8 py-3.5 bg-[#6C7CFF] hover:bg-indigo-600 text-white font-bold text-base rounded-2xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer transform hover:-translate-y-0.5 active:translate-y-0"
+              className="px-10 py-4 bg-white text-gray-500 font-semibold text-base rounded-2xl shadow-sm border border-gray-100 transition-all duration-300 hover:bg-gradient-to-r hover:from-[#6E8BFF] hover:to-[#7A5CFF] hover:text-white hover:border-transparent hover:shadow-xl hover:scale-105 active:scale-95 flex items-center justify-center gap-4 cursor-pointer"
             >
               <span>발음 코칭 받기</span>
-              <span className="text-lg font-normal">&gt;</span>
+              <span className="text-lg font-light">&gt;</span>
             </button>
           </div>
-
         </div>
       </div>
     </div>
