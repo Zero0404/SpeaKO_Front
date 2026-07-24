@@ -9,6 +9,7 @@ import TextInput from '../components/TextInput';
 import bgSvg from '../assets/select-page-background.svg';
 import bgGradient from '../assets/background_gradiant.png';
 
+// 페이지 불러오기
 export const CoachSetPage: React.FC = () => {
   const navigate = useNavigate();
 
