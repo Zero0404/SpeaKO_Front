@@ -31,21 +31,35 @@ const TYPE_CONFIG: Record<FileUploadType, FileUploadConfig> = {
   },
 };
 
+// 1. 빠져있던 maxSizeMB와 onError 속성 추가
 interface FileUploadProps {
   type: FileUploadType;
   file?: File | null;
+  maxSizeMB?: number; // 추가
   onFileSelect?: (file: File) => void;
+  onError?: (message: string) => void; // 추가
   className?: string;
 }
 
 export const FileUpload: React.FC<FileUploadProps> = ({
   type = 'ppt',
   file = null,
+  maxSizeMB = 20, // 기본값 설정
   onFileSelect,
+  onError,
   className = '',
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const config = TYPE_CONFIG[type];
+
+  // 2. 파일 용량 검증 로직 추가 (선택 사항이지만 권장)
+  const validateAndSelectFile = (selectedFile: File) => {
+    if (maxSizeMB && selectedFile.size > maxSizeMB * 1024 * 1024) {
+      onError?.(`파일 크기는 최대 ${maxSizeMB}MB를 초과할 수 없습니다.`);
+      return;
+    }
+    onFileSelect?.(selectedFile);
+  };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -54,13 +68,13 @@ export const FileUpload: React.FC<FileUploadProps> = ({
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      onFileSelect?.(e.dataTransfer.files[0]);
+      validateAndSelectFile(e.dataTransfer.files[0]);
     }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      onFileSelect?.(e.target.files[0]);
+      validateAndSelectFile(e.target.files[0]);
     }
   };
 
@@ -107,7 +121,7 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         className="hidden"
       />
 
-      {/* 고정 규격 파일 선택 버튼 (width: 220px, height: 48px) */}
+      {/* 고정 규격 파일 선택 버튼 */}
       <button
         type="button"
         onClick={() => fileInputRef.current?.click()}

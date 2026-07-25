@@ -10,12 +10,15 @@ export const FeedbackPage: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // 파일 업로드 여부 확인
+  const isFormValid = Boolean(file);
+
   // [평가 시작하기] 버튼 클릭 시
   const handleStartFeedback = () => {
     setErrorMessage('');
 
-    if (!file) {
-      setErrorMessage('');
+    if (!isFormValid) {
+      setErrorMessage('음성 파일을 업로드해주세요.');
       return;
     }
 
@@ -72,21 +75,43 @@ export const FeedbackPage: React.FC = () => {
           <button
             type="button"
             onClick={handleStartFeedback}
-            className="group flex items-center justify-between shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer bg-white text-[var(--color-text-heading,#27272a)] hover:text-white border border-slate-200 hover:border-transparent box-border w-full sm:w-[250px] h-[54px] sm:h-[60px] px-5 sm:px-6 rounded-[16px]"
+            style={{
+              width: '250px',
+              height: '60px',
+              borderRadius: '16px',
+              paddingTop: '16px',
+              paddingRight: '20px',
+              paddingBottom: '16px',
+              paddingLeft: '20px',
+              opacity: 1,
+              background: isFormValid ? 'var(--gradient-brand-active)' : 'var(--color-inactive-bg, #f3f4f6)',
+              color: isFormValid ? 'var(--color-white, #ffffff)' : '#9CA3AF',
+            }}
+            className={`group flex items-center justify-between shadow-md transition-all duration-300 box-border border border-slate-200 ${
+              isFormValid
+                ? 'cursor-pointer hover:shadow-xl hover:border-transparent'
+                : 'cursor-not-allowed pointer-events-none'
+            }`}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--gradient-brand-active)';
-              e.currentTarget.style.color = 'var(--color-white)';
+              if (isFormValid) {
+                e.currentTarget.style.background = 'var(--gradient-brand-active)';
+                e.currentTarget.style.color = 'var(--color-white)';
+              }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#ffffff';
-              e.currentTarget.style.color = 'var(--color-text-heading, #27272a)';
+              if (isFormValid) {
+                e.currentTarget.style.background = 'var(--gradient-brand-active)';
+                e.currentTarget.style.color = 'var(--color-white)';
+              }
             }}
           >
             <span className="text-sm sm:text-base font-bold transition-colors">
               평가 시작하기
             </span>
             <svg
-              className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors shrink-0"
+              className={`w-5 h-5 transition-colors shrink-0 ${
+                isFormValid ? 'text-white group-hover:text-white' : 'text-slate-400'
+              }`}
               fill="none"
               stroke="currentColor"
               strokeWidth="2.5"
