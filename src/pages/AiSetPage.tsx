@@ -20,11 +20,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
   const [file, setFile] = useState<File | null>(null);
 
   const [isSetModalOpen, setIsSetModalOpen] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
   const [hasSubmittedWithoutFile, setHasSubmittedWithoutFile] = useState(false);
-
-  // 필수 조건: 파일이 있거나, 없으면 주제만 채우면 됨
-  const isFormValid = Boolean(file) || topic.trim() !== '';
 
   useEffect(() => {
     const fontId = 'pretendard-font-cdn';
@@ -50,21 +46,19 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
     ],
   };
 
-  const handleOpenModal = () => {
-    setErrorMessage('');
-
+const handleOpenModal = () => {
     if (!file) {
       setHasSubmittedWithoutFile(true);
-      if (!topic.trim()) {
-        setErrorMessage('파일 미업로드 시 발표 주제는 필수 입력 항목입니다.');
-        return;
-      }
+      if (!topic.trim()) return;
+      if (!outline.trim()) return;
     } else {
       setHasSubmittedWithoutFile(false);
     }
 
     setIsSetModalOpen(true);
   };
+
+
 
   const handleConfirmStart = () => {
     setIsSetModalOpen(false);
@@ -188,12 +182,11 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                 file={file}
                 maxSizeMB={20}
                 onFileSelect={(selectedFile) => {
-                  setErrorMessage('');
                   setFile(selectedFile);
                   setHasSubmittedWithoutFile(false);
                 }}
-                onError={(msg) => {
-                  setErrorMessage(msg);
+                onError={() => {
+                  
                 }}
               />
             </div>
@@ -221,7 +214,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
 
               {/* 내부 위젯 박스 */}
               <div className="flex flex-col justify-between w-full lg:w-[800px] mx-auto gap-6 lg:gap-0 h-auto lg:h-[472px]">
-
+                
                 {/* 상단: 발표 주제 + 발표 시간 */}
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4 md:gap-0">
                   <div className="w-full md:w-[352px]">
@@ -390,11 +383,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
           <button
             type="button"
             onClick={handleOpenModal}
-            className={`flex items-center justify-between shadow-md transition-all duration-300 group ${
-              isFormValid
-                ? 'cursor-pointer text-white hover:shadow-xl border-transparent'
-                : 'cursor-not-allowed pointer-events-none bg-white text-slate-500 border border-slate-200'
-            }`}
+            className="flex items-center justify-between shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer bg-white text-slate-500 hover:text-white border border-slate-200 hover:border-transparent group"
             style={{
               width: '250px',
               height: '60px',
@@ -403,22 +392,19 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
               paddingRight: '20px',
               paddingBottom: '16px',
               paddingLeft: '20px',
-              background: isFormValid
-                ? 'var(--gradient-brand-active, linear-gradient(90deg, #6E8BFF 0%, #7A5CFF 100%))'
-                : '#ffffff',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--gradient-brand-active, linear-gradient(90deg, #6E8BFF 0%, #7A5CFF 100%))';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#ffffff';
             }}
           >
-            <span
-              className={`text-base font-bold transition-colors ${
-                isFormValid ? 'text-white' : ''
-              }`}
-            >
+            <span className="text-base font-bold transition-colors group-hover:text-white">
               대본 생성하기
             </span>
             <svg
-              className={`w-5 h-5 text-slate-400 transition-colors shrink-0 ${
-                isFormValid ? 'text-white' : ''
-              }`}
+              className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors shrink-0"
               fill="none"
               stroke="currentColor"
               strokeWidth="2.5"

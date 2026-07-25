@@ -109,7 +109,7 @@ const HomePage: FC = () => {
     };
 
     return (
-        <div className="w-full pt-20 bg-[var(--color-white)]">
+         <div className="w-full pt-20 bg-[var(--color-white)]">
             {/* Hero Section */}
             <section className="w-full snap-start scroll-mt-20 bg-gradient-to-br from-white via-[#F5F7FF] to-white lg:min-h-[calc(100vh-80px)]">
                 <div className="mx-auto flex max-w-[1600px] flex-col items-center gap-10 px-6 py-16 sm:px-10 md:px-16 lg:min-h-[calc(100vh-80px)] lg:flex-row lg:gap-28 lg:px-28 lg:py-0">
@@ -166,7 +166,7 @@ const HomePage: FC = () => {
             </section>
 
             {/* Why SpeaKO Section */}
-            <section className="flex w-full snap-start scroll-mt-20 items-center bg-[var(--color-white)] px-6 py-16 sm:px-10 md:px-16 lg:min-h-screen lg:px-28 lg:py-24">
+             <section className="flex w-full snap-start scroll-mt-20 items-center bg-[var(--color-white)] px-6 py-16 sm:px-10 md:px-16 lg:min-h-screen lg:px-28 lg:py-24">
                 <div className="mx-auto flex w-full max-w-[1600px] flex-col items-start gap-10 lg:flex-row lg:gap-4">
                     {/* Left - 텍스트 */}
                     <div className="w-full text-center lg:mt-8 lg:w-[500px] lg:shrink-0 lg:text-left">
@@ -409,7 +409,7 @@ const HomePage: FC = () => {
             </section>
 
             {/* Footer */}
-            <footer className="w-full snap-start scroll-mt-20 border-t border-gray-100 bg-white px-6 py-12 sm:px-10 md:px-16 lg:px-28 lg:py-16">
+             <footer className="w-full border-t border-gray-100 bg-white px-6 py-12 sm:px-10 md:px-16 lg:px-28 lg:py-16">
                 <div className="mx-auto flex w-full max-w-[1600px] flex-col items-center gap-10 text-center md:flex-row md:flex-wrap md:items-start md:justify-center md:gap-16 md:text-left lg:gap-50">
                     {/* Brand */}
                     <div className="max-w-xs">
