@@ -6,6 +6,8 @@ import AiSetPage from "./pages/AiSetPage";
 import CoachSetPage from "./pages/CoachSetPage";
 import CoachViewPage from "./pages/CoachVeiwPage";
 import MyPage from "./pages/MyPage";
+import ScriptEditPage from "./pages/ScriptEditPage";
+
 
 const App = () => {
   return (
@@ -21,6 +23,8 @@ const App = () => {
           <Route path="/coach-view" element={<CoachViewPage />} />
           <Route path="/mypage" element={<MyPage />} />
           <Route path="/coach" element={<CoachSetPage />} />      
+          <Route path="/coach" element={<CoachSetPage />} />   
+          <Route path="/script-edit" element={<ScriptEditPage />} />  
           </Routes>
 
       </div>
