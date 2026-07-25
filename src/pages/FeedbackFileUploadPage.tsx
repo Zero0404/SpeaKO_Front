@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 
 import bgSvg from '../assets/select-page-background.svg';
 import FileUpload from '../components/FileUpload';
-import TextInput from '../components/TextInput'; // 
 
 export const FeedbackPage: React.FC = () => {
   const navigate = useNavigate();

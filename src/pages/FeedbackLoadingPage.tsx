@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import bgSvg from '../assets/background_gradiant.png';
-import TextInput from '../components/TextInput';
+
 
 interface FeedbackLoadingPageProps {
   onComplete?: () => void;
