@@ -46,3 +46,8 @@
     backdrop-filter: blur(12px);
   }
 }
+
+html {
+    scroll-snap-type: y proximity;
+    scroll-behavior: smooth; /* 앵커 링크 클릭 시에도 부드럽게 */
+}
