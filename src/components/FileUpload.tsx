@@ -1,0 +1,178 @@
+import React, { useRef } from 'react';
+import featureScriptIllustration from '../assets/feature-script-illustration.svg';
+
+export type FileUploadType = 'ppt' | 'docx' | 'mp3';
+
+interface FileUploadConfig {
+  accept: string;
+  subText: string;
+  width: string;
+  height: string;
+}
+
+// 타입별 규격 및 텍스트 설정
+const TYPE_CONFIG: Record<FileUploadType, FileUploadConfig> = {
+  ppt: {
+    accept: '.ppt, .pptx, .pdf',
+    subText: 'PPT, PPTX, PDF 지원 · 최대 20MB',
+    width: '530px',
+    height: '472px',
+  },
+  docx: {
+    accept: '.docx, .txt, .pdf',
+    subText: 'DOCX, TXT, PDF 지원 · 최대 20MB',
+    width: '530px',
+    height: '472px',
+  },
+  mp3: {
+    accept: '.mp3, .wav, .m4a',
+    subText: '음성 파일 선택 (MP3 / WAV / M4A) · 최대 20MB',
+    width: '1440px',
+    height: '472px',
+  },
+};
+
+interface FileUploadProps {
+  type: FileUploadType;
+  file?: File | null;
+  onFileSelect?: (file: File) => void;
+  onError?: (errorMessage: string) => void; // 💡 검증 에러 발생 시 처리 콜백
+  maxSizeMB?: number; // 💡 최대 용량 (기본값: 20MB)
+  className?: string;
+}
+
+export const FileUpload: React.FC<FileUploadProps> = ({
+  type = 'ppt',
+  file = null,
+  onFileSelect,
+  onError,
+  maxSizeMB = 20,
+  className = '',
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const config = TYPE_CONFIG[type];
+
+  // 💡 파일 확장자 및 용량 검증 로직
+  const validateAndSelect = (selectedFile: File) => {
+    // 1. 확장자 검증
+    const allowedExtensions = config.accept
+      .split(',')
+      .map((ext) => ext.trim().toLowerCase());
+    const fileExtension = `.${selectedFile.name.split('.').pop()?.toLowerCase()}`;
+
+    if (!allowedExtensions.includes(fileExtension)) {
+      onError?.(`허용되지 않는 파일 형식입니다. (${config.accept} 파일만 가능)`);
+      return;
+    }
+
+    // 2. 용량 검증 (MB -> Bytes)
+    const maxSizeBytes = maxSizeMB * 1024 * 1024;
+    if (selectedFile.size > maxSizeBytes) {
+      onError?.(`파일 용량이 너무 큽니다. (최대 ${maxSizeMB}MB까지 가능)`);
+      return;
+    }
+
+    // 검증 통과 시 실행
+    onFileSelect?.(selectedFile);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      validateAndSelect(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      validateAndSelect(e.target.files[0]);
+    }
+  };
+
+  return (
+    <div
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      className={`relative flex flex-col items-center justify-center rounded-[24px] border-2 border-dashed border-[#C7D2FE] bg-[#F5F7FF] transition-all duration-300 hover:border-indigo-400 ${className}`}
+      style={{
+        width: config.width,
+        height: config.height,
+        maxWidth: '100%',
+      }}
+    >
+      {/* 3D 폴더/PPT 이미지 */}
+      <div className="mb-4 flex items-center justify-center">
+        <img
+          src={featureScriptIllustration}
+          alt="File Upload Icon"
+          className="h-28 w-28 object-contain drop-shadow-sm select-none"
+        />
+      </div>
+
+      {/* 안내 텍스트 */}
+      <h3
+        className="text-[17px] font-bold tracking-tight mb-1.5"
+        style={{ color: 'var(--color-text-heading)' }}
+      >
+        파일을 여기에 끌어다 놓거나 클릭하세요
+      </h3>
+
+      {/* 서브 설명 문구 */}
+      <p
+        className="text-[13px] font-normal mb-6"
+        style={{ color: 'var(--color-text-body)' }}
+      >
+        {file ? file.name : config.subText}
+      </p>
+
+      {/* 숨겨진 input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={config.accept}
+        onChange={handleFileChange}
+        className="hidden"
+      />
+
+      {/* 업로드 버튼 (규격 및 중앙 정렬 수정) */}
+      <button
+        type="button"
+        onClick={() => fileInputRef.current?.click()}
+        style={{
+          width: '220px',
+          height: '48px',
+          borderRadius: '100px',
+          paddingTop: '12px',
+          paddingRight: '40px',
+          paddingBottom: '12px',
+          paddingLeft: '28px',
+        }}
+        className="hover-effect-btn is-active flex items-center justify-center gap-[8px] text-base font-semibold shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer box-border"
+      >
+        {/* 업로드 아이콘 (왼쪽) */}
+        <svg
+          className="w-5 h-5 text-white shrink-0"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2.5"
+            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+          />
+        </svg>
+
+        {/* 텍스트 (오른쪽) */}
+        <span>{file ? '파일 변경' : '파일 선택'}</span>
+      </button>
+    </div>
+  );
+};
+
+export default FileUpload;
