@@ -5,8 +5,7 @@ import TextInput from "../components/TextInput";
 interface EmailChangeProps {
   onClose: () => void;
   currentEmail?: string;
-  /** TODO: 실제 API 연동 시 여기서 이메일 변경/인증 요청 호출 */
-  onSave?: (email: string, password: string) => void; // 필요하다면 password도 전달 가능
+  onSave?: (email: string, password: string) => void;
 }
 
 const isValidEmail = (value: string) =>
@@ -14,16 +13,15 @@ const isValidEmail = (value: string) =>
 
 const EmailChange = ({
   onClose,
-  currentEmail = "",
+  currentEmail: _currentEmail, 
+  //  currentEmail = "",
   onSave,
 }: EmailChangeProps) => {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState(""); // 현재 비밀번호 상태
+  const [password, setPassword] = useState("");
 
   const isEmailValid = isValidEmail(email);
   const isPasswordValid = password.trim().length > 0;
-
-  // 두 조건이 모두 충족되어야 활성화
   const canSubmit = isEmailValid && isPasswordValid;
 
   const handleSave = () => {
