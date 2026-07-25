@@ -54,10 +54,25 @@ export const FileUpload: React.FC<FileUploadProps> = ({
 
   // 2. 파일 용량 검증 로직 추가 (선택 사항이지만 권장)
   const validateAndSelectFile = (selectedFile: File) => {
+    // 1) 확장자 검증
+    const allowedExtensions = config.accept
+      .split(',')
+      .map((ext) => ext.trim().toLowerCase());
+    const fileExtension =
+      '.' + (selectedFile.name.split('.').pop()?.toLowerCase() ?? '');
+
+    if (!allowedExtensions.includes(fileExtension)) {
+      onError?.(`지원하지 않는 파일 형식입니다. (${config.accept} 만 가능)`);
+      return;
+    }
+
+    // 2) 파일 크기 검증
     if (maxSizeMB && selectedFile.size > maxSizeMB * 1024 * 1024) {
       onError?.(`파일 크기는 최대 ${maxSizeMB}MB를 초과할 수 없습니다.`);
       return;
     }
+
+    // 3) 통과 시 콜백 실행
     onFileSelect?.(selectedFile);
   };
 
