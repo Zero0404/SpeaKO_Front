@@ -66,11 +66,16 @@ const ScriptPanel = ({
       value={script}
       onChange={(e) => onChange(e.target.value)}
       placeholder="생성된 AI 대본이 들어갑니다."
-      className="min-h-[220px] lg:min-h-[160px] flex-1 resize-none rounded-xl border border-gray-200 p-4 text-sm leading-relaxed text-[color:var(--color-text-heading)] outline-none transition focus:border-[color:var(--color-brand-primary)]"
+      className="min-h-[160px] flex-1 resize-none rounded-xl border border-gray-200 p-4 text-sm leading-relaxed text-[color:var(--color-text-heading)] outline-none transition focus:border-[color:var(--color-brand-primary)]"
     />
   </div>
 );
 
+/* ────────────────────────────────────────────────────────────
+   서브 컴포넌트: 발표 스타일 카드
+   (HoverButton은 아이콘+설명 2줄 레이아웃을 지원하지 않아
+    동일한 hover-effect-btn / is-active 클래스만 재사용해 새로 작성)
+   ──────────────────────────────────────────────────────────── */
 
 const StyleCard = ({
   icon,
@@ -121,6 +126,9 @@ const StyleCard = ({
   </button>
 );
 
+/* ────────────────────────────────────────────────────────────
+   메인 페이지
+   ──────────────────────────────────────────────────────────── */
 
 const ScriptEditPage = () => {
   const [slides, setSlides] = useState<SlideItem[]>([]);
@@ -180,19 +188,13 @@ const ScriptEditPage = () => {
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-5rem)] w-full flex-col bg-slate-50 pt-20">
+    <div className="flex h-[calc(100vh-5rem)] w-full flex-col bg-slate-50 pt-18">
       {/* 상단 바 */}
-      <div className="flex shrink-0 flex-col gap-4 border-b border-gray-100 bg-white px-4 py-4
-        sm:px-6
-        lg:flex-row
-        lg:items-center
-        lg:justify-between
-        lg:px-8"
-    >
+      <div className="flex shrink-0 items-center justify-between border-b border-gray-100 bg-white px-8 py-4">
         <p className="text-sm font-semibold text-[color:var(--color-text-heading)]">
           프로젝트명.pptx
         </p>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-3">
           {/* 임시 버튼: PPT 업로드/미업로드 화면 미리보기 전환 */}
           <button
             type="button"
@@ -204,14 +206,14 @@ const ScriptEditPage = () => {
           </button>
           <button
             type="button"
-            className="flex items-center gap-2 rounded-full bg-[color:var(--color-brand-light)]/15 px-4 py-2.5 sm:px-6 sm:py-3 text-sm font-semibold text-[color:var(--color-brand-primary)] transition hover:bg-[color:var(--color-brand-light)]/25"
+            className="flex items-center gap-2 rounded-full bg-[color:var(--color-brand-light)]/15 px-6 py-3 text-sm font-semibold text-[color:var(--color-brand-primary)] transition hover:bg-[color:var(--color-brand-light)]/25"
           >
             <Volume2 size={18} />
             발표코칭
           </button>
           <button
             type="button"
-            className="flex items-center gap-2 rounded-full bg-[color:var(--color-brand-light)]/15 px-4 py-2.5 sm:px-6 sm:py-3 text-sm font-semibold text-[color:var(--color-brand-primary)] transition hover:bg-[color:var(--color-brand-light)]/25"
+            className="flex items-center gap-2 rounded-full bg-[color:var(--color-brand-light)]/15 px-6 py-3 text-sm font-semibold text-[color:var(--color-brand-primary)] transition hover:bg-[color:var(--color-brand-light)]/25"
           >
             <Download size={18} />
             다운로드
@@ -221,32 +223,14 @@ const ScriptEditPage = () => {
 
       {/* 본문 */}
       <div
-        className={`grid flex-1 gap-6 p-4
-        lg:p-6
-        ${
-        hasSlides
-        ? "grid-cols-1 xl:grid-cols-[280px_1fr_400px]"
-        : "grid-cols-1 xl:grid-cols-[1fr_400px]"
+        className={`grid min-h-[750px] flex-1 gap-8 p-6 ${
+          hasSlides ? "grid-cols-[280px_1fr_400px]" : "grid-cols-[1fr_400px]"
         }`}
-        >
+      >
         {/* 좌측: 슬라이드 리스트 */}
         {hasSlides && (
-          <aside
-            className="
-            order-1
-            flex
-            max-h-[300px]
-            flex-col
-            overflow-hidden
-            rounded-2xl
-            bg-white
-            shadow-sm
-
-            xl:order-none
-            xl:max-h-none
-            "
-            >
-            <div className="flex-1 space-y-3 overflow-y-auto p-3 sm:p-4">
+          <aside className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm">
+            <div className="flex-1 space-y-3 overflow-y-auto p-4">
               {slides.map((slide) => {
                 const isSelected = slide.id === selectedSlideId;
                 return (
@@ -254,7 +238,7 @@ const ScriptEditPage = () => {
                     key={slide.id}
                     type="button"
                     onClick={() => setSelectedSlideId(slide.id)}
-                    className={`flex w-full items-center gap-2 sm:gap-3 rounded-xl border p-2 sm:p-3 text-left transition ${
+                    className={`flex w-full items-center gap-3 rounded-xl border p-3 text-left transition ${
                       isSelected
                         ? "border-[color:var(--color-brand-primary)] bg-indigo-50/60"
                         : "border-transparent hover:bg-gray-50"
@@ -288,34 +272,10 @@ const ScriptEditPage = () => {
         )}
 
         {/* 중앙: 미리보기 + 대본 */}
-        <section className="
-        order-2
-        flex
-        min-w-0
-        flex-col
-        gap-6
-
-        overflow-visible
-
-        xl:order-none
-        xl:overflow-y-auto
-        "
-        >
+        <section className="flex min-w-0 flex-col gap-6 overflow-y-auto">
           {hasSlides ? (
             <>
-              <div
-                className="
-                flex
-                min-h-[220px]
-                lg:min-h-[240px]
-                flex-1
-                items-center
-                justify-center
-                rounded-2xl
-                bg-white
-                shadow-sm
-                "
-                >
+              <div className="flex min-h-[240px] flex-1 items-center justify-center rounded-2xl bg-white shadow-sm">
                 <p className="text-sm text-[color:var(--color-text-body)]">
                   슬라이드 미리보기
                 </p>
@@ -337,28 +297,7 @@ const ScriptEditPage = () => {
         </section>
 
         {/* 우측: 편집 도구 */}
-        <aside
-        className="
-        order-3
-        flex
-        flex-col
-        gap-3
-
-        overflow-visible
-
-        rounded-2xl
-        bg-white
-
-        p-5
-        sm:p-6
-        lg:p-8
-
-        shadow-sm
-
-        xl:order-none
-        xl:overflow-y-auto
-        "
-        >
+        <aside className="flex flex-col gap-3 overflow-y-auto rounded-2xl bg-white p-8 shadow-sm">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-[color:var(--color-text-heading)]">
               편집 도구
@@ -439,7 +378,7 @@ const ScriptEditPage = () => {
             <label className="text-sm font-semibold text-[color:var(--color-text-heading)]">
               발표 스타일
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <StyleCard
                 icon={<Building2 size={18} />}
                 title="격식체"
@@ -465,7 +404,7 @@ const ScriptEditPage = () => {
               value={regenRequest}
               onChange={(e) => setRegenRequest(e.target.value)}
               placeholder="예) 더 간결하게 / 인사말 빼고 바로 주제로 / 더 격식있게 등"
-              className="min-h-[180px] lg:min-h-[140px] flex-1 resize-none rounded-xl border border-gray-200 p-4 text-sm outline-none transition focus:border-[color:var(--color-brand-primary)]"
+              className="min-h-[140px] flex-1 resize-none rounded-xl border border-gray-200 p-4 text-sm outline-none transition focus:border-[color:var(--color-brand-primary)]"
             />
           </div>
 

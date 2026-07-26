@@ -372,6 +372,56 @@ const HomePage: FC = () => {
                     {feature.description}
                   </p>
                 </div>
+            </section>
+
+            {/* Why SpeaKO Section */}
+            <section className="flex min-h-screen w-full snap-start scroll-mt-20 items-center bg-[var(--color-white)] px-28 py-24">
+                <div className="mx-auto flex w-full max-w-[1600px] items-start gap-4">
+                    {/* Left - 텍스트 */}
+                    <div className="mt-8 w-[500px] shrink-0">
+                        <p className="mt-4 text-left text-[25px] font-bold bg-[image:var(--gradient-brand-active)] bg-clip-text text-transparent">
+                            Why SpeaKO
+                        </p>
+
+                        <h2 className="mt-6 text-[70px] font-bold leading-snug text-[var(--color-text-heading)]">
+                            발표가 막막한
+                            <br />
+                            3가지 이유
+                        </h2>
+
+                        <p className="mt-5 text-[25px] leading-7 text-[var(--color-text-body)]">
+                            대부분의 사람들이 발표를 앞두고
+                            <br />
+                            어려워하는 부분들입니다.
+                        </p>
+                    </div>
+
+                    {/* Right - 카드 3개 */}
+                    <div className="mt-64 flex flex-1 gap-8">
+                        {REASONS.map((reason) => {
+                            const Icon = reason.icon;
+
+                            return (
+                                <div
+                                    key={reason.id}
+                                    className="relative w-[340px] pt-6"
+                                >
+                                    {/* Number */}
+                                    <span
+                                        className="
+                                            absolute
+                                            left-10
+                                            -top-8
+                                            z-0
+                                            select-none
+                                            text-[72px]
+                                            font-bold
+                                            leading-none
+                                            text-[var(--color-brand-light)]/45
+                                        "
+                                    >
+                                        {reason.number}
+                                    </span>
 
                 {/* Bottom Tags */}
                 <div className="flex flex-wrap gap-2">
