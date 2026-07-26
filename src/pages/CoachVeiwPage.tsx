@@ -1,11 +1,16 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   FileText,
   Download,
-  ChevronRight,
+  Volume2,
+  AudioLines,
+  Ear,
+  BarChart3,
+  CheckCircle2,
   ChevronRight as ArrowIcon,
 } from "lucide-react";
-import ViewPageBackground from "../assets/background_gradiant.svg";
+import ViewPageBackground from "../assets/background_gradiant.png";
 import MainChip from "../components/MainChip";
 import VoiceRecorder from "../components/VoiceRecorder";
 import TaskChip from "../components/TaskChip";
@@ -31,6 +36,17 @@ interface WordEntry {
   type: HighlightType;
   description: string;
 }
+
+type IconComponent = React.ComponentType<{ size?: number; className?: string }>;
+
+interface PronunciationTip {
+  icon: IconComponent;
+  title: string;
+  description: string;
+}
+
+// 대본 뷰어 / 단어 목록 패널과 우측 사이드바가 같은 세로 길이를 갖도록 고정 높이를 공유한다.
+const PANEL_HEIGHT_CLASS = "h-[640px]";
 
 const HIGHLIGHT_META: Record<
   HighlightType,
@@ -213,6 +229,24 @@ const highlightSummary: { type: HighlightType; count: number }[] = (
   count: wordEntries.filter((w) => w.type === type).length,
 }));
 
+const pronunciationTips: PronunciationTip[] = [
+  {
+    icon: AudioLines,
+    title: "명백한 자음 발음",
+    description: "'ㄷ,ㅈ,ㅅ' 계열의 자음을 더 또렷하게 발음해보세요.",
+  },
+  {
+    icon: Ear,
+    title: "끝소리 주의",
+    description: "단어의 끝소리를 자연스럽게 마무리해보세요.",
+  },
+  {
+    icon: BarChart3,
+    title: "강세와 억양",
+    description: "중요한 키워드에 강세를 주면 더 전달력이 높아져요.",
+  },
+];
+
 /* ────────────────────────────────────────────────────────────
    서브 컴포넌트
    ──────────────────────────────────────────────────────────── */
@@ -245,7 +279,7 @@ const HighlightSpan = ({
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
       onClick={onClick}
-      className={`rounded-sm px-1 font-semibold transition-shadow ${meta.bgClass} ${meta.textClass} ${meta.shadow} ${onClick ? "cursor-pointer" : ""} ${isFocused ? "ring-2 ring-offset-2 ring-current" : ""}`}
+      className={`rounded-[2px] px-0.5 font-semibold transition-shadow ${meta.bgClass} ${meta.textClass} ${meta.shadow} ${onClick ? "cursor-pointer" : ""} ${isFocused ? "ring-2 ring-offset-2 ring-current" : ""}`}
     >
       {children}
     </span>
@@ -256,7 +290,7 @@ const TypeBadge = ({ type }: { type: HighlightType }) => {
   const meta = HIGHLIGHT_META[type];
   return (
     <span
-      className={`flex w-24 shrink-0 items-center justify-center rounded-lg py-2 text-base font-bold font-['Pretendard'] leading-4 ${meta.bgClass} ${meta.textClass}`}
+      className={`flex w-24 shrink-0 items-center justify-center rounded-lg py-3 text-base font-bold font-['Pretendard'] leading-4 ${meta.bgClass} ${meta.textClass} ${meta.shadow}`}
     >
       {meta.shortLabel}
     </span>
@@ -278,7 +312,7 @@ const WordListCard = ({
       type="button"
       id={`word-${entry.id}`}
       onClick={onClick}
-      className={`flex w-full items-start gap-4 rounded-2xl bg-[color:var(--color-white)] px-6 py-4 text-left shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 transition ${isFocused ? "ring-2 ring-[color:var(--color-brand-primary)] ring-offset-2" : ""}`}
+      className={`flex w-full items-center gap-4 rounded-2xl bg-[color:var(--color-white)] px-6 py-4 text-left shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 transition ${isFocused ? "ring-2 ring-[color:var(--color-brand-primary)] ring-offset-2" : ""}`}
     >
       <TypeBadge type={entry.type} />
       <div className="flex flex-1 flex-col gap-1.5">
@@ -312,6 +346,7 @@ type TabKey = "viewer" | "words";
 type WordFilter = "all" | HighlightType;
 
 const CoachViewPage = () => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabKey>("viewer");
   const [wordFilter, setWordFilter] = useState<WordFilter>("all");
   const [focusedId, setFocusedId] = useState<string | null>(null);
@@ -319,6 +354,17 @@ const CoachViewPage = () => {
 
   const handleCheckScript = () => {};
   const handleDownload = () => {};
+
+  // 헤더의 "파일로 평가받기" — 파일 업로드로 평가받는 플로우로 이동
+  const handleFileEvaluation = () => {
+    navigate("/feedback-fileupload");
+  };
+
+  // 사이드바의 "실시간 평가받기" — 실시간 평가 로딩 화면으로 이동
+  const handleRealtimeEvaluation = () => {
+    navigate("/feedback-loading");
+  };
+
   const handleRecordingComplete = (
     audioBlob: Blob,
     durationSeconds: number,
@@ -356,6 +402,83 @@ const CoachViewPage = () => {
       ? wordEntries
       : wordEntries.filter((w) => w.type === wordFilter);
 
+  const summarySidebar = (
+    <aside
+      className={`flex ${PANEL_HEIGHT_CLASS} flex-col gap-6 overflow-y-auto rounded-[20px] bg-[color:var(--color-white)] px-6 py-10 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20`}
+    >
+      <div className="flex flex-col gap-4">
+        <h3 className="pl-1 text-xl font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
+          하이라이트 요약
+        </h3>
+        <div className="flex flex-col gap-4">
+          {highlightSummary.map(({ type, count }) => {
+            const meta = HIGHLIGHT_META[type];
+            return (
+              <button
+                type="button"
+                key={type}
+                onClick={() => {
+                  setActiveTab("words");
+                  setWordFilter(type);
+                }}
+                className="flex h-11 items-center justify-between rounded-lg px-4 py-2 text-left shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 transition hover:bg-slate-50"
+              >
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`size-2 rounded-full ${meta.bgClass.replace("/10", "")}`}
+                  />
+                  <span
+                    className={`text-base font-bold font-['Pretendard'] leading-4 ${meta.textClass}`}
+                  >
+                    {meta.label}
+                  </span>
+                </div>
+                <span className="text-base font-semibold font-['Pretendard'] leading-6 text-[color:var(--color-text-heading)]">
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <h3 className="pl-1 text-xl font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
+          발음 팁
+        </h3>
+        <div className="flex flex-col gap-4">
+          {pronunciationTips.map((tip) => {
+            const Icon = tip.icon;
+            return (
+              <div key={tip.title} className="flex items-start gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-brand-primary)]/10 text-[color:var(--color-brand-primary)]">
+                  <Icon size={18} />
+                </div>
+                <div className="flex flex-col gap-0.5 pt-0.5">
+                  <span className="text-sm font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
+                    {tip.title}
+                  </span>
+                  <span className="text-sm font-medium font-['Pretendard'] leading-5 text-[color:var(--color-text-body)]">
+                    {tip.description}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleRealtimeEvaluation}
+        className="mt-auto flex w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)] py-3 text-base font-bold font-['Pretendard'] text-[color:var(--color-white)] transition hover:opacity-90"
+      >
+        <CheckCircle2 size={18} />
+        실시간 평가받기
+      </button>
+    </aside>
+  );
+
   return (
     <div
       className="min-h-screen w-full px-6 py-8 lg:px-12 lg:py-10"
@@ -367,7 +490,7 @@ const CoachViewPage = () => {
         backgroundRepeat: "no-repeat",
       }}
     >
-      <div className="flex flex-col gap-4 rounded-xl bg-[color:var(--color-white)] px-6 py-4 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-xl bg-[color:var(--color-white)] px-6 py-2 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 sm:flex-row sm:items-center sm:justify-between mt-20">
         <div className="flex flex-wrap items-center gap-5">
           <h2 className="text-xl font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
             하이라이트 범례
@@ -380,6 +503,13 @@ const CoachViewPage = () => {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {activeTab === "viewer" && (
+            <TaskChip
+              icon={Volume2}
+              label="파일로 평가받기"
+              onClick={handleFileEvaluation}
+            />
+          )}
           <TaskChip
             icon={FileText}
             label="대본 확인"
@@ -408,9 +538,11 @@ const CoachViewPage = () => {
         />
       </div>
 
-      {activeTab === "viewer" ? (
-        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
-          <section className="flex flex-col gap-3 rounded-[20px] bg-[color:var(--color-white)] px-6 py-7">
+      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+        {activeTab === "viewer" ? (
+          <section
+            className={`flex ${PANEL_HEIGHT_CLASS} flex-col gap-3 rounded-[20px] bg-[color:var(--color-white)] px-6 py-7`}
+          >
             <div className="flex items-center gap-1 pl-1">
               <h3 className="text-lg font-bold font-['Pretendard'] leading-4 text-[color:var(--color-text-heading)]">
                 전체 대본_하이라이트 적용
@@ -424,7 +556,7 @@ const CoachViewPage = () => {
               </div>
             </div>
             <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
-            <div className="max-h-[560px] flex-1 overflow-y-auto rounded-xl bg-[color:var(--color-white)] p-6 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20">
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-xl bg-[color:var(--color-white)] p-6 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20">
               <div className="flex flex-col gap-5 text-base font-semibold font-['Pretendard'] leading-8 text-[color:var(--color-text-heading)]">
                 {scriptParagraphs.map((paragraph, pIdx) => (
                   <p key={pIdx}>
@@ -450,107 +582,59 @@ const CoachViewPage = () => {
               </div>
             </div>
           </section>
-          <aside className="flex flex-col gap-6">
-            <div className="flex flex-col gap-6 rounded-[20px] bg-[color:var(--color-white)] px-6 py-10 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20">
-              <div className="flex items-center justify-between pl-1">
-                <h3 className="text-xl font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
-                  발음 종합 점수
-                </h3>
-                <button
-                  type="button"
-                  className="flex items-center gap-1.5 text-base font-medium font-['Pretendard'] leading-4 text-[color:var(--color-brand-primary)]"
-                >
-                  상세 분석 보기
-                  <ChevronRight size={18} />
-                </button>
-              </div>
-              <div className="flex h-40 items-center justify-center rounded-xl border border-dashed border-slate-500/25 text-sm font-medium text-[color:var(--color-text-body)]">
-                점수 위젯 준비 중
-              </div>
-            </div>
-            <div className="flex flex-col gap-6 rounded-[20px] bg-[color:var(--color-white)] px-6 py-10 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20">
-              <h3 className="pl-1 text-xl font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
-                하이라이트 요약
-              </h3>
-              <div className="flex flex-col gap-4">
-                {highlightSummary.map(({ type, count }) => {
+        ) : (
+          <section
+            className={`flex ${PANEL_HEIGHT_CLASS} flex-col gap-4 rounded-[20px] bg-[color:var(--color-white)] px-6 py-7`}
+          >
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setWordFilter("all")}
+                className={`rounded-full px-5 py-2.5 text-base font-semibold font-['Pretendard'] leading-4 transition ${wordFilter === "all" ? "bg-[color:var(--color-brand-primary)] text-[color:var(--color-white)]" : "bg-[color:var(--color-white)] text-[color:var(--color-text-heading)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20"}`}
+              >
+                전체
+              </button>
+              {(["duration", "liaison", "mismatch"] as HighlightType[]).map(
+                (type) => {
                   const meta = HIGHLIGHT_META[type];
+                  const count =
+                    highlightSummary.find((s) => s.type === type)?.count ?? 0;
                   return (
                     <button
-                      type="button"
                       key={type}
-                      onClick={() => {
-                        setActiveTab("words");
-                        setWordFilter(type);
-                      }}
-                      className="flex h-11 items-center justify-between rounded-lg px-4 py-2 text-left shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 transition hover:bg-slate-50"
+                      type="button"
+                      onClick={() => setWordFilter(type)}
+                      className={`rounded-full px-5 py-2.5 text-base font-semibold font-['Pretendard'] leading-4 transition ${wordFilter === type ? "bg-[color:var(--color-brand-primary)] text-[color:var(--color-white)]" : "bg-[color:var(--color-white)] text-[color:var(--color-text-heading)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20"}`}
                     >
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`size-2 rounded-full ${meta.bgClass.replace("/10", "")}`}
-                        />
-                        <span
-                          className={`text-base font-bold font-['Pretendard'] leading-4 ${meta.textClass}`}
-                        >
-                          {meta.label}
-                        </span>
-                      </div>
-                      <span className="text-base font-semibold font-['Pretendard'] leading-6 text-[color:var(--color-text-heading)]">
-                        {count}
-                      </span>
+                      {meta.shortLabel} ({count})
                     </button>
                   );
-                })}
+                },
+              )}
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+              <div className="flex flex-col gap-4">
+                {filteredWordEntries.length === 0 ? (
+                  <div className="flex h-32 items-center justify-center rounded-2xl bg-[color:var(--color-white)] text-sm font-medium text-[color:var(--color-text-body)] shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20">
+                    해당하는 단어가 없습니다.
+                  </div>
+                ) : (
+                  filteredWordEntries.map((entry, idx) => (
+                    <WordListCard
+                      key={`${entry.id}-${idx}`}
+                      entry={entry}
+                      isFocused={focusedId === entry.id}
+                      onClick={() => focusHighlight(entry.id, "viewer")}
+                    />
+                  ))
+                )}
               </div>
             </div>
-          </aside>
-        </div>
-      ) : (
-        <div className="mt-6 flex flex-col gap-6">
-          <div className="flex flex-wrap items-center gap-2.5">
-            <button
-              type="button"
-              onClick={() => setWordFilter("all")}
-              className={`rounded-full px-5 py-2.5 text-base font-semibold font-['Pretendard'] leading-4 transition ${wordFilter === "all" ? "bg-[color:var(--color-brand-primary)] text-[color:var(--color-white)]" : "bg-[color:var(--color-white)] text-[color:var(--color-text-heading)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20"}`}
-            >
-              전체
-            </button>
-            {(["duration", "liaison", "mismatch"] as HighlightType[]).map(
-              (type) => {
-                const meta = HIGHLIGHT_META[type];
-                const count =
-                  highlightSummary.find((s) => s.type === type)?.count ?? 0;
-                return (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setWordFilter(type)}
-                    className={`rounded-full px-5 py-2.5 text-base font-semibold font-['Pretendard'] leading-4 transition ${wordFilter === type ? "bg-[color:var(--color-brand-primary)] text-[color:var(--color-white)]" : "bg-[color:var(--color-white)] text-[color:var(--color-text-heading)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20"}`}
-                  >
-                    {meta.shortLabel} ({count})
-                  </button>
-                );
-              },
-            )}
-          </div>
-          <div className="flex flex-col gap-4">
-            {filteredWordEntries.length === 0 ? (
-              <div className="flex h-32 items-center justify-center rounded-2xl bg-[color:var(--color-white)] text-sm font-medium text-[color:var(--color-text-body)] shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20">
-                해당하는 단어가 없습니다.
-              </div>
-            ) : (
-              filteredWordEntries.map((entry, idx) => (
-                <WordListCard
-                  key={`${entry.id}-${idx}`}
-                  entry={entry}
-                  isFocused={focusedId === entry.id}
-                  onClick={() => focusHighlight(entry.id, "viewer")}
-                />
-              ))
-            )}
-          </div>
-        </div>
-      )}
+          </section>
+        )}
+
+        {summarySidebar}
+      </div>
     </div>
   );
 };

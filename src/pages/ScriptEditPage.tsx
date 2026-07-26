@@ -35,7 +35,11 @@ const ScriptPanel = ({
   dashed?: boolean;
 }) => (
   <div
-    className={`flex flex-1 flex-col gap-5 rounded-2xl p-8 ${
+    className={`flex flex-1 flex-col gap-5 rounded-2xl
+    p-5
+    sm:p-6
+    lg:p-8
+    ${
       dashed
         ? "border-2 border-dashed border-[color:var(--color-brand-primary)]/50 bg-white"
         : "bg-white shadow-sm"

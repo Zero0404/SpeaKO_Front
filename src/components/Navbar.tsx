@@ -12,40 +12,38 @@ const Navbar = () => {
 
   return (
     <>
-      <header className="w-full h-20 border-b border-gray-100 bg-white">
-        <div className="mx-auto flex h-full max-w-[2000px] items-center justify-between px-12">
+      <header className="absolute top-0 left-0 right-0 z-50 w-full h-28 transparent-bg">
+        <div className="flex h-full w-full items-center justify-between py-6 px-6 lg:px-12">
           {/* 왼쪽 */}
-          <div className="flex items-center gap-16">
+          <div className="flex items-center gap-20">
             <Link to="/">
-              <img src={logo} alt="SpeaKO" className="h-11 w-auto" />
+              <img
+                src={logo}
+                alt="SpeaKO"
+                className="h-14 w-auto"
+              />
             </Link>
 
-            <nav className="flex items-center gap-12">
+            <nav className="flex items-center gap-14">
               <LinkButton to="/service">서비스 소개</LinkButton>
               <LinkButton to="/pricing">요금 안내</LinkButton>
             </nav>
           </div>
 
           {/* 오른쪽 */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-7">
             <Link
               to="/mypage"
-              className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)]"
+              className="flex size-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)]"
             >
-              <User size={18} className="text-[color:var(--color-white)]"/>
+              <User size={22} className="text-[color:var(--color-white)]" />
             </Link>
-            <button
-              onClick={() => setIsLoginOpen(true)}
-              className="text-sm font-medium text-gray-700 transition hover:text-[#6E8BFF]"
-            >
-              로그인
-            </button>
 
             <button
-              onClick={() => setIsSignupOpen(true)}
-              className="rounded-2xl bg-gradient-to-r from-[#6E8BFF] to-[#7A5CFF] px-7 py-3 text-sm font-semibold text-white shadow-md transition hover:scale-105"
+              onClick={() => setIsLoginOpen(true)}
+              className="rounded-2xl hover-effect-btn is-active px-8 py-3.5 text-base font-semibold text-white shadow-md transition hover:scale-105"
             >
-              회원가입
+              로그인
             </button>
           </div>
         </div>

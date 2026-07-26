@@ -64,9 +64,10 @@ const PasswordChange = ({ onClose, onSave }: PasswordChangeProps) => {
             type="button"
             onClick={handleSave}
             disabled={!isValid}
+            style={isValid ? { backgroundImage: "var(--gradient-brand-active)" } : undefined}
             className={`flex-1 rounded-xl py-3 text-sm font-semibold transition ${
               isValid
-                ? "bg-[var(--color-brand-primary)] text-white hover:bg-indigo-600"
+                ? "text-white hover:opacity-90"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
             }`}
           >
