@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Mic, Play, Pause, Square, RotateCcw, RotateCw } from "lucide-react";
+import { Mic, Play, Pause, Square, RotateCcw, RotateCw, Repeat } from "lucide-react";
 
 /* ────────────────────────────────────────────────────────────
    상수 / 유틸
@@ -43,22 +43,58 @@ const resampleWaveform = (data: number[], targetLength: number): number[] => {
 type RecorderPhase = "idle" | "requesting" | "recording" | "recorded";
 
 /* ────────────────────────────────────────────────────────────
-   서브 컴포넌트: 파형
+   서브 컴포넌트: 파형 (클릭 / 드래그로 탐색 가능)
    ──────────────────────────────────────────────────────────── */
 
 const Waveform = ({
   bars,
   progressRatio,
+  onSeek,
 }: {
   bars: number[];
   /** 0~1, 재생 진행률. null이면 전부 "미재생" 색으로 표시 */
   progressRatio: number | null;
+  /** 넘기면 파형 클릭/드래그로 탐색(seek) 가능해짐. ratio: 0~1 */
+  onSeek?: (ratio: number) => void;
 }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
   const playedCount =
     progressRatio === null ? 0 : Math.round(progressRatio * bars.length);
 
+  const getRatioFromEvent = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const el = containerRef.current;
+    if (!el) return 0;
+    const rect = el.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    return Math.min(Math.max(x / rect.width, 0), 1);
+  }, []);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!onSeek) return;
+    setIsDragging(true);
+    e.currentTarget.setPointerCapture(e.pointerId);
+    onSeek(getRatioFromEvent(e));
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!onSeek || !isDragging) return;
+    onSeek(getRatioFromEvent(e));
+  };
+
+  const stopDragging = () => setIsDragging(false);
+
   return (
-    <div className="flex h-8 flex-1 items-center gap-[3px] overflow-hidden">
+    <div
+      ref={containerRef}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={stopDragging}
+      onPointerCancel={stopDragging}
+      className={`flex h-8 flex-1 items-center gap-[3px] overflow-hidden ${
+        onSeek ? "cursor-pointer" : ""
+      }`}
+    >
       {bars.map((value, i) => {
         const isPlayed = progressRatio !== null && i < playedCount;
         return (
@@ -255,7 +291,7 @@ const VoiceRecorder = ({
     mediaRecorderRef.current?.stop();
   }, []);
 
-  /* ── 다시 녹음 (초기화) ──────────────────────────────────── */
+  /* ── 다시 녹음 (처음부터 새로 녹음) ──────────────────────── */
   const resetRecording = useCallback(() => {
     if (audioUrlRef.current) {
       URL.revokeObjectURL(audioUrlRef.current);
@@ -294,7 +330,21 @@ const VoiceRecorder = ({
     [recordedDuration]
   );
 
-  const hasStartedPlaying = currentTime > 0.05 || isPlaying;
+  /** 파형을 클릭하거나 드래그했을 때 해당 위치로 이동. 정지 상태였다면 그 지점부터 바로 재생 시작 */
+  const seekToRatio = useCallback(
+    (ratio: number) => {
+      const audioEl = audioElRef.current;
+      if (!audioEl || !recordedDuration) return;
+      const next = ratio * recordedDuration;
+      audioEl.currentTime = next;
+      setCurrentTime(next);
+      if (audioEl.paused) {
+        audioEl.play().catch(() => setError("오디오를 재생할 수 없습니다."));
+      }
+    },
+    [recordedDuration]
+  );
+
   const progressRatio =
     phase === "recorded" && recordedDuration > 0
       ? Math.min(currentTime / recordedDuration, 1)
@@ -328,7 +378,7 @@ const VoiceRecorder = ({
     );
   }
 
-  // 2) recording: 일시정지 / 정지 / 경과시간 / 실시간 파형
+  // 2) recording: 일시정지 / 정지 / 경과시간 / 실시간 파형 (탐색 불가)
   if (phase === "recording") {
     return (
       <div className={containerClass}>
@@ -364,7 +414,8 @@ const VoiceRecorder = ({
     );
   }
 
-  // 3) recorded: 재생 준비됨 / 재생 중 / 재생 일시정지
+  // 3) recorded: 재생 준비됨 / 재생 중 / 재생 일시정지 — 파형 클릭·드래그로 탐색 가능
+  // 되감기/재생/앞으로/다시 녹음 버튼은 재생 시작 여부와 무관하게 항상 노출한다.
   return (
     <div className={containerClass}>
       <audio
@@ -377,16 +428,14 @@ const VoiceRecorder = ({
         className="hidden"
       />
 
-      {hasStartedPlaying && (
-        <button
-          type="button"
-          onClick={() => skip(-SKIP_SECONDS)}
-          aria-label={`${SKIP_SECONDS}초 되감기`}
-          className="flex size-6 shrink-0 items-center justify-center text-[color:var(--color-text-body)] transition hover:text-[color:var(--color-brand-primary)]"
-        >
-          <RotateCcw size={18} />
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => skip(-SKIP_SECONDS)}
+        aria-label={`${SKIP_SECONDS}초 되감기`}
+        className="flex size-6 shrink-0 items-center justify-center text-[color:var(--color-text-body)] transition hover:text-[color:var(--color-brand-primary)]"
+      >
+        <RotateCcw size={18} />
+      </button>
 
       <button
         type="button"
@@ -401,25 +450,23 @@ const VoiceRecorder = ({
         )}
       </button>
 
-      {hasStartedPlaying ? (
-        <button
-          type="button"
-          onClick={() => skip(SKIP_SECONDS)}
-          aria-label={`${SKIP_SECONDS}초 앞으로`}
-          className="flex size-6 shrink-0 items-center justify-center text-[color:var(--color-text-body)] transition hover:text-[color:var(--color-brand-primary)]"
-        >
-          <RotateCw size={18} />
-        </button>
-      ) : (
-        <button
-          type="button"
-          onClick={resetRecording}
-          aria-label="다시 녹음"
-          className="flex size-6 shrink-0 items-center justify-center text-[color:var(--color-text-body)] transition hover:text-[color:var(--color-brand-primary)]"
-        >
-          <RotateCcw size={18} />
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={() => skip(SKIP_SECONDS)}
+        aria-label={`${SKIP_SECONDS}초 앞으로`}
+        className="flex size-6 shrink-0 items-center justify-center text-[color:var(--color-text-body)] transition hover:text-[color:var(--color-brand-primary)]"
+      >
+        <RotateCw size={18} />
+      </button>
+
+      <button
+        type="button"
+        onClick={resetRecording}
+        aria-label="처음부터 다시 녹음"
+        className="flex size-6 shrink-0 items-center justify-center text-[color:var(--color-text-body)] transition hover:text-[color:var(--color-brand-primary)]"
+      >
+        <Repeat size={18} />
+      </button>
 
       <span className="shrink-0 text-base font-['Pretendard'] leading-4">
         <span className="font-bold text-[color:var(--color-text-heading)]">
@@ -431,6 +478,7 @@ const VoiceRecorder = ({
       <Waveform
         bars={finalBars.length ? finalBars : new Array(NUM_BARS).fill(0.12)}
         progressRatio={progressRatio}
+        onSeek={seekToRatio}
       />
     </div>
   );
