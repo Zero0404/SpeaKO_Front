@@ -91,78 +91,87 @@ const isFormValid = file
       <div className="w-full max-w-[1520px] flex flex-col items-center mt-15">
 
         {/* 1. 상단 스텝 바 & 경고 메시지 상자 */}
-        <div className="w-full flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-0 mb-6">
-          <div className="flex flex-wrap items-center gap-3 sm:gap-[45px] min-h-[38px]">
-            <div className="flex items-center gap-2">
-              <span
-                className="w-7 h-7 rounded-full text-white text-sm font-bold flex items-center justify-center shadow-sm"
-                style={{ backgroundImage: 'var(--gradient-brand-active)' }}
-              >
-                1
-              </span>
-              <span className="text-sm font-bold" style={{ color: 'var(--color-text-heading)' }}>
-                자료 업로드 / 가이드라인 입력
-              </span>
-            </div>
+<div className="w-full flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-0 mb-6">
+  <div
+    style={{
+      height: '38px',
+      opacity: 1,
+    }}
+    className="flex items-center gap-4 md:gap-[45px] pl-1 select-none"
+  >
+    {/* 1단계 - 활성 */}
+    <div className="flex items-center gap-2.5 shrink-0">
+      <div
+        style={{ backgroundImage: 'var(--gradient-brand-active)' }}
+        className="w-8 h-8 rounded-full text-white font-bold flex items-center justify-center text-sm shadow-sm"
+      >
+        1
+      </div>
+      <span className="font-bold text-[var(--color-text-heading)] text-sm md:text-base whitespace-nowrap">
+        자료 업로드 / 가이드라인 입력
+      </span>
+    </div>
 
-            <span className="text-slate-300 text-sm font-bold">≫</span>
+    <span className="text-gray-400 font-light text-base shrink-0">≫</span>
 
-            <div className="flex items-center gap-2">
-              <span className="w-7 h-7 rounded-full bg-white text-slate-400 text-sm font-bold flex items-center justify-center shadow-sm border border-slate-200">
-                2
-              </span>
-              <span className="text-sm font-medium" style={{ color: 'var(--color-text-body)' }}>
-                대본 미리보기
-              </span>
-            </div>
+    {/* 2단계 - 비활성 */}
+    <div className="flex items-center gap-2.5 shrink-0">
+      <div className="w-8 h-8 rounded-full border-2 border-gray-400 text-gray-500 font-medium flex items-center justify-center text-sm">
+        2
+      </div>
+      <span className="font-medium text-gray-500 text-sm md:text-base whitespace-nowrap">
+        대본 미리보기
+      </span>
+    </div>
 
-            <span className="text-slate-300 text-sm font-bold">≫</span>
+    <span className="text-gray-400 font-light text-base shrink-0">≫</span>
 
-            <div className="flex items-center gap-2">
-              <span className="w-7 h-7 rounded-full bg-white text-slate-400 text-sm font-bold flex items-center justify-center shadow-sm border border-slate-200">
-                3
-              </span>
-              <span className="text-sm font-medium" style={{ color: 'var(--color-text-body)' }}>
-                대본 생성
-              </span>
-            </div>
-          </div>
+    {/* 3단계 - 비활성 */}
+    <div className="flex items-center gap-2.5 shrink-0">
+      <div className="w-8 h-8 rounded-full border-2 border-gray-400 text-gray-500 font-medium flex items-center justify-center text-sm">
+        3
+      </div>
+      <span className="font-medium text-gray-500 text-sm md:text-base whitespace-nowrap">
+        대본 생성
+      </span>
+    </div>
+  </div>
 
-          {/* 경고 상자 */}
-          <div className="relative self-end md:self-auto shrink-0">
-            <div
-              className="bg-white border border-red-100 shadow-sm flex flex-col items-start justify-center box-border relative z-10"
-              style={{
-                width: '329px',
-                height: '68px',
-                borderRadius: '12px',
-                paddingTop: '16px',
-                paddingRight: '20px',
-                paddingBottom: '16px',
-                paddingLeft: '20px',
-              }}
-            >
-              <p className="text-xs font-medium text-red-500 leading-snug">
-                파일 업로드를 하지 않을 시,<br />
-                <span className="font-bold">발표 주제와 가이드라인을 필수</span>로 입력하셔야합니다.
-              </p>
-            </div>
+  {/* 경고 상자 (기존 그대로 유지) */}
+  <div className="relative self-end md:self-auto shrink-0">
+    <div
+      className="bg-white border border-red-100 shadow-sm flex flex-col items-start justify-center box-border relative z-10"
+      style={{
+        width: '329px',
+        height: '68px',
+        borderRadius: '12px',
+        paddingTop: '16px',
+        paddingRight: '20px',
+        paddingBottom: '16px',
+        paddingLeft: '20px',
+      }}
+    >
+      <p className="text-xs font-medium text-red-500 leading-snug">
+        파일 업로드를 하지 않을 시,<br />
+        <span className="font-bold">발표 주제와 가이드라인을 필수</span>로 입력하셔야합니다.
+      </p>
+    </div>
 
-            <div
-              className="absolute z-0 pointer-events-none"
-              style={{
-                width: '32px',
-                height: '32px',
-                bottom: '-12px',
-                right: '24px',
-              }}
-            >
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                <path d="M16 32L0 0H32L16 32Z" fill="white" stroke="#FEE2E2" strokeWidth="1" />
-              </svg>
-            </div>
-          </div>
-        </div>
+    <div
+      className="absolute z-0 pointer-events-none"
+      style={{
+        width: '32px',
+        height: '32px',
+        bottom: '-12px',
+        right: '24px',
+      }}
+    >
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <path d="M16 32L0 0H32L16 32Z" fill="white" stroke="#FEE2E2" strokeWidth="1" />
+      </svg>
+    </div>
+  </div>
+</div>
 
         {/* 2. 메인 콘텐츠 2단 배치 */}
         <div className="w-full flex flex-col lg:flex-row justify-center items-center lg:items-start gap-6 lg:gap-[30px]">
