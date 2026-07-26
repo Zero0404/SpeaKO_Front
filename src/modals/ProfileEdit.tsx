@@ -1,3 +1,4 @@
+// ProfileEdit.tsx
 import { useState } from "react";
 import ModalShell from "./ModalShell";
 import TextInput from "../components/TextInput";
@@ -12,8 +13,10 @@ interface ProfileEditProps {
 const ProfileEdit = ({ onClose, currentName = "", onSave }: ProfileEditProps) => {
   const [name, setName] = useState(currentName);
 
+  const canSubmit = name.trim().length > 0;
+
   const handleSave = () => {
-    if (!name.trim()) return;
+    if (!canSubmit) return;
     onSave?.(name.trim());
     onClose();
   };
@@ -32,8 +35,13 @@ const ProfileEdit = ({ onClose, currentName = "", onSave }: ProfileEditProps) =>
           <button
             type="button"
             onClick={handleSave}
-            disabled={!name.trim()}
-            className="flex-1 rounded-xl bg-[var(--color-brand-primary)] py-3 text-sm font-semibold text-white transition hover:bg-indigo-600 disabled:cursor-not-allowed disabled:opacity-40"
+            disabled={!canSubmit}
+            style={canSubmit ? { backgroundImage: "var(--gradient-brand-active)" } : undefined}
+            className={`flex-1 rounded-xl py-3 text-sm font-semibold transition ${
+              canSubmit
+                ? "text-white hover:opacity-90"
+                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+            }`}
           >
             변경 사항 저장
           </button>

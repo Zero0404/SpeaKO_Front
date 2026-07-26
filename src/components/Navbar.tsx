@@ -1,89 +1,52 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Menu, X } from "lucide-react";
 import logo from "../assets/SpeaKO-logo.svg";
 import LinkButton from "./LinkButton";
 import Login from "../modals/Login";
 import Signup from "../modals/SignUp";
+import { User } from "lucide-react";
 
 const Navbar = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSignupOpen, setIsSignupOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <>
-      <header className="absolute left-0 top-0 right-0 z-50 h-20 w-full transparent-bg">
-        <div className="mx-auto flex h-full max-w-[2000px] items-center justify-between px-4 sm:px-8 lg:px-12">
+      <header className="absolute top-0 left-0 right-0 z-50 w-full h-28 transparent-bg">
+        <div className="flex h-full w-full items-center justify-between py-6 px-6 lg:px-12">
           {/* 왼쪽 */}
-          <div className="flex items-center gap-6 lg:gap-16">
+          <div className="flex items-center gap-20">
             <Link to="/">
               <img
                 src={logo}
                 alt="SpeaKO"
-                className="h-9 w-auto lg:h-11"
+                className="h-14 w-auto"
               />
             </Link>
 
-            {/* Desktop 메뉴 */}
-            <nav className="hidden items-center gap-12 lg:flex">
+            <nav className="flex items-center gap-14">
               <LinkButton to="/service">서비스 소개</LinkButton>
               <LinkButton to="/pricing">요금 안내</LinkButton>
             </nav>
           </div>
 
-          {/* Desktop 로그인 */}
-          <div className="hidden items-center gap-6 lg:flex">
+          {/* 오른쪽 */}
+          <div className="flex items-center gap-7">
+            <Link
+              to="/mypage"
+              className="flex size-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)]"
+            >
+              <User size={22} className="text-[color:var(--color-white)]" />
+            </Link>
+
             <button
               onClick={() => setIsLoginOpen(true)}
-              className="rounded-2xl hover-effect-btn is-active px-7 py-3 text-sm font-semibold text-white shadow-md transition hover:scale-105"
+              className="rounded-2xl hover-effect-btn is-active px-8 py-3.5 text-base font-semibold text-white shadow-md transition hover:scale-105"
             >
               로그인
             </button>
           </div>
-
-          {/* Mobile 햄버거 */}
-          <button
-            type="button"
-            onClick={() => setMenuOpen((prev) => !prev)}
-            className="lg:hidden"
-          >
-            {menuOpen ? <X size={28} /> : <Menu size={28} />}
-          </button>
         </div>
-
-        {/* Mobile 메뉴 */}
-        {menuOpen && (
-          <div className="absolute left-0 right-0 top-20 bg-white shadow-lg lg:hidden">
-            <nav className="flex flex-col px-6 py-5">
-              <Link
-                to="/service"
-                className="py-3 text-sm font-medium text-gray-700"
-                onClick={() => setMenuOpen(false)}
-              >
-                서비스 소개
-              </Link>
-
-              <Link
-                to="/pricing"
-                className="py-3 text-sm font-medium text-gray-700"
-                onClick={() => setMenuOpen(false)}
-              >
-                요금 안내
-              </Link>
-
-              <button
-                onClick={() => {
-                  setMenuOpen(false);
-                  setIsLoginOpen(true);
-                }}
-                className="mt-4 rounded-2xl hover-effect-btn is-active py-3 text-sm font-semibold text-white shadow-md"
-              >
-                로그인
-              </button>
-            </nav>
-          </div>
-        )}
       </header>
 
       {/* 로그인 모달 */}
