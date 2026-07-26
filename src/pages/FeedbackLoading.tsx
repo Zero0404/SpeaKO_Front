@@ -2,11 +2,11 @@ import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import bgGradient from '../assets/background_gradiant.png';
 
-interface FeedbackLoadingPageProps {
+interface FeedbackLoadingProps {
   onComplete?: () => void;
 }
 
-export const FeedbackLoadingPage: React.FC<FeedbackLoadingPageProps> = ({ onComplete }) => {
+export const FeedbackLoading: React.FC<FeedbackLoadingProps> = ({ onComplete }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -137,4 +137,4 @@ export const FeedbackLoadingPage: React.FC<FeedbackLoadingPageProps> = ({ onComp
   );
 };
 
-export default FeedbackLoadingPage;
+export default FeedbackLoading;
