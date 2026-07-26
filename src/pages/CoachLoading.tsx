@@ -118,7 +118,7 @@ export const CoachLoadingPage: React.FC = () => {
             e.currentTarget.style.color = 'var(--color-text-heading)';
           }}
         >
-          <span className="text-base font-semibold">다음 페이지로 이동</span>
+          <span className="text-base font-semibold">테스트용_삭제예정</span>
           <span className="text-xl font-light">&gt;</span>
         </button>
       </div>

@@ -357,7 +357,7 @@ const CoachViewPage = () => {
 
   // 헤더의 "파일로 평가받기" — 파일 업로드로 평가받는 플로우로 이동
   const handleFileEvaluation = () => {
-    navigate("/feedbackfileupload");
+    navigate("/feedback-fileupload");
   };
 
   // 사이드바의 "실시간 평가받기" — 실시간 평가 로딩 화면으로 이동
