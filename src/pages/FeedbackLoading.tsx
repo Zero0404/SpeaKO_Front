@@ -129,7 +129,7 @@ export const FeedbackLoading: React.FC<FeedbackLoadingProps> = ({ onComplete }) 
             e.currentTarget.style.color = 'var(--color-text-heading)';
           }}
         >
-          <span className="text-base font-semibold">다음 페이지</span>
+          <span className="text-base font-semibold">테스트용_삭제예정</span>
           <span className="text-xl font-light">&gt;</span>
         </button>
       </div>

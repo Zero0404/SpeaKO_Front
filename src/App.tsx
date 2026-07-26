@@ -5,6 +5,7 @@ import SelectPage from "./pages/SelectPage";
 
 import AiSetPage from "./pages/AiSetPage";
 import AiLoading from './pages/AiLoading';
+import ScriptEditPage from "./pages/ScriptEditPage";
 
 import CoachSetPage from "./pages/CoachSetPage";
 import CoachViewPage from "./pages/CoachVeiwPage";
@@ -28,9 +29,10 @@ const App = () => {
 
           <Route path="/ai-set" element={<AiSetPage />} />
           <Route path="/ai-loading" element={<AiLoading isOpen={true} />} />
+          <Route path="/script-edit" element={<ScriptEditPage />} />
 
           <Route path="/coach-set" element={<CoachSetPage />} />
-          <Route path="/coach-loading" element={<CoachLoading />} />  
+          <Route path="/coach-loading" element={<CoachLoading />} />
           <Route path="/coach-view" element={<CoachViewPage />} />
 
           <Route path="/feedback-fileupload" element={<FeedbackFileUploadPage />} />

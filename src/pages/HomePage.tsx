@@ -22,7 +22,7 @@ import logo from "../assets/SpeaKO-logo.svg";
 
 import FeatureCard1 from "../assets/feature-script-illustration.svg";
 import FeatureCard2 from "../assets/feature-coach-illustration.svg";
-import FeatureCard3 from "../assets/발음 평가 Image.png";
+import FeatureCard3 from "../assets/feature-feedback-illustration.svg";
 
 import MainChip from "../components/MainChip";
 import SubChip from "../components/SubChip";
