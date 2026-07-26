@@ -5,7 +5,7 @@ import {
   ChevronRight,
   ChevronRight as ArrowIcon,
 } from "lucide-react";
-import ViewPageBackground from "../assets/background_gradiant.svg";
+import ViewPageBackground from "../assets/background_gradiant.png";
 import MainChip from "../components/MainChip";
 import VoiceRecorder from "../components/VoiceRecorder";
 import TaskChip from "../components/TaskChip";
@@ -367,7 +367,7 @@ const CoachViewPage = () => {
         backgroundRepeat: "no-repeat",
       }}
     >
-      <div className="flex flex-col gap-4 rounded-xl bg-[color:var(--color-white)] px-6 py-4 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-xl bg-[color:var(--color-white)] px-6 py-4 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 sm:flex-row sm:items-center sm:justify-between mt-20">
         <div className="flex flex-wrap items-center gap-5">
           <h2 className="text-xl font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
             하이라이트 범례

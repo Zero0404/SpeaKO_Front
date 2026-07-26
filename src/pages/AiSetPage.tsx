@@ -86,9 +86,9 @@ const isFormValid = file
   return (
     <div
       style={{ ...fontStyle, backgroundImage: `url(${bgSvg})` }}
-      className="min-h-screen w-full bg-cover bg-center bg-no-repeat flex flex-col justify-center items-center py-8 md:py-12 px-4 sm:px-6 mt-15"
+      className="min-h-screen w-full bg-cover bg-center bg-no-repeat flex flex-col justify-center items-center py-8 md:py-12 px-4 sm:px-6"
     >
-      <div className="w-full max-w-[1520px] flex flex-col items-center">
+      <div className="w-full max-w-[1520px] flex flex-col items-center mt-15">
 
         {/* 1. 상단 스텝 바 & 경고 메시지 상자 */}
         <div className="w-full flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-0 mb-6">

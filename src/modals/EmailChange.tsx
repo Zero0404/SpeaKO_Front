@@ -1,3 +1,4 @@
+// EmailChange.tsx
 import { useState } from "react";
 import ModalShell from "./ModalShell";
 import TextInput from "../components/TextInput";
@@ -13,7 +14,7 @@ const isValidEmail = (value: string) =>
 
 const EmailChange = ({
   onClose,
-  currentEmail: _currentEmail, 
+  currentEmail: _currentEmail,
   //  currentEmail = "",
   onSave,
 }: EmailChangeProps) => {
@@ -64,9 +65,10 @@ const EmailChange = ({
             type="button"
             onClick={handleSave}
             disabled={!canSubmit}
+            style={canSubmit ? { backgroundImage: "var(--gradient-brand-active)" } : undefined}
             className={`flex-1 rounded-xl py-3 text-sm font-semibold transition ${
               canSubmit
-                ? "bg-[var(--color-brand-primary)] text-white hover:bg-indigo-600"
+                ? "text-white hover:opacity-90"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
             }`}
           >
