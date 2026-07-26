@@ -89,7 +89,7 @@ src/
 | CoachSetPage | `/coach-set` | 발음 코칭용 대본 입력 |
 | CoachLoading | `/coach-loading` | 코칭 분석 로딩 화면 |
 | CoachViewPage | `/coach-view` | 하이라이트가 적용된 대본 뷰어 & 단어 목록 확인 |
-| FeedbackFileUploadPage | `/feedbackfileupload` | 발표 녹음 파일 업로드 |
+| FeedbackFileUploadPage | `/feedback-fileupload` | 발표 녹음 파일 업로드 |
 | FeedbackLoading | `/feedback-loading` | 피드백 분석 로딩 화면 |
 | FeedbackPage | `/feedback` | 녹음(실시간/파일)에 대한 **발음 평가 결과**를 확인하는 페이지 |
 | MyPage | `/mypage` | 마이페이지 |
