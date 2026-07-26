@@ -36,7 +36,7 @@ const MyPage = () => {
   const closeModal = () => setActiveModal(null);
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-white"
+    <div className="relative min-h-screen w-full overflow-hidden bg-white "
         style={{
         backgroundImage: `url(${ViewPageBackground})`,
         backgroundSize: "cover",
@@ -45,7 +45,7 @@ const MyPage = () => {
         backgroundRepeat: "no-repeat",
       }}
       >
-      <main className="relative mx-auto w-full max-w-[1519px] px-6 pb-24 pt-16 sm:px-10">
+      <main className="relative mx-auto w-full max-w-[1519px] px-6 pb-24 pt-16 sm:px-10 mt-15">
         {/* 타이틀 + 상단 버튼 */}
         <div className="flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
           <div className="flex flex-col gap-2.5">

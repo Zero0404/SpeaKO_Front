@@ -131,7 +131,7 @@ const HomePage: FC = () => {
   return (
     <div className="w-full">
       <div className="relative overflow-hidden">
-        {/* Blob 1 - Hero 우측 (blue-400, 진함) */}
+        {/* Blob 1 - Hero 우측 */}
         <div
           aria-hidden="true"
           className="hidden lg:block absolute pointer-events-none -z-10"
@@ -143,13 +143,13 @@ const HomePage: FC = () => {
             transform: "rotate(172.32deg)",
             transformOrigin: "top left",
             background:
-              "radial-gradient(at 89% 47%, #60a5fac2 0%, #ffffff 100%)",
+              "radial-gradient(at 89% 47%, #a5b4fc 0%, #ffffff 100%)",
             borderRadius: "9999px",
             filter: "blur(calc(400 / 1920 * 100vw))",
           }}
         />
 
-        {/* Blob 2 - Hero~Why 경계 우측 (indigo-300, 진함) */}
+        {/* Blob 2 - Hero~Why 경계 우측 */}
         <div
           aria-hidden="true"
           className="hidden lg:block absolute pointer-events-none -z-10"
@@ -160,7 +160,7 @@ const HomePage: FC = () => {
             height: "calc(384 / 1920 * 100vw)",
             transform: "rotate(174.37deg)",
             transformOrigin: "top left",
-            background: "radial-gradient(at 55% 63%, #a5b4fc 0%, #ffffff 100%)",
+            background: "radial-gradient(at 55% 63%, #97a8fa 0%, #ffffff 100%)",
             borderRadius: "9999px",
             filter: "blur(calc(400 / 1920 * 100vw))",
           }}

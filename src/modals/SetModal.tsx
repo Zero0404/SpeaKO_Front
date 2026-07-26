@@ -26,7 +26,7 @@ const SetModal: FC<SetModalProps> = ({
 
   return (
     <ConfirmShell
-      icon={<Info size={40} className="text-zinc-800" strokeWidth={2} />}
+      icon={<Info size={40} className="text-[var(--color-brand-primary)]" strokeWidth={2} />}
       title={"발표 주제, 발표 시간, 말투 스타일\n모두 알맞게 설정하셨습니까?"}
       description={`선택 값: ${time} / ${tone}`}
       cancelLabel="다시 확인하기"

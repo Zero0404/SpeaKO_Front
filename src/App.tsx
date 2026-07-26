@@ -33,7 +33,7 @@ const App = () => {
           <Route path="/coach-loading" element={<CoachLoadingPage />} />  
           <Route path="/coach-view" element={<CoachViewPage />} />
 
-          <Route path="/feedbackfileupload" element={<FeedbackFileUploadPage />} />
+          <Route path="/feedback-fileupload" element={<FeedbackFileUploadPage />} />
           <Route path="/feedback-loading" element={<FeedbackLoadingPage />} />
 
           <Route path="/mypage" element={<MyPage />} />

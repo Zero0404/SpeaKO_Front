@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import bgGradient from '../assets/background_gradiant.png';
-import Navbar from '../components/Navbar'; // 💡 Navbar 컴포넌트 불러오기
+import Navbar from '../components/Navbar';
 
 export interface AiLoadingModalProps {
   isOpen: boolean;
@@ -35,7 +35,7 @@ export const AiLoadingModal: React.FC<AiLoadingModalProps> = ({
         backgroundColor: '#F8FAFC',
       }}
     >
-      {/* 💡 상단 Navbar 컴포넌트 추가 */}
+      {/* 상단 Navbar */}
       <div className="w-full relative z-20">
         <Navbar />
       </div>
@@ -68,8 +68,12 @@ export const AiLoadingModal: React.FC<AiLoadingModalProps> = ({
 
         {/* 4단계 프로세스 위젯 */}
         <div className="flex items-center justify-center gap-3 sm:gap-6 flex-wrap mb-12">
+          {/* 1단계 - 완료 */}
           <div className="flex flex-col items-center gap-2">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-[#6E8BFF] to-[#7A5CFF] text-white font-bold flex items-center justify-center text-xs sm:text-sm shadow-md">
+            <div
+              style={{ backgroundImage: 'var(--gradient-brand-active)' }}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full text-white font-bold flex items-center justify-center text-xs sm:text-sm shadow-md"
+            >
               1
             </div>
             <span className="text-xs sm:text-sm font-bold text-gray-900 mt-1">파일 수령</span>
@@ -77,8 +81,12 @@ export const AiLoadingModal: React.FC<AiLoadingModalProps> = ({
 
           <span className="text-[#6E8BFF] font-light text-lg sm:text-xl pb-6">≫</span>
 
+          {/* 2단계 - 완료 */}
           <div className="flex flex-col items-center gap-2">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-r from-[#6E8BFF] to-[#7A5CFF] text-white font-bold flex items-center justify-center text-xs sm:text-sm shadow-md">
+            <div
+              style={{ backgroundImage: 'var(--gradient-brand-active)' }}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full text-white font-bold flex items-center justify-center text-xs sm:text-sm shadow-md"
+            >
               2
             </div>
             <span className="text-xs sm:text-sm font-bold text-gray-900 mt-1">텍스트 추출</span>
@@ -86,15 +94,17 @@ export const AiLoadingModal: React.FC<AiLoadingModalProps> = ({
 
           <span className="text-[#6E8BFF] font-light text-lg sm:text-xl pb-6">≫</span>
 
+          {/* 3단계 - 진행 중 (숫자 없이 회전 링만) */}
           <div className="flex flex-col items-center gap-2">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-gray-200 border-t-[#6E8BFF] border-r-[#6E8BFF] animate-spin flex items-center justify-center" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-gray-200 border-t-[#6E8BFF] border-r-[#6E8BFF] animate-spin" />
             <span className="text-xs sm:text-sm font-bold text-gray-900 mt-1">대본 작성 중</span>
           </div>
 
           <span className="text-gray-300 font-light text-xl pb-6">≫</span>
 
+          {/* 4단계 - 대기 */}
           <div className="flex flex-col items-center gap-2">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-gray-400 text-gray-500 font-medium flex items-center justify-center text-xs sm:text-sm">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-gray-400 text-gray-500 font-medium flex items-center justify-center text-xs sm:text-sm bg-white">
               4
             </div>
             <span className="text-xs sm:text-sm font-medium text-gray-400 mt-1">완료</span>

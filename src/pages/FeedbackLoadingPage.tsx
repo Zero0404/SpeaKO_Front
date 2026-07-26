@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import bgSvg from '../assets/background_gradiant.png';
-
+import bgGradient from '../assets/background_gradiant.png';
 
 interface FeedbackLoadingPageProps {
   onComplete?: () => void;
@@ -25,130 +24,114 @@ export const FeedbackLoadingPage: React.FC<FeedbackLoadingPageProps> = ({ onComp
     if (onComplete) {
       onComplete();
     } else {
-      // 추후 제작할 피드백 결과 페이지(예: /feedback-result)로 이동
       navigate('/feedback-result');
     }
   };
 
   return (
     <div
-      className="relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden bg-cover bg-center bg-no-repeat font-sans select-none px-4 sm:px-6 md:px-8 box-border py-12"
+      className="min-h-screen w-full flex flex-col items-center justify-center p-4 md:p-6 bg-cover bg-center bg-no-repeat font-sans select-none overflow-hidden"
       style={{
-        backgroundImage: `url(${bgSvg})`,
+        backgroundImage: `url(${bgGradient})`,
+        backgroundColor: '#F8FAFC',
       }}
     >
-      {/* 메인 컨테이너 */}
-      <div className="flex flex-col items-center justify-center text-center z-10 w-full max-w-2xl px-4 sm:px-6">
-        
-        {/* 1. 상단 회전 스피너 (항상 돌아가는 상태) */}
-        <div className="relative mb-6 sm:mb-8 flex items-center justify-center">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full border-[3.5px] border-slate-200 border-t-[#5B6CFB] animate-spin" />
+      <div className="flex flex-col items-center justify-center text-center max-w-2xl mx-auto w-full px-4">
+        {/* 회전 스피너 */}
+        <div className="relative flex items-center justify-center mb-8 md:mb-10">
+          <div
+            className="w-16 h-16 md:w-20 md:h-20 rounded-full border-[5px] border-gray-200/80 border-t-transparent animate-spin"
+            style={{
+              borderTopColor: 'rgba(91, 108, 251, 1)',
+              borderRightColor: 'rgba(91, 108, 251, 0.8)',
+            }}
+          />
         </div>
 
-        {/* 2. 타이틀 */}
-        <h2
-          className="text-2xl sm:text-3xl font-extrabold tracking-tight mb-3"
-          style={{ color: 'var(--color-text-heading, #27272a)' }}
-        >
-          녹음 파일을 분석하고 있어요
-        </h2>
+        {/* 타이틀 & 설명 문구 */}
+        <div className="space-y-3 mb-12 md:mb-16">
+          <h2 className="text-2xl md:text-3xl font-extrabold text-[var(--color-text-heading)] tracking-tight">
+            녹음 파일을 분석하고 있어요
+          </h2>
+          <p className="text-sm md:text-base font-medium text-[var(--color-text-body)]">
+            사용자님의 음성을 분석하여 발음 피드백을 생성하는 중입니다.
+          </p>
+          <p className="text-xs md:text-sm text-gray-400">
+            잠시만 기다려 주세요. 파일의 용량에 따라 최대 4분까지 소요될 수 있습니다.
+          </p>
+        </div>
 
-        {/* 3. 서브 설명 문구 */}
-        <p
-          className="text-sm sm:text-base font-normal leading-relaxed mb-8 sm:mb-10"
-          style={{ color: 'var(--color-text-body, #64748b)' }}
-        >
-          사용자님의 음성을 분석하여 발음 피드백을 생성하는 중입니다.
-          <br />
-          잠시만 기다려 주세요. 파일의 용량에 따라 최대 4분까지 소요될 수 있습니다.
-        </p>
-
-
-        {/* 5. 4단계 스텝 위젯 (이미지 시안과 100% 동일한 상태) */}
-        <div className="flex items-center justify-center gap-3 sm:gap-6 md:gap-8 w-full max-w-xl mb-12">
-          
-          {/* STEP 1: 오디오 업로드 */}
+        {/* 하단 4단계 프로세스 위젯 */}
+        <div className="flex items-center justify-center gap-3 sm:gap-6 flex-wrap mb-12">
+          {/* 1단계 - 완료 */}
           <div className="flex flex-col items-center gap-2">
             <div
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full text-white text-sm font-bold flex items-center justify-center shadow-sm"
-              style={{ background: 'var(--gradient-brand-active)' }}
+              style={{ backgroundImage: 'var(--gradient-brand-active)' }}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full text-white font-bold flex items-center justify-center text-xs sm:text-sm shadow-md"
             >
               1
             </div>
-            <span className="text-xs sm:text-sm font-bold text-slate-800 whitespace-nowrap">
-              오디오 업로드
-            </span>
+            <span className="text-xs sm:text-sm font-bold text-gray-900 mt-1">오디오 업로드</span>
           </div>
 
-          <span className="text-indigo-400 text-sm font-bold pb-6">≫</span>
+          <span className="text-[#6E8BFF] font-light text-lg sm:text-xl pb-6">≫</span>
 
-          {/* STEP 2: 음성 인식 */}
+          {/* 2단계 - 완료 */}
           <div className="flex flex-col items-center gap-2">
             <div
-              className="w-8 h-8 sm:w-9 sm:h-9 rounded-full text-white text-sm font-bold flex items-center justify-center shadow-sm"
-              style={{ background: 'var(--gradient-brand-active)' }}
+              style={{ backgroundImage: 'var(--gradient-brand-active)' }}
+              className="w-9 h-9 sm:w-10 sm:h-10 rounded-full text-white font-bold flex items-center justify-center text-xs sm:text-sm shadow-md"
             >
               2
             </div>
-            <span className="text-xs sm:text-sm font-bold text-slate-800 whitespace-nowrap">
-              음성 인식
-            </span>
+            <span className="text-xs sm:text-sm font-bold text-gray-900 mt-1">음성 인식</span>
           </div>
 
-          <span className="text-indigo-400 text-sm font-bold pb-6">≫</span>
+          <span className="text-[#6E8BFF] font-light text-lg sm:text-xl pb-6">≫</span>
 
-          {/* STEP 3: 코칭 분석 중 (스피너 돌아가는 상태) */}
+          {/* 3단계 - 진행 중 (숫자 없이 회전 링만) */}
           <div className="flex flex-col items-center gap-2">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border-2 border-slate-200 border-t-[#5B6CFB] animate-spin flex items-center justify-center bg-white shadow-sm" />
-            <span className="text-xs sm:text-sm font-bold text-slate-800 whitespace-nowrap">
-              코칭 분석 중
-            </span>
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-gray-200 border-t-[#6E8BFF] border-r-[#6E8BFF] animate-spin" />
+            <span className="text-xs sm:text-sm font-bold text-gray-900 mt-1">코칭 분석 중</span>
           </div>
 
-          <span className="text-slate-300 text-sm font-bold pb-6">≫</span>
+          <span className="text-gray-300 font-light text-xl pb-6">≫</span>
 
-          {/* STEP 4: 완료 */}
+          {/* 4단계 - 대기 */}
           <div className="flex flex-col items-center gap-2">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-slate-300 bg-white text-slate-400 text-sm font-medium flex items-center justify-center shadow-sm">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-gray-400 text-gray-500 font-medium flex items-center justify-center text-xs sm:text-sm bg-white">
               4
             </div>
-            <span className="text-xs sm:text-sm font-medium text-slate-400 whitespace-nowrap">
-              완료
-            </span>
+            <span className="text-xs sm:text-sm font-medium text-gray-400 mt-1">완료</span>
           </div>
-
         </div>
 
-        {/* 6. 다음 페이지 버튼 */}
-        <div className="w-full flex justify-center sm:justify-end">
-          <button
-            type="button"
-            onClick={handleNextPage}
-            className="group flex items-center justify-between shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer bg-white text-[var(--color-text-heading,#27272a)] hover:text-white border border-slate-200 hover:border-transparent box-border w-full sm:w-[250px] h-[54px] sm:h-[60px] px-5 sm:px-6 rounded-[16px]"
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'var(--gradient-brand-active)';
-              e.currentTarget.style.color = 'var(--color-white)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#ffffff';
-              e.currentTarget.style.color = 'var(--color-text-heading, #27272a)';
-            }}
-          >
-            <span className="text-sm sm:text-base font-bold transition-colors">
-              다음 페이지
-            </span>
-            <svg
-              className="w-5 h-5 text-slate-400 group-hover:text-white transition-colors shrink-0"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
-
+        {/* 하단 [다음 페이지] 버튼 */}
+        <button
+          type="button"
+          onClick={handleNextPage}
+          style={{
+            width: '250px',
+            height: '60px',
+            borderRadius: '16px',
+            paddingTop: '16px',
+            paddingRight: '20px',
+            paddingBottom: '16px',
+            paddingLeft: '20px',
+          }}
+          className="hover-effect-btn flex items-center justify-between font-semibold text-base shadow-md border border-gray-100 transition-all duration-300 cursor-pointer active:scale-95 box-border bg-white"
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'var(--gradient-brand-active)';
+            e.currentTarget.style.color = 'var(--color-white)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = '#ffffff';
+            e.currentTarget.style.color = 'var(--color-text-heading)';
+          }}
+        >
+          <span className="text-base font-semibold">다음 페이지</span>
+          <span className="text-xl font-light">&gt;</span>
+        </button>
       </div>
     </div>
   );
