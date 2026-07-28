@@ -226,7 +226,7 @@ const HomePage: FC = () => {
         </section>
 
         {/* Why SpeaKO Section */}
-       <section className="relative isolate overflow-hidden flex w-full snap-start scroll-mt-20 items-center px-6 py-16 sm:px-10 md:px-16 lg:h-screen lg:px-28 lg:py-24">
+        <section className="relative isolate overflow-hidden flex w-full snap-start scroll-mt-20 items-center px-6 py-16 sm:px-10 md:px-16 lg:min-h-screen lg:px-28 lg:py-24">
 
           <div
             aria-hidden="true"
@@ -244,51 +244,47 @@ const HomePage: FC = () => {
               filter: "blur(150px)",
             }}
           />
-          <div className="mx-auto flex w-full max-w-[1600px] flex-col items-start gap-10 lg:flex-row lg:gap-4">
-            {/* Left - 텍스트 */}
-            <div className="w-full text-center lg:mt-8 lg:w-[500px] lg:shrink-0 lg:text-left">
-              <p className="text-left text-[20px] font-bold bg-[image:var(--gradient-brand-active)] bg-clip-text text-transparent sm:text-[22px] lg:mt-4 lg:text-[25px]">
-                Why SpeaKO
-              </p>
+          <div className="mx-auto flex w-full max-w-[1600px] flex-col items-start gap-10 lg:flex-row lg:items-start lg:gap-14">
+          {/* Left - 텍스트 */}
+          <div className="w-full text-center lg:w-[380px] lg:shrink-0 lg:text-left">
+            <p className="text-left text-[20px] font-bold bg-[image:var(--gradient-brand-active)] bg-clip-text text-transparent sm:text-[22px] lg:mt-4 lg:text-[25px]">
+              Why SpeaKO
+            </p>
 
-              <h2 className="mt-4 text-[32px] font-bold leading-snug text-[var(--color-text-heading)] sm:text-[44px] md:text-[56px] lg:mt-6 lg:text-[70px]">
-                발표가 막막한
-                <br />
-                3가지 이유
-              </h2>
+            <h2 className="mt-4 text-[32px] font-bold leading-snug text-[var(--color-text-heading)] sm:text-[44px] md:text-[56px] lg:mt-6 lg:text-[56px]">
+              발표가 막막한
+              <br />
+              3가지 이유
+            </h2>
 
-              <p className="mt-4 text-base leading-7 text-[var(--color-text-body)] sm:text-lg lg:mt-5 lg:text-[25px]">
-                대부분의 사람들이 발표를 앞두고
-                <br />
-                어려워하는 부분들입니다.
-              </p>
-            </div>
+            <p className="mt-4 text-base leading-7 text-[var(--color-text-body)] sm:text-lg lg:mt-5 lg:text-lg">
+              대부분의 사람들이 발표를 앞두고
+              <br />
+              어려워하는 부분들입니다.
+            </p>
+          </div>
 
-            {/* Right - 카드 3개 */}
-            <div className="grid w-full grid-cols-1 gap-8 sm:grid-cols-2 lg:mt-16 lg:flex lg:flex-1 lg:grid-cols-none lg:gap-8">
+          {/* Right - 카드 3개 */}
+          <div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 lg:mt-28 lg:grid-cols-3 lg:gap-6 lg:flex-1">
               {REASONS.map((reason) => {
                 const Icon = reason.icon;
 
                 return (
-                  <div
-                    key={reason.id}
-                    className="relative w-full pt-8 lg:w-[340px]"
-                  >
+                  <div key={reason.id} className="relative w-full pt-8">
                     {/* Number */}
-                    <span className="absolute left-8 -top-6 z-0 select-none text-[56px] font-semibold leading-none text-indigo-100 lg:text-[72px]">
+                    <span className="absolute left-8 -top-6 z-0 select-none text-[56px] font-semibold leading-none text-indigo-100 lg:text-[64px]">
                       {reason.number}
                     </span>
 
                     {/* Card */}
                     <div
                       className="
-              relative z-10 flex h-auto min-h-[360px] w-full flex-col items-start gap-11
-              rounded-[20px] bg-gradient-to-br from-white/10 to-indigo-500/10
-              outline outline-1 outline-offset-[-1px] outline-white
-              px-7 py-8
-              transition-all duration-300 hover:-translate-y-2
-              lg:h-[400px] lg:w-[340px] lg:px-9
-            "
+                        relative z-10 flex h-full min-h-[380px] w-full flex-col items-start gap-8
+                        rounded-[20px] bg-gradient-to-br from-white/10 to-indigo-500/10
+                        outline outline-1 outline-offset-[-1px] outline-white
+                        px-7 py-8
+                        transition-all duration-300 hover:-translate-y-2
+                      "
                     >
                       <div className="glass-icon-box flex h-14 w-14 items-center justify-center rounded-2xl lg:h-16 lg:w-16">
                         <Icon
@@ -298,10 +294,10 @@ const HomePage: FC = () => {
                       </div>
 
                       <div className="flex flex-col items-start gap-5">
-                        <h3 className="text-[24px] font-bold leading-snug text-[var(--color-text-heading)] lg:text-[28px]">
+                        <h3 className="whitespace-nowrap text-[22px] font-bold leading-snug text-[var(--color-text-heading)] lg:text-[22px]">
                           {reason.title}
                         </h3>
-                        <p className="whitespace-pre-line text-[15px] leading-7 text-[var(--color-text-body)] lg:text-[17px] lg:leading-8">
+                        <p className="whitespace-pre-line text-[15px] leading-7 text-[var(--color-text-body)] lg:text-[16px] lg:leading-8">
                           {reason.description}
                         </p>
                       </div>
