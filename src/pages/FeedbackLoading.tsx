@@ -24,7 +24,7 @@ export const FeedbackLoading: React.FC<FeedbackLoadingProps> = ({ onComplete }) 
     if (onComplete) {
       onComplete();
     } else {
-      navigate('/feedback-result');
+      navigate('/feedback');
     }
   };
 
