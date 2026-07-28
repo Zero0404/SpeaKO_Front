@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Download,
   Volume2,
@@ -131,6 +132,7 @@ const StyleCard = ({
    ──────────────────────────────────────────────────────────── */
 
 const ScriptEditPage = () => {
+  const navigate = useNavigate();
   const [slides, setSlides] = useState<SlideItem[]>([]);
   const [selectedSlideId, setSelectedSlideId] = useState<string | null>(null);
   const [fullScript, setFullScript] = useState("");
@@ -206,6 +208,7 @@ const ScriptEditPage = () => {
           </button>
           <button
             type="button"
+            onClick={() => navigate("/coach-loading")}
             className="flex items-center gap-2 rounded-full bg-[color:var(--color-brand-light)]/15 px-6 py-3 text-sm font-semibold text-[color:var(--color-brand-primary)] transition hover:bg-[color:var(--color-brand-light)]/25"
           >
             <Volume2 size={18} />
