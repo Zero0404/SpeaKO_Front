@@ -27,9 +27,9 @@
 
 @layer components {
   .glass-icon-box {
-    background: linear-gradient(to bottom right, rgba(165, 180, 252, 0.345), rgba(215, 222, 255, 0.353), rgba(165, 180, 252, 0.345));
+    background: linear-gradient(to bottom right, rgba(165, 180, 252, 0.2), rgba(165, 180, 252, 0.2), rgba(165, 180, 252, 0.2));
     outline: 1px solid rgba(255, 255, 255, 0.8);
-    outline-offset: 4px;
+    outline-offset: -1px;
     box-shadow: 0 2px 5px -4px rgba(91, 108, 251, 0.5),
                 inset 0 1.5px 1.5px rgba(255, 255, 255, 0.95),
                 inset 0 -8px 0px -10px rgba(91, 108, 251, 0.35);
