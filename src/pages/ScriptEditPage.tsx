@@ -1,15 +1,16 @@
 import { useCallback, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Download,
   Volume2,
   ChevronDown,
   Clock,
   Plus,
-  Building2,
-  MessageCircle,
   Eye,
 } from "lucide-react";
 import VoiceRecorder from "../components/VoiceRecorder";
+import TaskChip from "../components/TaskChip";
+import MainChip from "../components/MainChip";
 
 interface SlideItem {
   id: string;
@@ -45,19 +46,11 @@ const ScriptPanel = ({
         : "bg-white shadow-sm"
     }`}
   >
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1">
       <p className="text-sm font-semibold text-[color:var(--color-text-heading)]">
         {label}
       </p>
-      <span
-        className="inline-flex items-center justify-center rounded-full border border-[color:var(--color-brand-light)]/50 px-2.5 py-0.5 text-xs font-semibold text-[color:var(--color-brand-primary)]"
-        style={{
-          backgroundImage:
-            "linear-gradient(to bottom right, rgba(165,180,252,0.25), rgba(99,102,241,0.15))",
-        }}
-      >
-        AI 생성
-      </span>
+      <MainChip text="AI 생성" scale={0.55} className="-ml-1" />
     </div>
 
     <VoiceRecorder message="녹음 후 직접 들어보며 자연스러운지 확인해보세요." />
@@ -93,34 +86,27 @@ const StyleCard = ({
   <button
     type="button"
     onClick={onClick}
-    style={active ? { backgroundColor: "#e0e7ff" } : undefined}
-    className={`flex flex-col items-center gap-3 rounded-2xl border-2 p-5 text-center transition ${
+    style={active ? undefined : { border: "1px solid rgba(128, 136, 146, 1)" }}
+    className={`flex h-[130px] w-full flex-col items-center justify-center gap-2 rounded-[16px] p-3 text-center transition-all ${
       active
-        ? "border-[color:var(--color-brand-primary)] shadow-sm"
-        : "border-gray-200 bg-white hover:border-gray-300"
+        ? "border border-[#5b6cfb] bg-[#EEF2FF] shadow-sm"
+        : "bg-white hover:border-slate-400"
     }`}
   >
     <span
-      className={`flex size-12 items-center justify-center rounded-full ${
-        active
-          ? "bg-indigo-100 text-[color:var(--color-brand-primary)]"
-          : "bg-gray-100 text-gray-400"
-      }`}
+      className="flex h-9 w-9 items-center justify-center rounded-full"
+      style={{ backgroundColor: "rgba(159, 160, 253, 0.25)" }}
     >
-      {icon}
+      <span style={{ color: "rgba(91, 108, 251, 1)" }}>{icon}</span>
     </span>
     <span
-      className={`text-base font-bold ${
-        active ? "text-[color:var(--color-brand-primary)]" : "text-[color:var(--color-text-heading)]"
+      className={`text-sm font-bold ${
+        active ? "text-[#4338CA]" : "text-slate-800"
       }`}
     >
       {title}
     </span>
-    <span
-      className={`text-xs leading-snug ${
-        active ? "text-[color:var(--color-text-body)]" : "text-gray-400"
-      }`}
-    >
+    <span className="text-center text-[11px] font-normal leading-tight text-slate-500">
       {description}
     </span>
   </button>
@@ -131,6 +117,7 @@ const StyleCard = ({
    ──────────────────────────────────────────────────────────── */
 
 const ScriptEditPage = () => {
+  const navigate = useNavigate();
   const [slides, setSlides] = useState<SlideItem[]>([]);
   const [selectedSlideId, setSelectedSlideId] = useState<string | null>(null);
   const [fullScript, setFullScript] = useState("");
@@ -188,13 +175,13 @@ const ScriptEditPage = () => {
   };
 
   return (
-    <div className="flex h-[calc(100vh-5rem)] w-full flex-col bg-slate-50 pt-18">
+    <div className="flex h-[calc(100vh-5rem)] w-full flex-col bg-slate-50 pt-22">
       {/* 상단 바 */}
       <div className="flex shrink-0 items-center justify-between border-b border-gray-100 bg-white px-8 py-4">
         <p className="text-sm font-semibold text-[color:var(--color-text-heading)]">
           프로젝트명.pptx
         </p>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1">
           {/* 임시 버튼: PPT 업로드/미업로드 화면 미리보기 전환 */}
           <button
             type="button"
@@ -204,27 +191,20 @@ const ScriptEditPage = () => {
             <Eye size={16} />
             {hasSlides ? "PPT X 화면 보기 (임시)" : "PPT O 화면 보기 (임시)"}
           </button>
-          <button
-            type="button"
-            className="flex items-center gap-2 rounded-full bg-[color:var(--color-brand-light)]/15 px-6 py-3 text-sm font-semibold text-[color:var(--color-brand-primary)] transition hover:bg-[color:var(--color-brand-light)]/25"
-          >
-            <Volume2 size={18} />
-            발표코칭
-          </button>
-          <button
-            type="button"
-            className="flex items-center gap-2 rounded-full bg-[color:var(--color-brand-light)]/15 px-6 py-3 text-sm font-semibold text-[color:var(--color-brand-primary)] transition hover:bg-[color:var(--color-brand-light)]/25"
-          >
-            <Download size={18} />
-            다운로드
-          </button>
+          <TaskChip
+            icon={Volume2}
+            label="발표코칭"
+            onClick={() => navigate("/coach-loading")}
+            className="scale-90 origin-right"
+          />
+          <TaskChip icon={Download} label="다운로드" className="scale-90 origin-right" />
         </div>
       </div>
 
       {/* 본문 */}
       <div
         className={`grid min-h-[750px] flex-1 gap-8 p-6 ${
-          hasSlides ? "grid-cols-[280px_1fr_400px]" : "grid-cols-[1fr_400px]"
+          hasSlides ? "grid-cols-[360px_1fr_400px]" : "grid-cols-[1fr_400px]"
         }`}
       >
         {/* 좌측: 슬라이드 리스트 */}
@@ -247,9 +227,9 @@ const ScriptEditPage = () => {
                     <span className="w-5 shrink-0 text-xs font-semibold text-[color:var(--color-text-body)]">
                       {String(slide.index).padStart(2, "0")}
                     </span>
-                    <div className="h-12 w-20 shrink-0 rounded-md bg-gray-100" />
+                    <div className="h-[52px] w-[92px] shrink-0 rounded-md bg-gray-100" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-[color:var(--color-text-heading)]">
+                      <p className="text-[13px] font-medium text-[color:var(--color-text-heading)]">
                         {slide.title}
                       </p>
                       <p className="text-xs text-[color:var(--color-text-body)]">
@@ -303,7 +283,7 @@ const ScriptEditPage = () => {
               편집 도구
             </p>
             <div className="flex items-center gap-3 text-xs font-medium text-[color:var(--color-text-body)]">
-              <button type="button" className="hover:text-[color:var(--color-brand-primary)]">
+              <button type="button" className="hover:text-[color:var(--color-brand-primaary)]">
                 이전
               </button>
               <button type="button" className="hover:text-[color:var(--color-brand-primary)]">
@@ -380,14 +360,30 @@ const ScriptEditPage = () => {
             </label>
             <div className="grid grid-cols-2 gap-3">
               <StyleCard
-                icon={<Building2 size={18} />}
+                icon={
+                  <svg
+                    className="w-5 h-5"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.1-.9-2-2-2zm-6 0h-4V4h4v2z" />
+                  </svg>
+                }
                 title="격식체"
                 description="공식적이고 전문적인 어조의 발표"
                 active={speakingStyle === "formal"}
                 onClick={() => setSpeakingStyle("formal")}
               />
               <StyleCard
-                icon={<MessageCircle size={18} />}
+                icon={
+                  <svg
+                    className="w-5 h-5"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z" />
+                  </svg>
+                }
                 title="편안한 말투"
                 description="친근하고 자연스러운 대화체 발표"
                 active={speakingStyle === "casual"}
@@ -410,7 +406,8 @@ const ScriptEditPage = () => {
 
           <button
             type="button"
-            className="w-full rounded-xl bg-gradient-to-r from-[#6E8BFF] to-[#7A5CFF] py-3.5 text-sm font-semibold text-white shadow-md transition hover:scale-[1.02]"
+            style={{ backgroundImage: "var(--gradient-brand-active)" }}
+            className="w-full rounded-xl py-3.5 text-sm font-semibold text-white shadow-md transition hover:scale-[1.02]"
           >
             재생성
           </button>
