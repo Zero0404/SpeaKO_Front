@@ -77,7 +77,7 @@ const Login = ({ open, onClose, onSignupClick }: LoginProps) => {
         <button
           onClick={handleLogin}
           disabled={isLoading}
-          className="mt-8 h-12 w-full rounded-xl bg-[#6E8BFF] font-semibold text-white transition hover:bg-[#5a75e6] disabled:bg-gray-300"
+          className="mt-8 h-12 w-full rounded-xl hover-effect-btn is-active font-semibold transition hover:brightness-105 disabled:bg-gray-300"
         >
           {isLoading ? "로그인 중..." : "로그인"}
         </button>

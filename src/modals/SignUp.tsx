@@ -14,9 +14,12 @@ const SignUp = ({ open, onClose, onLoginClick }: SignupProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordCheck, setPasswordCheck] = useState("");
-  
+
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  const passwordsMatch = password.length > 0 && password === passwordCheck;
+  const canSubmit = passwordsMatch && !isLoading;
 
   if (!open) return null;
 
@@ -77,8 +80,12 @@ const SignUp = ({ open, onClose, onLoginClick }: SignupProps) => {
 
         <button
           onClick={handleSignup}
-          disabled={isLoading}
-          className="mt-8 h-12 w-full rounded-xl bg-[#6E8BFF] text-base font-semibold text-white transition hover:bg-[#5a75e6] disabled:bg-gray-300"
+          disabled={!canSubmit}
+          className={`mt-8 h-12 w-full rounded-xl font-semibold transition ${
+            canSubmit
+              ? "hover-effect-btn is-active hover:brightness-105"
+              : "cursor-not-allowed bg-gray-300 text-white"
+          }`}
         >
           {isLoading ? "처리 중..." : "SpeaKO 시작하기"}
         </button>

@@ -4,11 +4,37 @@ import logo from "../assets/SpeaKO-logo.svg";
 import LinkButton from "./LinkButton";
 import Login from "../modals/Login";
 import Signup from "../modals/SignUp";
+import Logout from "../modals/Logout";
+import DeleteAccount from "../modals/DeleteAccount";
+import AccountMenu from "../modals/AccountMenu";
+import SetModal from "../modals/SetModal";
+import type { SettingsTab } from "../modals/SetModal";
 import { User } from "lucide-react";
+
+// TODO: 로그인 상태/유저 정보를 전역 상태(Context 등)로 관리하게 되면 이 mock 값을 대체합니다.
+// (백엔드 로그인 API 정상화 전까지 마이페이지 화면 테스트용으로 임시 고정)
+const CURRENT_USER = {
+  name: "홍길동",
+  email: "honggildong@naver.com",
+};
 
 const Navbar = () => {
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSignupOpen, setIsSignupOpen] = useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<SettingsTab | null>(null);
+  const [isLogoutOpen, setIsLogoutOpen] = useState(false);
+  const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false);
+
+  const handleLogoutConfirm = () => {
+    // TODO: 로그아웃 API 연동 시 여기서 함께 호출
+    console.log("로그아웃 처리");
+  };
+
+  const handleDeleteAccountConfirm = () => {
+    // TODO: 회원 탈퇴 API 연동 시 여기서 함께 호출
+    console.log("회원 탈퇴 처리");
+  };
 
   return (
     <>
@@ -32,12 +58,34 @@ const Navbar = () => {
 
           {/* 오른쪽 */}
           <div className="flex items-center gap-7">
-            <Link
-              to="/mypage"
-              className="flex size-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)]"
-            >
-              <User size={22} className="text-[color:var(--color-white)]" />
-            </Link>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsAccountMenuOpen((prev) => !prev)}
+                aria-label="마이페이지"
+                className="flex size-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)]"
+              >
+                <User size={22} className="text-[color:var(--color-white)]" />
+              </button>
+
+              {isAccountMenuOpen && (
+                <AccountMenu
+                  name={CURRENT_USER.name}
+                  email={CURRENT_USER.email}
+                  onClose={() => setIsAccountMenuOpen(false)}
+                  onOpenSettings={(tab) => setSettingsTab(tab)}
+                  onLogoutClick={() => setIsLogoutOpen(true)}
+                  onContactClick={() => {
+                    // TODO: 문의하기 플로우 연동
+                    console.log("문의하기");
+                  }}
+                  onNotificationClick={() => {
+                    // TODO: 알림 플로우 연동
+                    console.log("알림");
+                  }}
+                />
+              )}
+            </div>
 
             <button
               onClick={() => setIsLoginOpen(true)}
@@ -68,6 +116,36 @@ const Navbar = () => {
           setIsLoginOpen(true);
         }}
       />
+
+      {/* 설정 모달 (계정 설정 / 요금제 업그레이드에서 진입) */}
+      {settingsTab && (
+        <SetModal
+          initialTab={settingsTab}
+          user={CURRENT_USER}
+          onClose={() => setSettingsTab(null)}
+          onSaveProfile={(data) => {
+            // TODO: 프로필 저장 API 연동
+            console.log("프로필 저장", data);
+          }}
+          onDeleteAccountClick={() => {
+            setSettingsTab(null);
+            setIsDeleteAccountOpen(true);
+          }}
+        />
+      )}
+
+      {/* 로그아웃 확인 */}
+      {isLogoutOpen && (
+        <Logout onClose={() => setIsLogoutOpen(false)} onConfirm={handleLogoutConfirm} />
+      )}
+
+      {/* 회원 탈퇴 확인 */}
+      {isDeleteAccountOpen && (
+        <DeleteAccount
+          onClose={() => setIsDeleteAccountOpen(false)}
+          onConfirm={handleDeleteAccountConfirm}
+        />
+      )}
     </>
   );
 };
