@@ -9,6 +9,8 @@ import {
   Eye,
 } from "lucide-react";
 import VoiceRecorder from "../components/VoiceRecorder";
+import TaskChip from "../components/TaskChip";
+import MainChip from "../components/MainChip";
 
 interface SlideItem {
   id: string;
@@ -44,19 +46,11 @@ const ScriptPanel = ({
         : "bg-white shadow-sm"
     }`}
   >
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1">
       <p className="text-sm font-semibold text-[color:var(--color-text-heading)]">
         {label}
       </p>
-      <span
-        className="inline-flex items-center justify-center rounded-full border border-[color:var(--color-brand-light)]/50 px-2.5 py-0.5 text-xs font-semibold text-[color:var(--color-brand-primary)]"
-        style={{
-          backgroundImage:
-            "linear-gradient(to bottom right, rgba(165,180,252,0.25), rgba(99,102,241,0.15))",
-        }}
-      >
-        AI 생성
-      </span>
+      <MainChip text="AI 생성" scale={0.55} className="-ml-1" />
     </div>
 
     <VoiceRecorder message="녹음 후 직접 들어보며 자연스러운지 확인해보세요." />
@@ -187,7 +181,7 @@ const ScriptEditPage = () => {
         <p className="text-sm font-semibold text-[color:var(--color-text-heading)]">
           프로젝트명.pptx
         </p>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1">
           {/* 임시 버튼: PPT 업로드/미업로드 화면 미리보기 전환 */}
           <button
             type="button"
@@ -197,21 +191,13 @@ const ScriptEditPage = () => {
             <Eye size={16} />
             {hasSlides ? "PPT X 화면 보기 (임시)" : "PPT O 화면 보기 (임시)"}
           </button>
-          <button
-            type="button"
+          <TaskChip
+            icon={Volume2}
+            label="발표코칭"
             onClick={() => navigate("/coach-loading")}
-            className="flex items-center gap-2 rounded-full bg-[color:var(--color-brand-light)]/15 px-6 py-3 text-sm font-semibold text-[color:var(--color-brand-primary)] transition hover:bg-[color:var(--color-brand-light)]/25"
-          >
-            <Volume2 size={18} />
-            발표코칭
-          </button>
-          <button
-            type="button"
-            className="flex items-center gap-2 rounded-full bg-[color:var(--color-brand-light)]/15 px-6 py-3 text-sm font-semibold text-[color:var(--color-brand-primary)] transition hover:bg-[color:var(--color-brand-light)]/25"
-          >
-            <Download size={18} />
-            다운로드
-          </button>
+            className="scale-90 origin-right"
+          />
+          <TaskChip icon={Download} label="다운로드" className="scale-90 origin-right" />
         </div>
       </div>
 
@@ -297,7 +283,7 @@ const ScriptEditPage = () => {
               편집 도구
             </p>
             <div className="flex items-center gap-3 text-xs font-medium text-[color:var(--color-text-body)]">
-              <button type="button" className="hover:text-[color:var(--color-brand-primary)]">
+              <button type="button" className="hover:text-[color:var(--color-brand-primaary)]">
                 이전
               </button>
               <button type="button" className="hover:text-[color:var(--color-brand-primary)]">
