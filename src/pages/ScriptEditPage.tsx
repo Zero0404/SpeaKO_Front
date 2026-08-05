@@ -212,7 +212,7 @@ const ScriptEditPage = () => {
   };
 
   return (
-    <div className="flex w-full flex-col bg-slate-50 pt-28 lg:h-screen">
+    <div className="flex w-full flex-col bg-slate-50 pt-14 sm:pt-16 lg:pt-28 lg:h-screen">
       {/* 상단 바 */}
       <div className="flex shrink-0 flex-col gap-2 border-b border-gray-100 bg-white px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-3 lg:px-8">
         <p className="text-sm font-semibold text-[color:var(--color-text-heading)]">

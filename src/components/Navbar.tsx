@@ -38,34 +38,34 @@ const Navbar = () => {
 
   return (
     <>
-      <header className="absolute top-0 left-0 right-0 z-50 w-full h-28 transparent-bg">
-        <div className="flex h-full w-full items-center justify-between py-6 px-6 lg:px-12">
+      <header className="absolute top-0 left-0 right-0 z-50 w-full bg-transparent">
+        <div className="mx-auto flex w-full max-w-[2000px] items-center justify-between px-4 py-3 sm:px-5 sm:py-3 md:px-8 md:py-4 lg:px-12 lg:py-6">
           {/* 왼쪽 */}
-          <div className="flex items-center gap-20">
-            <Link to="/">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-6 md:gap-10 lg:gap-20">
+            <Link to="/" className="shrink-0">
               <img
                 src={logo}
                 alt="SpeaKO"
-                className="h-14 w-auto"
+                className="h-7 w-auto sm:h-9 md:h-10 lg:h-16"
               />
             </Link>
 
-            <nav className="flex items-center gap-14">
+            <nav className="hidden items-center gap-6 md:flex lg:gap-12 xl:gap-14">
               <LinkButton to="/service">서비스 소개</LinkButton>
               <LinkButton to="/pricing">요금 안내</LinkButton>
             </nav>
           </div>
 
           {/* 오른쪽 */}
-          <div className="flex items-center gap-7">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-4 lg:gap-7">
             <div className="relative">
               <button
                 type="button"
                 onClick={() => setIsAccountMenuOpen((prev) => !prev)}
                 aria-label="마이페이지"
-                className="flex size-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)]"
+                className="flex size-9 items-center justify-center rounded-full bg-gradient-to-br from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)] sm:size-9 md:size-10 lg:size-11"
               >
-                <User size={22} className="text-[color:var(--color-white)]" />
+                <User size={18} className="text-[color:var(--color-white)] sm:size-[18px] md:size-5 lg:size-[22px]" />
               </button>
 
               {isAccountMenuOpen && (
@@ -89,7 +89,7 @@ const Navbar = () => {
 
             <button
               onClick={() => setIsLoginOpen(true)}
-              className="rounded-2xl hover-effect-btn is-active px-8 py-3.5 text-base font-semibold text-white shadow-md transition hover:scale-105"
+              className="whitespace-nowrap rounded-xl hover-effect-btn is-active px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:scale-105 sm:rounded-xl sm:px-4 sm:py-2 sm:text-sm md:px-5 md:py-2.5 lg:rounded-2xl lg:px-8 lg:py-3.5 lg:text-base"
             >
               로그인
             </button>
