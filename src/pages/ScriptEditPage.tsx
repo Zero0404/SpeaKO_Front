@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Download,
@@ -11,6 +11,7 @@ import {
 import VoiceRecorder from "../components/VoiceRecorder";
 import TaskChip from "../components/TaskChip";
 import MainChip from "../components/MainChip";
+import { useScriptJobStore } from "../store/scriptJobStore";
 
 interface SlideItem {
   id: string;
@@ -22,7 +23,7 @@ interface SlideItem {
 type RegenMode = "full" | "partial";
 type SpeakingStyle = "formal" | "casual";
 
-const PRESENTATION_TIME_OPTIONS = ["3분", "5분", "7분", "10분", "15분"];
+const PRESENTATION_TIME_OPTIONS = ["5분", "10분", "15분", "20분", "30분"];
 
 const ScriptPanel = ({
   label,
@@ -36,10 +37,10 @@ const ScriptPanel = ({
   dashed?: boolean;
 }) => (
   <div
-    className={`flex flex-1 flex-col gap-5 rounded-2xl
-    p-5
-    sm:p-6
-    lg:p-8
+    className={`flex flex-1 flex-col gap-3 rounded-2xl
+    p-4
+    sm:p-5
+    lg:p-6
     ${
       dashed
         ? "border-2 border-dashed border-[color:var(--color-brand-primary)]/50 bg-white"
@@ -59,15 +60,13 @@ const ScriptPanel = ({
       value={script}
       onChange={(e) => onChange(e.target.value)}
       placeholder="생성된 AI 대본이 들어갑니다."
-      className="min-h-[160px] flex-1 resize-none rounded-xl border border-gray-200 p-4 text-sm leading-relaxed text-[color:var(--color-text-heading)] outline-none transition focus:border-[color:var(--color-brand-primary)]"
+      className="min-h-[200px] lg:min-h-0 flex-1 resize-none rounded-xl border border-gray-200 p-4 text-sm leading-relaxed text-[color:var(--color-text-heading)] outline-none transition focus:border-[color:var(--color-brand-primary)] sm:min-h-[160px]"
     />
   </div>
 );
 
 /* ────────────────────────────────────────────────────────────
    서브 컴포넌트: 발표 스타일 카드
-   (HoverButton은 아이콘+설명 2줄 레이아웃을 지원하지 않아
-    동일한 hover-effect-btn / is-active 클래스만 재사용해 새로 작성)
    ──────────────────────────────────────────────────────────── */
 
 const StyleCard = ({
@@ -87,7 +86,7 @@ const StyleCard = ({
     type="button"
     onClick={onClick}
     style={active ? undefined : { border: "1px solid rgba(128, 136, 146, 1)" }}
-    className={`flex h-[130px] w-full flex-col items-center justify-center gap-2 rounded-[16px] p-3 text-center transition-all ${
+    className={`flex h-auto min-h-[110px] w-full flex-col items-center justify-center gap-2 rounded-[16px] p-3 text-center transition-all sm:min-h-[130px] ${
       active
         ? "border border-[#5b6cfb] bg-[#EEF2FF] shadow-sm"
         : "bg-white hover:border-slate-400"
@@ -106,7 +105,7 @@ const StyleCard = ({
     >
       {title}
     </span>
-    <span className="text-center text-[11px] font-normal leading-tight text-slate-500">
+    <span className="whitespace-nowrap text-center text-[8px] font-normal leading-tight text-slate-500 sm:text-[9px]">
       {description}
     </span>
   </button>
@@ -118,37 +117,63 @@ const StyleCard = ({
 
 const ScriptEditPage = () => {
   const navigate = useNavigate();
-  const [slides, setSlides] = useState<SlideItem[]>([]);
+
+  const { result, hasSourceFile, sourceFileName, status } = useScriptJobStore();
+  const hasRealData = status === "success" && result !== null;
+
+  // 실데이터가 없을 때만 쓰는 임시 모의 데이터 (기존 "PPT O/X 화면 보기 (임시)" 토글용)
+  const [mockSlides, setMockSlides] = useState<SlideItem[]>([]);
   const [selectedSlideId, setSelectedSlideId] = useState<string | null>(null);
   const [fullScript, setFullScript] = useState("");
+
   const [regenMode, setRegenMode] = useState<RegenMode>("full");
   const [presentationTime, setPresentationTime] = useState("5분");
   const [speakingStyle, setSpeakingStyle] = useState<SpeakingStyle>("formal");
   const [regenRequest, setRegenRequest] = useState("");
 
-  const hasSlides = slides.length > 0;
+  // 실데이터가 들어오면 슬라이드 목록 또는 전체 대본 상태를 채움
+  useEffect(() => {
+    if (!hasRealData || !result) return;
+
+    if (hasSourceFile) {
+      const realSlides: SlideItem[] = result.slides.map((s) => ({
+        id: `slide-${s.page}`,
+        index: s.page,
+        title: "슬라이드 제목이 들어갑니다", // 서버가 제목을 따로 안 줘서 임시 유지
+        script: s.text,
+      }));
+      setMockSlides(realSlides);
+      setSelectedSlideId(realSlides[0]?.id ?? null);
+    } else {
+      setFullScript(result.slides[0]?.text ?? "");
+    }
+  }, [hasRealData, result, hasSourceFile]);
+
+  const hasSlides = hasRealData ? hasSourceFile : mockSlides.length > 0;
+  const slides = mockSlides;
+
   const selectedSlide = useMemo(
     () => slides.find((s) => s.id === selectedSlideId) ?? null,
     [slides, selectedSlideId]
   );
 
-  // TODO: 백엔드 연동 시 실제 업로드 + 슬라이드/대본 파싱 API 호출로 교체
   const loadMockSlides = useCallback(() => {
-    const mockSlides: SlideItem[] = Array.from({ length: 18 }, (_, i) => ({
+    const mock: SlideItem[] = Array.from({ length: 18 }, (_, i) => ({
       id: `slide-${i + 1}`,
       index: i + 1,
       title: "슬라이드 제목이 들어갑니다",
       script: "",
     }));
-    setSlides(mockSlides);
-    setSelectedSlideId(mockSlides[0].id);
+    setMockSlides(mock);
+    setSelectedSlideId(mock[0].id);
   }, []);
 
   // 임시: 백엔드 연동 전, PPT 업로드/미업로드 화면을 바로 확인하기 위한 토글
   // 실제 업로드 API가 붙으면 이 버튼과 handleTogglePreview는 제거하면 됩니다.
   const handleTogglePreview = () => {
+    if (hasRealData) return;
     if (hasSlides) {
-      setSlides([]);
+      setMockSlides([]);
       setSelectedSlideId(null);
     } else {
       loadMockSlides();
@@ -157,13 +182,13 @@ const ScriptEditPage = () => {
 
   const updateSelectedScript = (value: string) => {
     if (!selectedSlideId) return;
-    setSlides((prev) =>
+    setMockSlides((prev) =>
       prev.map((s) => (s.id === selectedSlideId ? { ...s, script: value } : s))
     );
   };
 
   const handleAddSlide = () => {
-    setSlides((prev) => {
+    setMockSlides((prev) => {
       const next: SlideItem = {
         id: `slide-${Date.now()}`,
         index: prev.length + 1,
@@ -179,7 +204,7 @@ const ScriptEditPage = () => {
       {/* 상단 바 */}
       <div className="flex shrink-0 items-center justify-between border-b border-gray-100 bg-white px-8 py-4">
         <p className="text-sm font-semibold text-[color:var(--color-text-heading)]">
-          프로젝트명.pptx
+          {hasRealData && sourceFileName ? sourceFileName : "프로젝트명.pptx"}
         </p>
         <div className="flex items-center gap-1">
           {/* 임시 버튼: PPT 업로드/미업로드 화면 미리보기 전환 */}
@@ -201,7 +226,7 @@ const ScriptEditPage = () => {
         </div>
       </div>
 
-      {/* 본문 */}
+      {/* 본문 — 모니터/노트북(lg 이상): 3단 그리드 (좌/우 폭은 %+최소폭), 패드/휴대폰(lg 미만): 세로 스택 */}
       <div
         className={`grid min-h-[750px] flex-1 gap-8 p-6 ${
           hasSlides ? "grid-cols-[360px_1fr_400px]" : "grid-cols-[1fr_400px]"
@@ -227,7 +252,7 @@ const ScriptEditPage = () => {
                     <span className="w-5 shrink-0 text-xs font-semibold text-[color:var(--color-text-body)]">
                       {String(slide.index).padStart(2, "0")}
                     </span>
-                    <div className="h-[52px] w-[92px] shrink-0 rounded-md bg-gray-100" />
+                    <div className="h-12 w-20 shrink-0 rounded-md bg-gray-100 sm:h-[52px] sm:w-[92px]" />
                     <div className="min-w-0 flex-1">
                       <p className="text-[13px] font-medium text-[color:var(--color-text-heading)]">
                         {slide.title}
@@ -240,14 +265,16 @@ const ScriptEditPage = () => {
                 );
               })}
             </div>
-            <button
-              type="button"
-              onClick={handleAddSlide}
-              className="flex shrink-0 items-center justify-center gap-1.5 border-t border-gray-100 py-4 text-sm font-semibold text-[color:var(--color-brand-primary)] transition hover:bg-indigo-50/50"
-            >
-              <Plus size={16} />
-              슬라이드 추가
-            </button>
+            {!hasRealData && (
+              <button
+                type="button"
+                onClick={handleAddSlide}
+                className="flex shrink-0 items-center justify-center gap-1.5 border-t border-gray-100 py-4 text-sm font-semibold text-[color:var(--color-brand-primary)] transition hover:bg-indigo-50/50"
+              >
+                <Plus size={16} />
+                슬라이드 추가
+              </button>
+            )}
           </aside>
         )}
 
@@ -260,11 +287,13 @@ const ScriptEditPage = () => {
                   슬라이드 미리보기
                 </p>
               </div>
-              <ScriptPanel
-                label="해당 슬라이드 대본"
-                script={selectedSlide?.script ?? ""}
-                onChange={updateSelectedScript}
-              />
+              <div className="flex flex-[0.58] flex-col">
+                <ScriptPanel
+                  label="해당 슬라이드 대본"
+                  script={selectedSlide?.script ?? ""}
+                  onChange={updateSelectedScript}
+                />
+              </div>
             </>
           ) : (
             <ScriptPanel
@@ -283,7 +312,7 @@ const ScriptEditPage = () => {
               편집 도구
             </p>
             <div className="flex items-center gap-3 text-xs font-medium text-[color:var(--color-text-body)]">
-              <button type="button" className="hover:text-[color:var(--color-brand-primaary)]">
+              <button type="button" className="hover:text-[color:var(--color-brand-primary)]">
                 이전
               </button>
               <button type="button" className="hover:text-[color:var(--color-brand-primary)]">
@@ -361,11 +390,7 @@ const ScriptEditPage = () => {
             <div className="grid grid-cols-2 gap-3">
               <StyleCard
                 icon={
-                  <svg
-                    className="w-5 h-5"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.1-.9-2-2-2zm-6 0h-4V4h4v2z" />
                   </svg>
                 }
@@ -376,11 +401,7 @@ const ScriptEditPage = () => {
               />
               <StyleCard
                 icon={
-                  <svg
-                    className="w-5 h-5"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                  >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z" />
                   </svg>
                 }
@@ -400,14 +421,14 @@ const ScriptEditPage = () => {
               value={regenRequest}
               onChange={(e) => setRegenRequest(e.target.value)}
               placeholder="예) 더 간결하게 / 인사말 빼고 바로 주제로 / 더 격식있게 등"
-              className="min-h-[140px] flex-1 resize-none rounded-xl border border-gray-200 p-4 text-sm outline-none transition focus:border-[color:var(--color-brand-primary)]"
+              className="min-h-[120px] flex-1 resize-none rounded-xl border border-gray-200 p-4 text-sm outline-none transition focus:border-[color:var(--color-brand-primary)] sm:min-h-[140px]"
             />
           </div>
 
           <button
             type="button"
             style={{ backgroundImage: "var(--gradient-brand-active)" }}
-            className="w-full rounded-xl py-3.5 text-sm font-semibold text-white shadow-md transition hover:scale-[1.02]"
+            className="w-full rounded-xl py-2.5 sm:py-3 lg:py-3.5 text-sm font-semibold text-white shadow-md transition hover:scale-[1.02]"
           >
             재생성
           </button>
