@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Download,
@@ -11,6 +11,7 @@ import {
 import VoiceRecorder from "../components/VoiceRecorder";
 import TaskChip from "../components/TaskChip";
 import MainChip from "../components/MainChip";
+import { useScriptJobStore } from "../store/scriptJobStore";
 
 interface SlideItem {
   id: string;
@@ -36,10 +37,10 @@ const ScriptPanel = ({
   dashed?: boolean;
 }) => (
   <div
-    className={`flex flex-1 flex-col gap-5 rounded-2xl
-    p-5
-    sm:p-6
-    lg:p-8
+    className={`flex flex-1 flex-col gap-3 rounded-2xl
+    p-4
+    sm:p-5
+    lg:p-6
     ${
       dashed
         ? "border-2 border-dashed border-[color:var(--color-brand-primary)]/50 bg-white"
@@ -50,20 +51,10 @@ const ScriptPanel = ({
       <p className="text-sm font-semibold text-[color:var(--color-text-heading)]">
         {label}
       </p>
-      <MainChip
-        text="AI 생성"
-        className="
-        scale-[0.6]
-        sm:scale-[0.7]
-        lg:scale-[0.75]
-        "
-      />
+      <MainChip text="AI 생성" scale={0.55} className="-ml-1" />
     </div>
 
-    <VoiceRecorder
-      className="scale-75 sm:scale-90 xl:scale-100"
-      message="녹음 후 직접 들어보며 자연스러운지 확인해보세요."
-    />
+    <VoiceRecorder message="녹음 후 직접 들어보며 자연스러운지 확인해보세요." />
 
     <textarea
       value={script}
@@ -126,34 +117,63 @@ const StyleCard = ({
 
 const ScriptEditPage = () => {
   const navigate = useNavigate();
-  const [slides, setSlides] = useState<SlideItem[]>([]);
+
+  const { result, hasSourceFile, sourceFileName, status } = useScriptJobStore();
+  const hasRealData = status === "success" && result !== null;
+
+  // 실데이터가 없을 때만 쓰는 임시 모의 데이터 (기존 "PPT O/X 화면 보기 (임시)" 토글용)
+  const [mockSlides, setMockSlides] = useState<SlideItem[]>([]);
   const [selectedSlideId, setSelectedSlideId] = useState<string | null>(null);
   const [fullScript, setFullScript] = useState("");
+
   const [regenMode, setRegenMode] = useState<RegenMode>("full");
   const [presentationTime, setPresentationTime] = useState("5분");
   const [speakingStyle, setSpeakingStyle] = useState<SpeakingStyle>("formal");
   const [regenRequest, setRegenRequest] = useState("");
 
-  const hasSlides = slides.length > 0;
+  // 실데이터가 들어오면 슬라이드 목록 또는 전체 대본 상태를 채움
+  useEffect(() => {
+    if (!hasRealData || !result) return;
+
+    if (hasSourceFile) {
+      const realSlides: SlideItem[] = result.slides.map((s) => ({
+        id: `slide-${s.page}`,
+        index: s.page,
+        title: "슬라이드 제목이 들어갑니다", // 서버가 제목을 따로 안 줘서 임시 유지
+        script: s.text,
+      }));
+      setMockSlides(realSlides);
+      setSelectedSlideId(realSlides[0]?.id ?? null);
+    } else {
+      setFullScript(result.slides[0]?.text ?? "");
+    }
+  }, [hasRealData, result, hasSourceFile]);
+
+  const hasSlides = hasRealData ? hasSourceFile : mockSlides.length > 0;
+  const slides = mockSlides;
+
   const selectedSlide = useMemo(
     () => slides.find((s) => s.id === selectedSlideId) ?? null,
     [slides, selectedSlideId]
   );
 
   const loadMockSlides = useCallback(() => {
-    const mockSlides: SlideItem[] = Array.from({ length: 18 }, (_, i) => ({
+    const mock: SlideItem[] = Array.from({ length: 18 }, (_, i) => ({
       id: `slide-${i + 1}`,
       index: i + 1,
       title: "슬라이드 제목이 들어갑니다",
       script: "",
     }));
-    setSlides(mockSlides);
-    setSelectedSlideId(mockSlides[0].id);
+    setMockSlides(mock);
+    setSelectedSlideId(mock[0].id);
   }, []);
 
+  // 임시: 백엔드 연동 전, PPT 업로드/미업로드 화면을 바로 확인하기 위한 토글
+  // 실제 업로드 API가 붙으면 이 버튼과 handleTogglePreview는 제거하면 됩니다.
   const handleTogglePreview = () => {
+    if (hasRealData) return;
     if (hasSlides) {
-      setSlides([]);
+      setMockSlides([]);
       setSelectedSlideId(null);
     } else {
       loadMockSlides();
@@ -162,13 +182,13 @@ const ScriptEditPage = () => {
 
   const updateSelectedScript = (value: string) => {
     if (!selectedSlideId) return;
-    setSlides((prev) =>
+    setMockSlides((prev) =>
       prev.map((s) => (s.id === selectedSlideId ? { ...s, script: value } : s))
     );
   };
 
   const handleAddSlide = () => {
-    setSlides((prev) => {
+    setMockSlides((prev) => {
       const next: SlideItem = {
         id: `slide-${Date.now()}`,
         index: prev.length + 1,
@@ -180,17 +200,18 @@ const ScriptEditPage = () => {
   };
 
   return (
-    <div className="flex w-full flex-col bg-slate-50 pt-28 min-h-screen">
+    <div className="flex h-[calc(100vh-5rem)] w-full flex-col bg-slate-50 pt-22">
       {/* 상단 바 */}
-      <div className="flex shrink-0 flex-col gap-3 border-b border-gray-100 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4 lg:px-8">
+      <div className="flex shrink-0 items-center justify-between border-b border-gray-100 bg-white px-8 py-4">
         <p className="text-sm font-semibold text-[color:var(--color-text-heading)]">
-          프로젝트명.pptx
+          {hasRealData && sourceFileName ? sourceFileName : "프로젝트명.pptx"}
         </p>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1">
+          {/* 임시 버튼: PPT 업로드/미업로드 화면 미리보기 전환 */}
           <button
             type="button"
             onClick={handleTogglePreview}
-            className="flex items-center gap-1.5 whitespace-nowrap rounded-lg border border-dashed border-amber-400 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 transition hover:bg-amber-100 sm:px-4 sm:text-sm"
+            className="flex items-center gap-1.5 rounded-lg border border-dashed border-amber-400 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-700 transition hover:bg-amber-100"
           >
             <Eye size={16} />
             {hasSlides ? "PPT X 화면 보기 (임시)" : "PPT O 화면 보기 (임시)"}
@@ -207,16 +228,14 @@ const ScriptEditPage = () => {
 
       {/* 본문 — 모니터/노트북(lg 이상): 3단 그리드 (좌/우 폭은 %+최소폭), 패드/휴대폰(lg 미만): 세로 스택 */}
       <div
-        className={`flex flex-1 flex-col gap-4 overflow-y-auto px-4 pt-3 pb-4 sm:gap-6 sm:px-6 sm:pt-4 sm:pb-6 lg:grid lg:min-h-0 lg:flex-1 lg:gap-6 lg:overflow-hidden lg:px-6 lg:pt-4 lg:pb-6 xl:gap-8 xl:px-8 xl:pt-5 xl:pb-8 ${
-          hasSlides
-            ? "lg:grid-cols-[minmax(260px,23%)_1fr_minmax(340px,26%)]"
-            : "lg:grid-cols-[1fr_minmax(340px,26%)]"
+        className={`grid min-h-[750px] flex-1 gap-8 p-6 ${
+          hasSlides ? "grid-cols-[360px_1fr_400px]" : "grid-cols-[1fr_400px]"
         }`}
       >
         {/* 좌측: 슬라이드 리스트 */}
         {hasSlides && (
-          <aside className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm lg:h-full">
-            <div className="max-h-[640px] space-y-3 overflow-y-auto p-4">
+          <aside className="flex flex-col overflow-hidden rounded-2xl bg-white shadow-sm">
+            <div className="flex-1 space-y-3 overflow-y-auto p-4">
               {slides.map((slide) => {
                 const isSelected = slide.id === selectedSlideId;
                 return (
@@ -235,7 +254,7 @@ const ScriptEditPage = () => {
                     </span>
                     <div className="h-12 w-20 shrink-0 rounded-md bg-gray-100 sm:h-[52px] sm:w-[92px]" />
                     <div className="min-w-0 flex-1">
-                      <p className="break-words text-[13px] font-medium leading-snug text-[color:var(--color-text-heading)]">
+                      <p className="text-[13px] font-medium text-[color:var(--color-text-heading)]">
                         {slide.title}
                       </p>
                       <p className="text-xs text-[color:var(--color-text-body)]">
@@ -246,22 +265,24 @@ const ScriptEditPage = () => {
                 );
               })}
             </div>
-            <button
-              type="button"
-              onClick={handleAddSlide}
-              className="flex shrink-0 items-center justify-center gap-1.5 border-t border-gray-100 py-4 text-sm font-semibold text-[color:var(--color-brand-primary)] transition hover:bg-indigo-50/50"
-            >
-              <Plus size={16} />
-              슬라이드 추가
-            </button>
+            {!hasRealData && (
+              <button
+                type="button"
+                onClick={handleAddSlide}
+                className="flex shrink-0 items-center justify-center gap-1.5 border-t border-gray-100 py-4 text-sm font-semibold text-[color:var(--color-brand-primary)] transition hover:bg-indigo-50/50"
+              >
+                <Plus size={16} />
+                슬라이드 추가
+              </button>
+            )}
           </aside>
         )}
 
-        {/* 중앙: 미리보기 + 대본 — 세로 비율은 flex-grow(비율)로만 제어 */}
-        <section className="flex min-w-0 flex-col gap-6 lg:h-full lg:overflow-y-auto">
+        {/* 중앙: 미리보기 + 대본 */}
+        <section className="flex min-w-0 flex-col gap-6 overflow-y-auto">
           {hasSlides ? (
             <>
-              <div className="flex min-h-[180px] flex-[0.42] items-center justify-center rounded-2xl bg-white shadow-sm sm:min-h-[220px]">
+              <div className="flex min-h-[240px] flex-1 items-center justify-center rounded-2xl bg-white shadow-sm">
                 <p className="text-sm text-[color:var(--color-text-body)]">
                   슬라이드 미리보기
                 </p>
@@ -285,7 +306,7 @@ const ScriptEditPage = () => {
         </section>
 
         {/* 우측: 편집 도구 */}
-        <aside className="flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-sm sm:p-6 lg:h-full lg:overflow-y-auto lg:p-8 2xl:p-10">
+        <aside className="flex flex-col gap-3 overflow-y-auto rounded-2xl bg-white p-8 shadow-sm">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-[color:var(--color-text-heading)]">
               편집 도구
