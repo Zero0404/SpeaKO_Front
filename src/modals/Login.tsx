@@ -2,6 +2,7 @@ import { useState } from "react";
 import TextInput from "../components/TextInput";
 import Logo from "../assets/Logo.png";
 import { loginApi } from "../apis/auth.api";
+import { useAuthStore } from "../store/authStore";
 
 interface LoginProps {
   open: boolean;
@@ -30,13 +31,17 @@ const Login = ({ open, onClose, onSignupClick }: LoginProps) => {
 
       if (result.success) {
         const { accessToken } = result.result;
-        // 토큰 저장 (추후 인증 필요한 페이지에서 사용)
-        localStorage.setItem("accessToken", accessToken);
+
+        useAuthStore.getState().setAccessToken(accessToken);
+
+        console.log("token:", accessToken);
+        console.log("store:", useAuthStore.getState().accessToken);
 
         alert("로그인에 성공하였습니다.");
         onClose();
         window.location.reload();
       }
+      console.log(result);
     } catch (error: any) {
       if (error.response && error.response.data) {
         setErrorMessage(error.response.data.message || "로그인에 실패했습니다.");
