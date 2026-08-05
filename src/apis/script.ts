@@ -18,14 +18,15 @@ export interface CreateScriptParams {
   style: 'formal' | 'casual';
 }
 
-export function createScript(params: CreateScriptParams) {
+export function createScript(
+  params: CreateScriptParams
+): Promise<ScriptResponse> {
   const formData = new FormData();
 
   if (params.file) {
     formData.append("file", params.file);
   }
-  console.log("file =", params.file);
-  // 👇 이 부분 추가
+
   const request = {
     topic: params.title,
     duration: params.duration,
@@ -33,19 +34,14 @@ export function createScript(params: CreateScriptParams) {
     guideline: params.guideline ?? "",
   };
 
-  console.log("전송할 request =", request);
-
   formData.append(
     "request",
-    new Blob(
-      [
-        JSON.stringify(request),
-      ],
-      { type: "application/json" }
-    )
+    new Blob([JSON.stringify(request)], {
+      type: "application/json",
+    })
   );
 
-  return apiFetch("/api/presentations", {
+  return apiFetch<ScriptResponse>("/api/presentations", {
     method: "POST",
     body: formData,
   });
