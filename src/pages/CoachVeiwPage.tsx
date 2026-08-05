@@ -534,11 +534,13 @@ const CoachViewPage = () => {
 
   // FeedbackLoading 페이지에서 평가를 마치고 돌아올 때 navigate(..., { state: { score } })로 점수를 넘겨준다.
   // 그 state가 있으면 처음부터 "done" 상태로 보여주고, 없으면 아직 평가 전(idle)이다.
+  // evalStatus/score는 마운트 시 location.state로 한 번 정해지고 그 이후로는 값을 바꾸지 않으므로
+  // (다시 바뀌려면 페이지가 새로 마운트돼야 함) setter는 필요 없다 — 남겨두면 "선언했지만 사용 안 함" 빌드 에러가 난다.
   const scoreFromLoadingPage = (location.state as { score?: number } | null)?.score;
-  const [evalStatus, setEvalStatus] = useState<"idle" | "done">(
+  const [evalStatus] = useState<"idle" | "done">(
     typeof scoreFromLoadingPage === "number" ? "done" : "idle",
   );
-  const [score, setScore] = useState<number | null>(scoreFromLoadingPage ?? null);
+  const [score] = useState<number | null>(scoreFromLoadingPage ?? null);
 
   const handleCheckScript = () => {};
   const handleDownload = () => {};
@@ -714,7 +716,7 @@ const CoachViewPage = () => {
       <button
         type="button"
         onClick={handleRealtimeEvaluation}
-        className="mt-auto flex w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)] py-2.5 text-sm font-bold font-['Pretendard'] text-[color:var(--color-white)] transition hover:opacity-90"
+        className="mt-auto flex w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)] py-3.5 text-m font-bold font-['Pretendard'] text-[color:var(--color-white)] transition hover:opacity-90"
       >
         <CheckCircle2 size={18} />
         실시간 평가받기
@@ -792,7 +794,7 @@ const CoachViewPage = () => {
         />
       </div>
 
-      <div className="mt-4 grid min-h-0 flex-1 grid-cols-1 gap-4 sm:mt-6 sm:gap-6 xl:grid-cols-[1fr_480px]">
+      <div className="mt-4 grid min-h-0 flex-1 grid-cols-1 gap-4 sm:mt-6 sm:gap-6 xl:grid-cols-[1fr_440px]">
         {activeTab === "viewer" ? (
           <section
             className={`flex ${PANEL_HEIGHT_CLASS} min-h-0 flex-col gap-3 rounded-[20px] bg-[color:var(--color-white)] px-4 py-5 sm:px-6 sm:py-7`}
