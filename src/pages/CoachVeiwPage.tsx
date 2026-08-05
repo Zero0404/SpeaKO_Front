@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import {
   FileText,
   Download,
@@ -45,8 +45,9 @@ interface PronunciationTip {
   description: string;
 }
 
-// 대본 뷰어 / 단어 목록 패널과 우측 사이드바가 같은 세로 길이를 갖도록 고정 높이를 공유한다.
-const PANEL_HEIGHT_CLASS = "h-[640px]";
+// 대본 뷰어 / 단어 목록 패널과 우측 사이드바가 같은 세로 길이를 갖도록 부모(flex-1)의 h-full을 그대로 채운다.
+// 단, 모바일/태블릿에서는 화면을 한 장에 억지로 욱여넣지 않고 내용만큼 자연스럽게 늘어난 뒤 페이지 자체가 스크롤되게 한다.
+const PANEL_HEIGHT_CLASS = "h-auto xl:h-full";
 
 const HIGHLIGHT_META: Record<
   HighlightType,
@@ -222,6 +223,23 @@ const wordEntries: WordEntry[] = [
   },
 ];
 
+// 대본 뷰어 안의 하이라이트 단어에 마우스를 올리면 보여줄 툴팁을 위해
+// segment.id -> WordEntry 로 바로 찾을 수 있게 맵으로 만들어둔다.
+const wordEntryById = new Map(wordEntries.map((entry) => [entry.id, entry]));
+
+// 단어 목록 카드에는 같은 단어(예: "특정")가 대본에 여러 번 나와도 한 번만 보여준다.
+// (대본 뷰어 쪽 하이라이트는 각 등장 위치마다 그대로 다 표시되고, 여기서만 목록용으로 중복 제거)
+const uniqueWordEntries: WordEntry[] = (() => {
+  const seenWords = new Set<string>();
+  const result: WordEntry[] = [];
+  for (const entry of wordEntries) {
+    if (seenWords.has(entry.word)) continue;
+    seenWords.add(entry.word);
+    result.push(entry);
+  }
+  return result;
+})();
+
 const highlightSummary: { type: HighlightType; count: number }[] = (
   ["duration", "liaison", "mismatch"] as HighlightType[]
 ).map((type) => ({
@@ -247,6 +265,33 @@ const pronunciationTips: PronunciationTip[] = [
   },
 ];
 
+// 점수 구간별로 보여줄 한줄 메시지 + 상세 피드백 (실제로는 평가 API 응답으로 교체될 자리)
+const getScoreFeedback = (value: number) => {
+  if (value >= 90) {
+    return {
+      message: "완벽해요! 🎉",
+      detail: "발음이 아주 정확하고 자연스러워요.\n지금처럼만 유지하면 돼요!",
+    };
+  }
+  if (value >= 75) {
+    return {
+      message: "훌륭해요! 👏",
+      detail:
+        "전반적으로 안정적인 발표에요.\n장단음에 대한 부분만 좀 더 연습하면\n더 완벽한 발표를 할 수 있을 것 같아요!",
+    };
+  }
+  if (value >= 50) {
+    return {
+      message: "좋아요, 조금만 더! 💪",
+      detail: "기본기는 탄탄해요.\n하이라이트된 단어들 위주로 반복 연습해보세요.",
+    };
+  }
+  return {
+    message: "연습이 더 필요해요 🙂",
+    detail: "하이라이트된 단어들을 천천히 다시 들어보면서\n발음을 교정해보세요.",
+  };
+};
+
 /* ────────────────────────────────────────────────────────────
    서브 컴포넌트
    ──────────────────────────────────────────────────────────── */
@@ -266,22 +311,50 @@ const HighlightSpan = ({
   type,
   isFocused,
   onClick,
+  tooltip,
   children,
 }: {
   type: HighlightType;
   isFocused?: boolean;
   onClick?: () => void;
+  /** 마우스오버 시 보여줄 단어 + 발음 툴팁. 없으면 툴팁 미표시 */
+  tooltip?: { word: string; pronunciation: string };
   children: React.ReactNode;
 }) => {
+  const [isHovered, setIsHovered] = useState(false);
   const meta = HIGHLIGHT_META[type];
+  // 포커스(단어 목록에서 넘어왔을 때) 시 배경만 살짝 진하게 + 딸깍 튀어오르는 스케일 효과.
+  const focusedBgClass = meta.bgClass.replace("/10", "/30");
+
   return (
     <span
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
       onClick={onClick}
-      className={`rounded-[2px] px-0.5 font-semibold transition-shadow ${meta.bgClass} ${meta.textClass} ${meta.shadow} ${onClick ? "cursor-pointer" : ""} ${isFocused ? "ring-2 ring-offset-2 ring-current" : ""}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`relative inline-block rounded-sm px-1 font-semibold leading-5 transition-[transform,background-color] duration-300 ease-out ${
+        isFocused ? focusedBgClass : meta.bgClass
+      } ${meta.textClass} ${meta.shadow} ${onClick ? "cursor-pointer" : ""} ${
+        isFocused ? "scale-110" : "scale-100"
+      }`}
     >
       {children}
+
+      {tooltip && isHovered && (
+        <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2">
+          <span className="flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[color:var(--color-white)] px-3 py-2 shadow-[0px_4px_16px_0px_rgba(30,41,59,0.15)] outline outline-1 outline-offset-[-1px] outline-slate-500/10">
+            <span className="text-sm font-bold font-['Pretendard'] leading-4 text-[color:var(--color-text-heading)]">
+              {tooltip.word}
+            </span>
+            <ArrowIcon size={12} className="text-[color:var(--color-text-body)]" />
+            <span className={`text-sm font-bold font-['Pretendard'] leading-4 ${meta.textClass}`}>
+              {tooltip.pronunciation}
+            </span>
+          </span>
+          <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-white" />
+        </span>
+      )}
     </span>
   );
 };
@@ -290,7 +363,7 @@ const TypeBadge = ({ type }: { type: HighlightType }) => {
   const meta = HIGHLIGHT_META[type];
   return (
     <span
-      className={`flex w-24 shrink-0 items-center justify-center rounded-lg py-3 text-base font-bold font-['Pretendard'] leading-4 ${meta.bgClass} ${meta.textClass} ${meta.shadow}`}
+      className={`flex w-20 shrink-0 items-center justify-center rounded-lg py-3 text-sm font-bold font-['Pretendard'] leading-4 sm:w-24 sm:text-base ${meta.bgClass} ${meta.textClass} ${meta.shadow}`}
     >
       {meta.shortLabel}
     </span>
@@ -312,7 +385,7 @@ const WordListCard = ({
       type="button"
       id={`word-${entry.id}`}
       onClick={onClick}
-      className={`flex w-full items-center gap-4 rounded-2xl bg-[color:var(--color-white)] px-6 py-4 text-left shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 transition ${isFocused ? "ring-2 ring-[color:var(--color-brand-primary)] ring-offset-2" : ""}`}
+      className={`flex w-full items-center gap-3 rounded-2xl bg-[color:var(--color-white)] px-4 py-3 text-left shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 transition sm:gap-4 sm:px-6 sm:py-4 ${isFocused ? "ring-2 ring-[color:var(--color-brand-primary)] ring-offset-2" : ""}`}
     >
       <TypeBadge type={entry.type} />
       <div className="flex flex-1 flex-col gap-1.5">
@@ -338,6 +411,64 @@ const WordListCard = ({
   );
 };
 
+/**
+ * 발음 종합 점수 도넛 차트.
+ * mount(또는 score 변경) 시 0%에서 목표 점수까지 시계방향으로 채워지는 애니메이션.
+ */
+const ScoreDonut = ({ score }: { score: number }) => {
+  const [animatedScore, setAnimatedScore] = useState(0);
+
+  useEffect(() => {
+    // 0으로 리셋한 다음 프레임에 목표 점수로 올려야 transition이 실제로 재생된다.
+    setAnimatedScore(0);
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setAnimatedScore(score));
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [score]);
+
+  const SIZE = 140;
+  const STROKE = 10;
+  const radius = (SIZE - STROKE) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - animatedScore / 100);
+
+  return (
+    <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} className="shrink-0">
+      <defs>
+        <linearGradient id="scoreDonutGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="var(--color-brand-light)" />
+          <stop offset="100%" stopColor="var(--color-brand-primary)" />
+        </linearGradient>
+      </defs>
+      {/* 배경 트랙 */}
+      <circle
+        cx={SIZE / 2}
+        cy={SIZE / 2}
+        r={radius}
+        fill="none"
+        stroke="currentColor"
+        className="text-slate-500/15"
+        strokeWidth={STROKE}
+      />
+      {/* 진행률 - 12시 방향에서 시작해서 시계방향으로 채워짐 */}
+      <circle
+        cx={SIZE / 2}
+        cy={SIZE / 2}
+        r={radius}
+        fill="none"
+        stroke="url(#scoreDonutGradient)"
+        strokeWidth={STROKE}
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}
+        style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.22, 1, 0.36, 1)" }}
+      />
+    </svg>
+  );
+};
+
 /* ────────────────────────────────────────────────────────────
    메인 페이지
    ──────────────────────────────────────────────────────────── */
@@ -347,22 +478,37 @@ type WordFilter = "all" | HighlightType;
 
 const CoachViewPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [activeTab, setActiveTab] = useState<TabKey>("viewer");
   const [wordFilter, setWordFilter] = useState<WordFilter>("all");
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const clearFocusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // FeedbackLoading 페이지에서 평가를 마치고 돌아올 때 navigate(..., { state: { score } })로 점수를 넘겨준다.
+  // 그 state가 있으면 처음부터 "done" 상태로 보여주고, 없으면 아직 평가 전(idle)이다.
+  const scoreFromLoadingPage = (location.state as { score?: number } | null)?.score;
+  const [evalStatus, setEvalStatus] = useState<"idle" | "done">(
+    typeof scoreFromLoadingPage === "number" ? "done" : "idle",
+  );
+  const [score, setScore] = useState<number | null>(scoreFromLoadingPage ?? null);
+
   const handleCheckScript = () => {};
   const handleDownload = () => {};
 
-  // 헤더의 "파일로 평가받기" — 파일 업로드로 평가받는 플로우로 이동
+  // "파일로 평가받기" — 파일 업로드로 평가받는 플로우로 이동
   const handleFileEvaluation = () => {
     navigate("/feedback-fileupload");
   };
 
-  // 사이드바의 "실시간 평가받기" — 실시간 평가 로딩 화면으로 이동
+  // "실시간 평가받기" — 기존 FeedbackLoading 페이지로 이동해서 로딩을 보여주고,
+  // 평가가 끝나면 FeedbackLoading이 이 페이지로 다시 navigate(..., { state: { score } })해서 돌아온다.
   const handleRealtimeEvaluation = () => {
     navigate("/feedback-loading");
+  };
+
+  // 사이드바의 "상세 분석 보기" — 상세 피드백 페이지로 이동
+  const handleViewDetailedAnalysis = () => {
+    navigate("/feedback");
   };
 
   const handleRecordingComplete = (
@@ -399,13 +545,62 @@ const CoachViewPage = () => {
 
   const filteredWordEntries =
     wordFilter === "all"
-      ? wordEntries
-      : wordEntries.filter((w) => w.type === wordFilter);
+      ? uniqueWordEntries
+      : uniqueWordEntries.filter((w) => w.type === wordFilter);
 
   const summarySidebar = (
     <aside
-      className={`flex ${PANEL_HEIGHT_CLASS} flex-col gap-6 overflow-y-auto rounded-[20px] bg-[color:var(--color-white)] px-6 py-10 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20`}
+      className={`flex ${PANEL_HEIGHT_CLASS} min-h-0 flex-col gap-6 overflow-y-auto rounded-[20px] bg-[color:var(--color-white)] px-4 py-6 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 sm:px-6 sm:py-10`}
     >
+      {evalStatus !== "idle" && (
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center justify-between pl-1">
+            <h3 className="text-xl font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
+              발음 종합 점수
+            </h3>
+            {evalStatus === "done" && (
+              <button
+                type="button"
+                onClick={handleViewDetailedAnalysis}
+                className="flex items-center gap-1 text-sm font-medium font-['Pretendard'] text-[color:var(--color-brand-primary)] transition hover:opacity-80"
+              >
+                상세 분석 보기
+                <ArrowIcon size={16} />
+              </button>
+            )}
+          </div>
+
+          {evalStatus === "done" && score !== null && (
+            <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:gap-5 sm:text-left">
+              <div className="relative flex shrink-0 items-center justify-center">
+                <ScoreDonut score={score} />
+                <div className="absolute flex flex-col items-center">
+                  <span className="text-center">
+                    <span className="text-3xl font-semibold font-['Pretendard'] text-[color:var(--color-brand-primary)]">
+                      {score}
+                    </span>
+                    <span className="text-lg font-semibold font-['Pretendard'] text-[color:var(--color-brand-primary)]">
+                      점
+                    </span>
+                  </span>
+                  <span className="text-lg font-medium font-['Pretendard'] text-[color:var(--color-text-body)]">
+                    /100
+                  </span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <p className="text-xl font-semibold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
+                  {getScoreFeedback(score).message}
+                </p>
+                <p className="whitespace-pre-line text-sm font-medium font-['Pretendard'] leading-6 text-[color:var(--color-text-body)]">
+                  {getScoreFeedback(score).detail}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-col gap-4">
         <h3 className="pl-1 text-xl font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
           하이라이트 요약
@@ -481,7 +676,7 @@ const CoachViewPage = () => {
 
   return (
     <div
-      className="min-h-screen w-full px-6 py-8 lg:px-12 lg:py-10"
+      className="flex min-h-screen w-full flex-col overflow-visible px-4 py-6 sm:px-6 sm:py-8 xl:h-screen xl:overflow-hidden xl:px-12 xl:py-10"
       style={{
         backgroundImage: `url(${ViewPageBackground})`,
         backgroundSize: "cover",
@@ -490,19 +685,19 @@ const CoachViewPage = () => {
         backgroundRepeat: "no-repeat",
       }}
     >
-      <div className="flex flex-col gap-4 rounded-xl bg-[color:var(--color-white)] px-6 py-2 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 sm:flex-row sm:items-center sm:justify-between mt-20">
-        <div className="flex flex-wrap items-center gap-5">
-          <h2 className="text-xl font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
+      <div className="mt-16 flex flex-col gap-4 rounded-xl bg-[color:var(--color-white)] px-4 py-3 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 sm:px-6 sm:py-2 sm:flex-row sm:items-center sm:justify-between md:mt-20">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-5">
+          <h2 className="text-lg font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)] sm:text-xl">
             하이라이트 범례
           </h2>
           <div className="hidden h-5 w-0 outline outline-1 outline-offset-[-0.5px] outline-slate-500/20 sm:block" />
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <LegendBadge type="duration" />
             <LegendBadge type="liaison" />
             <LegendBadge type="mismatch" />
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {activeTab === "viewer" && (
             <TaskChip
               icon={Volume2}
@@ -528,7 +723,7 @@ const CoachViewPage = () => {
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id as TabKey)}
-            className={`relative px-6 py-3 text-xl transition-colors duration-300 ${activeTab === tab.id ? "font-semibold text-[color:var(--color-brand-primary)]" : "font-medium text-[color:var(--color-text-body)]"}`}
+            className={`relative px-4 py-3 text-lg transition-colors duration-300 sm:px-6 sm:text-xl ${activeTab === tab.id ? "font-semibold text-[color:var(--color-brand-primary)]" : "font-medium text-[color:var(--color-text-body)]"}`}
           >
             {tab.label}
           </button>
@@ -538,13 +733,13 @@ const CoachViewPage = () => {
         />
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_360px]">
+      <div className="mt-4 grid min-h-0 flex-1 grid-cols-1 gap-4 sm:mt-6 sm:gap-6 xl:grid-cols-[1fr_480px]">
         {activeTab === "viewer" ? (
           <section
-            className={`flex ${PANEL_HEIGHT_CLASS} flex-col gap-3 rounded-[20px] bg-[color:var(--color-white)] px-6 py-7`}
+            className={`flex ${PANEL_HEIGHT_CLASS} min-h-0 flex-col gap-3 rounded-[20px] bg-[color:var(--color-white)] px-4 py-5 sm:px-6 sm:py-7`}
           >
             <div className="flex items-center gap-1 pl-1">
-              <h3 className="text-lg font-bold font-['Pretendard'] leading-4 text-[color:var(--color-text-heading)]">
+              <h3 className="text-base font-bold font-['Pretendard'] leading-4 text-[color:var(--color-text-heading)] sm:text-lg">
                 전체 대본_하이라이트 적용
               </h3>
               <div className="-my-2">
@@ -556,7 +751,7 @@ const CoachViewPage = () => {
               </div>
             </div>
             <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
-            <div className="min-h-0 flex-1 overflow-y-auto rounded-xl bg-[color:var(--color-white)] p-6 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20">
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-xl bg-[color:var(--color-white)] p-4 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 sm:p-6">
               <div className="flex flex-col gap-5 text-base font-semibold font-['Pretendard'] leading-8 text-[color:var(--color-text-heading)]">
                 {scriptParagraphs.map((paragraph, pIdx) => (
                   <p key={pIdx}>
@@ -568,6 +763,15 @@ const CoachViewPage = () => {
                             isFocused={focusedId === segment.id}
                             onClick={() =>
                               focusHighlight(segment.id as string, "words")
+                            }
+                            tooltip={
+                              wordEntryById.get(segment.id)
+                                ? {
+                                    word: wordEntryById.get(segment.id)!.word,
+                                    pronunciation: wordEntryById.get(segment.id)!
+                                      .pronunciation,
+                                  }
+                                : undefined
                             }
                           >
                             {segment.text}
@@ -584,7 +788,7 @@ const CoachViewPage = () => {
           </section>
         ) : (
           <section
-            className={`flex ${PANEL_HEIGHT_CLASS} flex-col gap-4 rounded-[20px] bg-[color:var(--color-white)] px-6 py-7`}
+            className={`flex ${PANEL_HEIGHT_CLASS} min-h-0 flex-col gap-4 rounded-[20px] bg-[color:var(--color-white)] px-4 py-5 sm:px-6 sm:py-7`}
           >
             <div className="flex flex-wrap items-center gap-2.5">
               <button
