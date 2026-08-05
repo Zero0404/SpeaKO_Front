@@ -23,9 +23,19 @@ export const FeedbackLoading: React.FC<FeedbackLoadingProps> = ({ onComplete }) 
   const handleNextPage = () => {
     if (onComplete) {
       onComplete();
-    } else {
-      navigate('/feedback-result');
+      return;
     }
+
+    if (uploadedFile) {
+      // "파일로 평가받기" 플로우 (FeedbackFileUploadPage에서 file을 state로 넘겨받은 경우) -> 결과 페이지로
+      navigate('/feedback-result');
+      return;
+    }
+
+    // "실시간 평가받기" 플로우 (녹음본 평가, file 없음) -> CoachViewPage 점수 섹션으로 복귀
+    // CoachViewPage는 location.state.score가 있으면 "발음 종합 점수"를 바로 done 상태로 보여준다.
+    // TODO: 아래 87은 임시값 — 위 useEffect의 분석 API 응답 점수로 교체
+    navigate('/coach-view', { state: { score: 87 } });
   };
 
   return (
