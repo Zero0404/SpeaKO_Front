@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Mic, Play, Pause, Square, RotateCcw, RotateCw, Repeat } from "lucide-react";
+import { Mic, Play, Pause, RotateCcw, RotateCw, Repeat } from "lucide-react";
 
 /* ────────────────────────────────────────────────────────────
    상수 / 유틸
@@ -118,7 +118,7 @@ const Waveform = ({
 interface VoiceRecorderProps {
   /** idle 상태에서 보여줄 안내 문구 */
   message?: string;
-  /** 녹음이 끝났을 때 결과 오디오를 상위로 전달 (분석 API 호출 등에 사용) */
+  /** 녹음이 끝났을 때 결과 오디오를 상위로 전달 (실시간 평가받기 버튼 등에서 사용) */
   onRecordingComplete?: (audioBlob: Blob, durationSeconds: number) => void;
   className?: string;
 }
@@ -345,6 +345,7 @@ const VoiceRecorder = ({
     [recordedDuration]
   );
 
+  const hasStartedPlaying = currentTime > 0.05 || isPlaying;
   const progressRatio =
     phase === "recorded" && recordedDuration > 0
       ? Math.min(currentTime / recordedDuration, 1)
@@ -398,10 +399,8 @@ const VoiceRecorder = ({
           type="button"
           onClick={stopRecording}
           aria-label="녹음 종료"
-          className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-zinc-800 text-[color:var(--color-white)] transition hover:opacity-90"
-        >
-          <Square size={14} fill="currentColor" />
-        </button>
+          className="flex size-5 shrink-0 items-center justify-center self-center rounded-[3px] bg-zinc-900 text-[color:var(--color-white)] transition hover:opacity-90"
+        />
         <span className="flex shrink-0 items-center gap-1.5 text-base font-bold font-['Pretendard'] text-[color:var(--color-text-heading)]">
           {!isRecordingPaused && <span className="size-1.5 rounded-full bg-red-500" />}
           {formatElapsed(elapsed)}
@@ -415,7 +414,7 @@ const VoiceRecorder = ({
   }
 
   // 3) recorded: 재생 준비됨 / 재생 중 / 재생 일시정지 — 파형 클릭·드래그로 탐색 가능
-  // 되감기/재생/앞으로/다시 녹음 버튼은 재생 시작 여부와 무관하게 항상 노출한다.
+  // 되감기/앞으로 버튼은 재생을 시작해야만 나타나고, "다시 녹음"은 재생 상태와 무관하게 항상 노출한다.
   return (
     <div className={containerClass}>
       <audio
@@ -428,14 +427,16 @@ const VoiceRecorder = ({
         className="hidden"
       />
 
-      <button
-        type="button"
-        onClick={() => skip(-SKIP_SECONDS)}
-        aria-label={`${SKIP_SECONDS}초 되감기`}
-        className="flex size-6 shrink-0 items-center justify-center text-[color:var(--color-text-body)] transition hover:text-[color:var(--color-brand-primary)]"
-      >
-        <RotateCcw size={18} />
-      </button>
+      {hasStartedPlaying && (
+        <button
+          type="button"
+          onClick={() => skip(-SKIP_SECONDS)}
+          aria-label={`${SKIP_SECONDS}초 되감기`}
+          className="flex size-6 shrink-0 items-center justify-center text-[color:var(--color-text-body)] transition hover:text-[color:var(--color-brand-primary)]"
+        >
+          <RotateCcw size={18} />
+        </button>
+      )}
 
       <button
         type="button"
@@ -450,15 +451,18 @@ const VoiceRecorder = ({
         )}
       </button>
 
-      <button
-        type="button"
-        onClick={() => skip(SKIP_SECONDS)}
-        aria-label={`${SKIP_SECONDS}초 앞으로`}
-        className="flex size-6 shrink-0 items-center justify-center text-[color:var(--color-text-body)] transition hover:text-[color:var(--color-brand-primary)]"
-      >
-        <RotateCw size={18} />
-      </button>
+      {hasStartedPlaying && (
+        <button
+          type="button"
+          onClick={() => skip(SKIP_SECONDS)}
+          aria-label={`${SKIP_SECONDS}초 앞으로`}
+          className="flex size-6 shrink-0 items-center justify-center text-[color:var(--color-text-body)] transition hover:text-[color:var(--color-brand-primary)]"
+        >
+          <RotateCw size={18} />
+        </button>
+      )}
 
+      {/* 재생 진행 상태와 무관하게 항상 노출되는 재녹음 버튼 */}
       <button
         type="button"
         onClick={resetRecording}

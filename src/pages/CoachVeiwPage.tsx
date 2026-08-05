@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   FileText,
@@ -321,19 +322,56 @@ const HighlightSpan = ({
   tooltip?: { word: string; pronunciation: string };
   children: React.ReactNode;
 }) => {
+  const spanRef = useRef<HTMLSpanElement>(null);
   const [isHovered, setIsHovered] = useState(false);
+  const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number } | null>(null);
   const meta = HIGHLIGHT_META[type];
   // 포커스(단어 목록에서 넘어왔을 때) 시 배경만 살짝 진하게 + 딸깍 튀어오르는 스케일 효과.
   const focusedBgClass = meta.bgClass.replace("/10", "/30");
 
+  const showTooltip = Boolean(tooltip) && (isHovered || Boolean(isFocused));
+
+  // 대본 박스는 overflow-y-auto라서 툴팁을 그 안에 absolute로 띄우면 화면 가장자리(특히 왼쪽)에
+  // 붙은 단어는 잘려서 안 보인다. document.body로 포탈해서 fixed 좌표로 띄우고,
+  // 뷰포트 안쪽으로 clamp해서 절대 잘리지 않게 한다.
+  useEffect(() => {
+    if (!showTooltip || !spanRef.current) {
+      setTooltipPos(null);
+      return;
+    }
+
+    const HALF_TOOLTIP_WIDTH = 90; // 툴팁 최대 예상 너비의 절반 (여유 포함)
+    const EDGE_MARGIN = 8;
+
+    const updatePosition = () => {
+      const rect = spanRef.current!.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const clampedX = Math.min(
+        Math.max(centerX, HALF_TOOLTIP_WIDTH + EDGE_MARGIN),
+        window.innerWidth - HALF_TOOLTIP_WIDTH - EDGE_MARGIN,
+      );
+      setTooltipPos({ top: rect.top, left: clampedX });
+    };
+
+    updatePosition();
+    // capture: true로 등록해야 중첩된 스크롤 컨테이너(대본 박스)의 스크롤도 감지된다.
+    window.addEventListener("scroll", updatePosition, true);
+    window.addEventListener("resize", updatePosition);
+    return () => {
+      window.removeEventListener("scroll", updatePosition, true);
+      window.removeEventListener("resize", updatePosition);
+    };
+  }, [showTooltip]);
+
   return (
     <span
+      ref={spanRef}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
       onClick={onClick}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      className={`relative inline-block rounded-sm px-1 font-semibold leading-5 transition-[transform,background-color] duration-300 ease-out ${
+      className={`relative inline-block rounded-sm px-1 font-semibold leading-5 outline-none transition-[transform,background-color] duration-300 ease-out ${
         isFocused ? focusedBgClass : meta.bgClass
       } ${meta.textClass} ${meta.shadow} ${onClick ? "cursor-pointer" : ""} ${
         isFocused ? "scale-110" : "scale-100"
@@ -341,20 +379,26 @@ const HighlightSpan = ({
     >
       {children}
 
-      {tooltip && isHovered && (
-        <span className="pointer-events-none absolute bottom-full left-1/2 z-50 mb-2 -translate-x-1/2">
-          <span className="flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[color:var(--color-white)] px-3 py-2 shadow-[0px_4px_16px_0px_rgba(30,41,59,0.15)] outline outline-1 outline-offset-[-1px] outline-slate-500/10">
-            <span className="text-sm font-bold font-['Pretendard'] leading-4 text-[color:var(--color-text-heading)]">
-              {tooltip.word}
+      {showTooltip &&
+        tooltipPos &&
+        createPortal(
+          <span
+            className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-full"
+            style={{ top: tooltipPos.top - 8, left: tooltipPos.left }}
+          >
+            <span className="flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[color:var(--color-white)] px-3 py-2 shadow-[0px_4px_16px_0px_rgba(30,41,59,0.15)] outline outline-1 outline-offset-[-1px] outline-slate-500/10">
+              <span className="text-sm font-bold font-['Pretendard'] leading-4 text-[color:var(--color-text-heading)]">
+                {tooltip!.word}
+              </span>
+              <ArrowIcon size={12} className="text-[color:var(--color-text-body)]" />
+              <span className={`text-sm font-bold font-['Pretendard'] leading-4 ${meta.textClass}`}>
+                {tooltip!.pronunciation}
+              </span>
             </span>
-            <ArrowIcon size={12} className="text-[color:var(--color-text-body)]" />
-            <span className={`text-sm font-bold font-['Pretendard'] leading-4 ${meta.textClass}`}>
-              {tooltip.pronunciation}
-            </span>
-          </span>
-          <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-white" />
-        </span>
-      )}
+            <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-white" />
+          </span>,
+          document.body,
+        )}
     </span>
   );
 };
@@ -385,7 +429,11 @@ const WordListCard = ({
       type="button"
       id={`word-${entry.id}`}
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-2xl bg-[color:var(--color-white)] px-4 py-3 text-left shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 transition sm:gap-4 sm:px-6 sm:py-4 ${isFocused ? "ring-2 ring-[color:var(--color-brand-primary)] ring-offset-2" : ""}`}
+      className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 transition-colors sm:gap-4 sm:px-6 sm:py-4 ${
+        isFocused
+          ? "bg-slate-100 ring-2 ring-[color:var(--color-brand-primary)] ring-offset-2"
+          : "bg-[color:var(--color-white)]"
+      }`}
     >
       <TypeBadge type={entry.type} />
       <div className="flex flex-1 flex-col gap-1.5">
@@ -427,8 +475,8 @@ const ScoreDonut = ({ score }: { score: number }) => {
     return () => cancelAnimationFrame(raf);
   }, [score]);
 
-  const SIZE = 140;
-  const STROKE = 10;
+  const SIZE = 112;
+  const STROKE = 9;
   const radius = (SIZE - STROKE) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - animatedScore / 100);
@@ -550,12 +598,12 @@ const CoachViewPage = () => {
 
   const summarySidebar = (
     <aside
-      className={`flex ${PANEL_HEIGHT_CLASS} min-h-0 flex-col gap-6 overflow-y-auto rounded-[20px] bg-[color:var(--color-white)] px-4 py-6 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 sm:px-6 sm:py-10`}
+      className={`flex ${PANEL_HEIGHT_CLASS} min-h-0 flex-col gap-4 overflow-y-auto rounded-[20px] bg-[color:var(--color-white)] px-4 py-5 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 sm:px-6 sm:py-6`}
     >
       {evalStatus !== "idle" && (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 pb-4">
           <div className="flex items-center justify-between pl-1">
-            <h3 className="text-xl font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
+            <h3 className="text-lg font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
               발음 종합 점수
             </h3>
             {evalStatus === "done" && (
@@ -571,25 +619,25 @@ const CoachViewPage = () => {
           </div>
 
           {evalStatus === "done" && score !== null && (
-            <div className="flex flex-col items-center gap-4 text-center sm:flex-row sm:items-center sm:gap-5 sm:text-left">
+            <div className="flex flex-col items-center gap-2 py-2 text-center sm:flex-row sm:items-center sm:gap-4 sm:text-left">
               <div className="relative flex shrink-0 items-center justify-center">
                 <ScoreDonut score={score} />
                 <div className="absolute flex flex-col items-center">
                   <span className="text-center">
-                    <span className="text-3xl font-semibold font-['Pretendard'] text-[color:var(--color-brand-primary)]">
+                    <span className="text-2xl font-semibold font-['Pretendard'] text-[color:var(--color-brand-primary)]">
                       {score}
                     </span>
                     <span className="text-lg font-semibold font-['Pretendard'] text-[color:var(--color-brand-primary)]">
                       점
                     </span>
                   </span>
-                  <span className="text-lg font-medium font-['Pretendard'] text-[color:var(--color-text-body)]">
+                  <span className="text-xs font-medium font-['Pretendard'] text-[color:var(--color-text-body)]">
                     /100
                   </span>
                 </div>
               </div>
               <div className="flex flex-col gap-1.5">
-                <p className="text-xl font-semibold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
+                <p className="text-lg font-semibold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
                   {getScoreFeedback(score).message}
                 </p>
                 <p className="whitespace-pre-line text-sm font-medium font-['Pretendard'] leading-6 text-[color:var(--color-text-body)]">
@@ -602,10 +650,10 @@ const CoachViewPage = () => {
       )}
 
       <div className="flex flex-col gap-4">
-        <h3 className="pl-1 text-xl font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
+        <h3 className="pl-1 text-lg font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
           하이라이트 요약
         </h3>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
           {highlightSummary.map(({ type, count }) => {
             const meta = HIGHLIGHT_META[type];
             return (
@@ -616,7 +664,7 @@ const CoachViewPage = () => {
                   setActiveTab("words");
                   setWordFilter(type);
                 }}
-                className="flex h-11 items-center justify-between rounded-lg px-4 py-2 text-left shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 transition hover:bg-slate-50"
+                className="flex h-9 items-center justify-between rounded-lg px-3 py-1.5 text-left shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 transition hover:bg-slate-50"
               >
                 <div className="flex items-center gap-2">
                   <span
@@ -638,16 +686,16 @@ const CoachViewPage = () => {
       </div>
 
       <div className="flex flex-col gap-4">
-        <h3 className="pl-1 text-xl font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
+        <h3 className="pl-1 text-lg font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
           발음 팁
         </h3>
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2.5">
           {pronunciationTips.map((tip) => {
             const Icon = tip.icon;
             return (
-              <div key={tip.title} className="flex items-start gap-3">
-                <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-brand-primary)]/10 text-[color:var(--color-brand-primary)]">
-                  <Icon size={18} />
+              <div key={tip.title} className="flex items-start gap-2.5">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-brand-primary)]/10 text-[color:var(--color-brand-primary)]">
+                  <Icon size={16} />
                 </div>
                 <div className="flex flex-col gap-0.5 pt-0.5">
                   <span className="text-sm font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
@@ -666,7 +714,7 @@ const CoachViewPage = () => {
       <button
         type="button"
         onClick={handleRealtimeEvaluation}
-        className="mt-auto flex w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)] py-3 text-base font-bold font-['Pretendard'] text-[color:var(--color-white)] transition hover:opacity-90"
+        className="mt-auto flex w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)] py-2.5 text-sm font-bold font-['Pretendard'] text-[color:var(--color-white)] transition hover:opacity-90"
       >
         <CheckCircle2 size={18} />
         실시간 평가받기
@@ -685,6 +733,19 @@ const CoachViewPage = () => {
         backgroundRepeat: "no-repeat",
       }}
     >
+      {/* 단어 목록 탭 진입 시 카드가 왼쪽에서 순차적으로 튀어 들어오는 stagger 애니메이션 */}
+      <style>{`
+        @keyframes wordCardSlideIn {
+          from {
+            opacity: 0;
+            transform: translateX(-28px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+      `}</style>
       <div className="mt-16 flex flex-col gap-4 rounded-xl bg-[color:var(--color-white)] px-4 py-3 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 sm:px-6 sm:py-2 sm:flex-row sm:items-center sm:justify-between md:mt-20">
         <div className="flex flex-wrap items-center gap-3 sm:gap-5">
           <h2 className="text-lg font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)] sm:text-xl">
@@ -698,13 +759,11 @@ const CoachViewPage = () => {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          {activeTab === "viewer" && (
-            <TaskChip
-              icon={Volume2}
-              label="파일로 평가받기"
-              onClick={handleFileEvaluation}
-            />
-          )}
+          <TaskChip
+            icon={Volume2}
+            label="파일로 평가받기"
+            onClick={handleFileEvaluation}
+          />
           <TaskChip
             icon={FileText}
             label="대본 확인"
@@ -824,12 +883,20 @@ const CoachViewPage = () => {
                   </div>
                 ) : (
                   filteredWordEntries.map((entry, idx) => (
-                    <WordListCard
+                    <div
                       key={`${entry.id}-${idx}`}
-                      entry={entry}
-                      isFocused={focusedId === entry.id}
-                      onClick={() => focusHighlight(entry.id, "viewer")}
-                    />
+                      style={{
+                        animation:
+                          "wordCardSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both",
+                        animationDelay: `${idx * 100}ms`,
+                      }}
+                    >
+                      <WordListCard
+                        entry={entry}
+                        isFocused={focusedId === entry.id}
+                        onClick={() => focusHighlight(entry.id, "viewer")}
+                      />
+                    </div>
                   ))
                 )}
               </div>
