@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import bgSvg from '../assets/select-page-background.svg';
 import FileUpload from '../components/FileUpload';
 import TextInput from '../components/TextInput';
-import SetModal from '../modals/SetModal';
+import SetModal from '../modals/SetConfirmModal';
+import { useScriptJobStore } from '../store/scriptJobStore';
 
 export interface AiSetPageProps {
   onNext?: () => void;
@@ -22,11 +23,10 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
   const [isSetModalOpen, setIsSetModalOpen] = useState(false);
   const [hasSubmittedWithoutFile, setHasSubmittedWithoutFile] = useState(false);
 
-  // 필수 조건: 파일이 있거나, 없으면 주제만 채우면 됨
-// 필수 조건: 파일이 있으면 주제만, 없으면 주제 + 가이드라인 모두 필요
-const isFormValid = file
-  ? topic.trim() !== ''
-  : topic.trim() !== '' && outline.trim() !== '';
+  // 필수 조건: 파일이 있으면 주제만, 없으면 주제 + 가이드라인 모두 필요
+  const isFormValid = file
+    ? topic.trim() !== ''
+    : topic.trim() !== '' && outline.trim() !== '';
 
   useEffect(() => {
     const fontId = 'pretendard-font-cdn';
@@ -52,27 +52,20 @@ const isFormValid = file
     ],
   };
 
- const handleOpenModal = () => {
-
-  if (!file) {
-    setHasSubmittedWithoutFile(true);
-    if (!topic.trim() || !outline.trim()) {
-      return;
+  const handleOpenModal = () => {
+    if (!file) {
+      setHasSubmittedWithoutFile(true);
+      if (!topic.trim() || !outline.trim()) {
+        return;
+      }
+    } else {
+      setHasSubmittedWithoutFile(false);
+      if (!topic.trim()) {
+        return;
+      }
     }
-  } else {
-    setHasSubmittedWithoutFile(false);
-    if (!topic.trim()) {
-      return;
-    }
-  }
 
-  setIsSetModalOpen(true);
-};
-
-  const handleConfirmStart = () => {
-    setIsSetModalOpen(false);
-    if (onNext) onNext();
-    navigate('/ai-loading');
+    setIsSetModalOpen(true);
   };
 
   const fontStyle = {
@@ -83,6 +76,31 @@ const isFormValid = file
     border: '1px solid rgba(128, 136, 146, 1)',
   };
 
+  const { status, error: submitError, runCreate } = useScriptJobStore();
+  const isSubmitting = status === 'running';
+
+  const parseDurationMinutes = (label: string) => parseInt(label.replace('분', ''), 10);
+
+  const handleConfirmStart = async () => {
+    setIsSetModalOpen(false);
+
+    await runCreate({
+      file,
+      guideline: outline || undefined,
+      title: topic,
+      duration: parseDurationMinutes(time),
+      style,
+    });
+
+    // runCreate 완료 후 스토어 상태로 성공/실패 판단
+    const currentStatus = useScriptJobStore.getState().status;
+    if (currentStatus === 'success') {
+      if (onNext) onNext();
+      navigate('/ai-loading');
+    }
+    // 'error' / 'paywall'이면 이동하지 않고 아래 submitError 메시지가 화면에 표시됨
+  };
+
   return (
     <div
       style={{ ...fontStyle, backgroundImage: `url(${bgSvg})` }}
@@ -91,87 +109,87 @@ const isFormValid = file
       <div className="w-full max-w-[1520px] flex flex-col items-center mt-15">
 
         {/* 1. 상단 스텝 바 & 경고 메시지 상자 */}
-<div className="w-full flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-0 mb-6">
-  <div
-    style={{
-      height: '38px',
-      opacity: 1,
-    }}
-    className="flex items-center gap-4 md:gap-[45px] pl-1 select-none"
-  >
-    {/* 1단계 - 활성 */}
-    <div className="flex items-center gap-2.5 shrink-0">
-      <div
-        style={{ backgroundImage: 'var(--gradient-brand-active)' }}
-        className="w-8 h-8 rounded-full text-white font-bold flex items-center justify-center text-sm shadow-sm"
-      >
-        1
-      </div>
-      <span className="font-bold text-[var(--color-text-heading)] text-sm md:text-base whitespace-nowrap">
-        자료 업로드 / 가이드라인 입력
-      </span>
-    </div>
+        <div className="w-full flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-0 mb-6">
+          <div
+            style={{
+              height: '38px',
+              opacity: 1,
+            }}
+            className="flex items-center gap-4 md:gap-[45px] pl-1 select-none"
+          >
+            {/* 1단계 - 활성 */}
+            <div className="flex items-center gap-2.5 shrink-0">
+              <div
+                style={{ backgroundImage: 'var(--gradient-brand-active)' }}
+                className="w-8 h-8 rounded-full text-white font-bold flex items-center justify-center text-sm shadow-sm"
+              >
+                1
+              </div>
+              <span className="font-bold text-[var(--color-text-heading)] text-sm md:text-base whitespace-nowrap">
+                자료 업로드 / 가이드라인 입력
+              </span>
+            </div>
 
-    <span className="text-gray-400 font-light text-base shrink-0">≫</span>
+            <span className="text-gray-400 font-light text-base shrink-0">≫</span>
 
-    {/* 2단계 - 비활성 */}
-    <div className="flex items-center gap-2.5 shrink-0">
-      <div className="w-8 h-8 rounded-full border-2 border-gray-400 text-gray-500 font-medium flex items-center justify-center text-sm">
-        2
-      </div>
-      <span className="font-medium text-gray-500 text-sm md:text-base whitespace-nowrap">
-        대본 미리보기
-      </span>
-    </div>
+            {/* 2단계 - 비활성 */}
+            <div className="flex items-center gap-2.5 shrink-0">
+              <div className="w-8 h-8 rounded-full border-2 border-gray-400 text-gray-500 font-medium flex items-center justify-center text-sm">
+                2
+              </div>
+              <span className="font-medium text-gray-500 text-sm md:text-base whitespace-nowrap">
+                대본 미리보기
+              </span>
+            </div>
 
-    <span className="text-gray-400 font-light text-base shrink-0">≫</span>
+            <span className="text-gray-400 font-light text-base shrink-0">≫</span>
 
-    {/* 3단계 - 비활성 */}
-    <div className="flex items-center gap-2.5 shrink-0">
-      <div className="w-8 h-8 rounded-full border-2 border-gray-400 text-gray-500 font-medium flex items-center justify-center text-sm">
-        3
-      </div>
-      <span className="font-medium text-gray-500 text-sm md:text-base whitespace-nowrap">
-        대본 생성
-      </span>
-    </div>
-  </div>
+            {/* 3단계 - 비활성 */}
+            <div className="flex items-center gap-2.5 shrink-0">
+              <div className="w-8 h-8 rounded-full border-2 border-gray-400 text-gray-500 font-medium flex items-center justify-center text-sm">
+                3
+              </div>
+              <span className="font-medium text-gray-500 text-sm md:text-base whitespace-nowrap">
+                대본 생성
+              </span>
+            </div>
+          </div>
 
-  {/* 경고 상자 (기존 그대로 유지) */}
-  <div className="relative self-end md:self-auto shrink-0">
-    <div
-      className="bg-white border border-red-100 shadow-sm flex flex-col items-start justify-center box-border relative z-10"
-      style={{
-        width: '329px',
-        height: '68px',
-        borderRadius: '12px',
-        paddingTop: '16px',
-        paddingRight: '20px',
-        paddingBottom: '16px',
-        paddingLeft: '20px',
-      }}
-    >
-      <p className="text-xs font-medium text-red-500 leading-snug">
-        파일 업로드를 하지 않을 시,<br />
-        <span className="font-bold">발표 주제와 가이드라인을 필수</span>로 입력하셔야합니다.
-      </p>
-    </div>
+          {/* 경고 상자 */}
+          <div className="relative self-end md:self-auto shrink-0">
+            <div
+              className="bg-white border border-red-100 shadow-sm flex flex-col items-start justify-center box-border relative z-10"
+              style={{
+                width: '329px',
+                height: '68px',
+                borderRadius: '12px',
+                paddingTop: '16px',
+                paddingRight: '20px',
+                paddingBottom: '16px',
+                paddingLeft: '20px',
+              }}
+            >
+              <p className="text-xs font-medium text-red-500 leading-snug">
+                파일 업로드를 하지 않을 시,<br />
+                <span className="font-bold">발표 주제와 가이드라인을 필수</span>로 입력하셔야합니다.
+              </p>
+            </div>
 
-    <div
-      className="absolute z-0 pointer-events-none"
-      style={{
-        width: '32px',
-        height: '32px',
-        bottom: '-12px',
-        right: '24px',
-      }}
-    >
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-        <path d="M16 32L0 0H32L16 32Z" fill="white" stroke="#FEE2E2" strokeWidth="1" />
-      </svg>
-    </div>
-  </div>
-</div>
+            <div
+              className="absolute z-0 pointer-events-none"
+              style={{
+                width: '32px',
+                height: '32px',
+                bottom: '-12px',
+                right: '24px',
+              }}
+            >
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                <path d="M16 32L0 0H32L16 32Z" fill="white" stroke="#FEE2E2" strokeWidth="1" />
+              </svg>
+            </div>
+          </div>
+        </div>
 
         {/* 2. 메인 콘텐츠 2단 배치 */}
         <div className="w-full flex flex-col lg:flex-row justify-center items-center lg:items-start gap-6 lg:gap-[30px]">
@@ -282,9 +300,11 @@ const isFormValid = file
                         style={defaultBorderStyle}
                         className="w-full md:w-[408px] h-[50px] pl-12 pr-10 rounded-xl text-sm font-medium bg-white focus:outline-none cursor-pointer appearance-none shadow-sm"
                       >
-                        <option value="3분">3분</option>
                         <option value="5분">5분</option>
                         <option value="10분">10분</option>
+                        <option value="15분">15분</option>
+                        <option value="20분">20분</option>
+                        <option value="30분">30분</option>
                       </select>
                       <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-700">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -397,9 +417,13 @@ const isFormValid = file
 
         {/* 3. 하단 대본 생성하기 버튼 */}
         <div className="w-full flex flex-col items-end mt-6">
+          {submitError && (
+            <p className="mt-3 text-sm font-medium text-red-500">{submitError}</p>
+          )}
           <button
             type="button"
             onClick={handleOpenModal}
+            disabled={isSubmitting}
             className={`flex items-center justify-between shadow-md transition-all duration-300 group ${
               isFormValid
                 ? 'cursor-pointer text-white hover:shadow-xl border-transparent'
@@ -423,7 +447,7 @@ const isFormValid = file
                 isFormValid ? 'text-white' : ''
               }`}
             >
-              대본 생성하기
+              {isSubmitting ? '생성 요청 중...' : '대본 생성하기'}
             </span>
             <svg
               className={`w-5 h-5 text-slate-400 transition-colors shrink-0 ${

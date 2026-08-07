@@ -23,7 +23,9 @@ export const FeedbackPage: React.FC = () => {
     }
 
     // 피드백 분석 로딩 페이지로 이동
-    navigate('/feedback-loading');
+    // FeedbackLoading은 location.state.file 유무로 "파일로 평가받기" 플로우인지 판단해서
+    // 완료 후 /feedback-result로 보내주기 때문에, 여기서 file을 state로 반드시 같이 넘겨야 한다.
+    navigate('/feedback-loading', { state: { file } });
   };
 
   return (
