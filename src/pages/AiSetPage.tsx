@@ -109,7 +109,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
       <div className="w-full max-w-[1520px] flex flex-col items-center mt-15">
 
         {/* 1. 상단 스텝 바 & 경고 메시지 상자 */}
-        <div className="w-full flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-0 mb-6">
+        <div className="relative w-full flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-0 mb-6">
           <div
             style={{
               height: '38px',
@@ -155,41 +155,47 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
             </div>
           </div>
 
-          {/* 경고 상자 */}
-          <div className="relative self-end md:self-auto shrink-0">
-            <div
-              className="bg-white border border-red-100 shadow-sm flex flex-col items-start justify-center box-border relative z-10"
-              style={{
-                width: '329px',
-                height: '68px',
-                borderRadius: '12px',
-                paddingTop: '16px',
-                paddingRight: '20px',
-                paddingBottom: '16px',
-                paddingLeft: '20px',
-              }}
-            >
-              <p className="text-xs font-medium text-red-500 leading-snug">
-                파일 업로드를 하지 않을 시,<br />
-                <span className="font-bold">발표 주제와 가이드라인을 필수</span>로 입력하셔야합니다.
-              </p>
-            </div>
+          {/* 경고 상자 (항상 표시) */}
+<div className="absolute right-0 top-[-18px] z-50 flex flex-col items-end pointer-events-none">
+  {/* 경고 메시지 본문 박스 */}
+  <div
+    className="bg-white flex items-center justify-center box-border relative z-10"
+    style={{
+       width: '336px',
+      height: '50px',
+      borderRadius: '12px',
+      paddingTop: '16px',
+      paddingRight: '20px',
+      paddingBottom: '16px',
+      paddingLeft: '20px',
+      gap: '10px',
+      opacity: 1,
+    }}
+  >
+    <p className="text-xs font-medium text-red-500 leading-snug">
+      주제 설정 및 가이드라인 항목은 필수로 입력해주세요.
+    </p>
+  </div>
 
-            <div
-              className="absolute z-0 pointer-events-none"
-              style={{
-                width: '32px',
-                height: '32px',
-                bottom: '-12px',
-                right: '24px',
-              }}
-            >
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                <path d="M16 32L0 0H32L16 32Z" fill="white" stroke="#FEE2E2" strokeWidth="1" />
-              </svg>
-            </div>
-          </div>
-        </div>
+  {/* 말풍선 꼬리표 (SVG) */}
+  <div
+    className="absolute z-0 pointer-events-none"
+    style={{
+      width: '32px',
+      height: '32px',
+      top: '38px',
+      right: '39px',
+      borderRadius: '1px',
+      opacity: 1,
+    }}
+  >
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <path d="M0 0 H32 L16 32 Z" fill="white" />
+    </svg>
+  </div>
+</div>
+
+</div>
 
         {/* 2. 메인 콘텐츠 2단 배치 */}
         <div className="w-full flex flex-col lg:flex-row justify-center items-center lg:items-start gap-6 lg:gap-[30px]">
@@ -318,8 +324,8 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                 {/* 하단: 목차/가이드라인 + 발표 스타일 & 추천 상자 */}
                 <div className="flex flex-col md:flex-row justify-between items-start gap-6 md:gap-0">
                   <div className="w-full md:w-[352px]">
-                    <label className="block text-sm font-bold mb-2" style={{ color: 'var(--color-text-heading)' }}>
-                      목차 / 가이드라인
+                   <label className="block text-sm font-bold mb-2" style={{ color: 'var(--color-text-heading)' }}>
+                      목차/가이드라인 <span className="font-bold text-[#5B6CFB]" style={{ color: 'var(--color-primary-500, #5B6CFB)' }}>(필수)</span>
                     </label>
                     <textarea
                       value={outline}
@@ -475,6 +481,6 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
       />
     </div>
   );
-};
+}
 
 export default AiSetPage;
