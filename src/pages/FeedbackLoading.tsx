@@ -23,12 +23,7 @@ export const FeedbackLoading: React.FC<FeedbackLoadingProps> = ({ onComplete }) 
   const handleNextPage = () => {
     if (onComplete) {
       onComplete();
-<<<<<<< HEAD
-    } else {
-      navigate('/feedback');
-=======
       return;
->>>>>>> 53062b0d19b2482b482b00c10fb3de4f790ebb88
     }
 
     if (uploadedFile) {
