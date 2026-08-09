@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import bgGradient from '../assets/background_gradiant.png';
 import Navbar from '../components/Navbar';
+import { useScriptJobStore } from '../store/scriptJobStore';
 
 export interface AiLoadingModalProps {
   isOpen: boolean;
@@ -15,13 +16,29 @@ export const AiLoadingModal: React.FC<AiLoadingModalProps> = ({
   onNext,
 }) => {
   const navigate = useNavigate();
+  const { status, result } = useScriptJobStore();
+  const [currentStep, setCurrentStep] = useState<number>(3); // 3: 대본 작성 중, 4: 완료
+
+  // 백엔드 API 상태 및 2초 타이머로 3단계 -> 4단계(완료) 전환
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // 2초 후 3단계 -> 4단계 완료 상태로 전환
+    const timerStep4 = setTimeout(() => {
+      setCurrentStep(4);
+    }, 2000);
+
+    return () => {
+      clearTimeout(timerStep4);
+    };
+  }, [isOpen, status]);
 
   const handleNavigateNext = () => {
     if (onClose) onClose();
     if (onNext) {
       onNext();
     } else {
-      navigate('/script-edit');
+      navigate('/script-edit', { state: { result } });
     }
   };
 
@@ -35,6 +52,18 @@ export const AiLoadingModal: React.FC<AiLoadingModalProps> = ({
         backgroundColor: '#F8FAFC',
       }}
     >
+      {/* 1바퀴(1초 회전) + 1초 멈춤 애니메이션 */}
+      <style>{`
+        @keyframes spinAndPause {
+          0% { transform: rotate(0deg); }
+          50% { transform: rotate(360deg); }
+          100% { transform: rotate(360deg); }
+        }
+        .animate-spin-pause {
+          animation: spinAndPause 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+      `}</style>
+
       {/* 상단 Navbar */}
       <div className="w-full relative z-20">
         <Navbar />
@@ -42,13 +71,12 @@ export const AiLoadingModal: React.FC<AiLoadingModalProps> = ({
 
       {/* 로딩 콘텐츠 메인 박스 */}
       <div className="flex-1 flex flex-col items-center justify-center text-center max-w-2xl mx-auto w-full px-4 py-8 relative z-10">
-        {/* 회전 스피너 */}
+        {/* 회전 스피너 (원 전체의 1/4 크기 보라색 아크 회전) */}
         <div className="relative flex items-center justify-center mb-8 md:mb-10">
           <div
-            className="w-16 h-16 md:w-20 md:h-20 rounded-full border-[5px] border-gray-200/80 border-t-transparent animate-spin"
+            className="w-[62px] h-[62px] rounded-full border-[5px] border-gray-200/80 animate-spin-pause"
             style={{
               borderTopColor: 'rgba(91, 108, 251, 1)',
-              borderRightColor: 'rgba(91, 108, 251, 0.8)',
             }}
           />
         </div>
@@ -94,24 +122,44 @@ export const AiLoadingModal: React.FC<AiLoadingModalProps> = ({
 
           <span className="text-[#6E8BFF] font-light text-lg sm:text-xl pb-6">≫</span>
 
-          {/* 3단계 - 진행 중 (숫자 없이 회전 링만) */}
+          {/* 3단계 - 진행 중("대본 생성 중") -> 완료("대본 생성")로 전환 */}
           <div className="flex flex-col items-center gap-2">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-gray-200 border-t-[#6E8BFF] border-r-[#6E8BFF] animate-spin" />
-            <span className="text-xs sm:text-sm font-bold text-gray-900 mt-1">대본 작성 중</span>
+            {currentStep >= 4 ? (
+              <div
+                style={{ backgroundImage: 'var(--gradient-brand-active)' }}
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full text-white font-bold flex items-center justify-center text-xs sm:text-sm shadow-md"
+              >
+                3
+              </div>
+            ) : (
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-gray-200 border-t-[#6E8BFF] border-r-[#6E8BFF] animate-spin" />
+            )}
+            <span className="text-xs sm:text-sm font-bold text-gray-900 mt-1">
+              {currentStep >= 4 ? '대본 생성' : '대본 생성 중'}
+            </span>
           </div>
 
-          <span className="text-gray-300 font-light text-xl pb-6">≫</span>
+          <span className={currentStep >= 4 ? "text-[#6E8BFF] font-light text-lg sm:text-xl pb-6" : "text-gray-300 font-light text-xl pb-6"}>≫</span>
 
-          {/* 4단계 - 대기 */}
+          {/* 4단계 - 대기 -> 완료로 활성화 */}
           <div className="flex flex-col items-center gap-2">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-gray-400 text-gray-500 font-medium flex items-center justify-center text-xs sm:text-sm bg-white">
+            <div
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm transition-all duration-300 ${
+                currentStep >= 4
+                  ? 'text-white font-bold shadow-md'
+                  : 'border border-gray-400 text-gray-500 font-medium bg-white'
+              }`}
+              style={currentStep >= 4 ? { backgroundImage: 'var(--gradient-brand-active)' } : {}}
+            >
               4
             </div>
-            <span className="text-xs sm:text-sm font-medium text-gray-400 mt-1">완료</span>
+            <span className={`text-xs sm:text-sm mt-1 ${currentStep >= 4 ? 'font-bold text-gray-900' : 'font-medium text-gray-400'}`}>
+              완료
+            </span>
           </div>
         </div>
 
-        {/* 하단 [다음 페이지] 버튼 */}
+        {/* 하단 대본 편집 이동 버튼 */}
         <button
           type="button"
           onClick={handleNavigateNext}
@@ -134,7 +182,7 @@ export const AiLoadingModal: React.FC<AiLoadingModalProps> = ({
             e.currentTarget.style.color = 'var(--color-text-heading)';
           }}
         >
-          <span className="text-base font-semibold">테스트용_삭제예정</span>
+          <span className="text-base font-semibold">대본 편집으로 이동</span>
           <span className="text-xl font-light">&gt;</span>
         </button>
       </div>
