@@ -138,64 +138,51 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                 2
               </div>
               <span className="font-medium text-gray-500 text-sm md:text-base whitespace-nowrap">
-                대본 미리보기
-              </span>
-            </div>
-
-            <span className="text-gray-400 font-light text-base shrink-0">≫</span>
-
-            {/* 3단계 - 비활성 */}
-            <div className="flex items-center gap-2.5 shrink-0">
-              <div className="w-8 h-8 rounded-full border-2 border-gray-400 text-gray-500 font-medium flex items-center justify-center text-sm">
-                3
-              </div>
-              <span className="font-medium text-gray-500 text-sm md:text-base whitespace-nowrap">
                 대본 생성
               </span>
             </div>
           </div>
 
           {/* 경고 상자 (항상 표시) */}
-<div className="absolute right-0 top-[-18px] z-50 flex flex-col items-end pointer-events-none">
-  {/* 경고 메시지 본문 박스 */}
-  <div
-    className="bg-white flex items-center justify-center box-border relative z-10"
-    style={{
-       width: '336px',
-      height: '50px',
-      borderRadius: '12px',
-      paddingTop: '16px',
-      paddingRight: '20px',
-      paddingBottom: '16px',
-      paddingLeft: '20px',
-      gap: '10px',
-      opacity: 1,
-    }}
-  >
-    <p className="text-xs font-medium text-red-500 leading-snug">
-      주제 설정 및 가이드라인 항목은 필수로 입력해주세요.
-    </p>
-  </div>
+          <div className="absolute right-0 top-[-18px] z-50 flex flex-col items-end pointer-events-none">
+            {/* 경고 메시지 본문 박스 */}
+            <div
+              className="bg-white flex items-center justify-center box-border relative z-10"
+              style={{
+                width: '336px',
+                height: '50px',
+                borderRadius: '12px',
+                paddingTop: '16px',
+                paddingRight: '20px',
+                paddingBottom: '16px',
+                paddingLeft: '20px',
+                gap: '10px',
+                opacity: 1,
+              }}
+            >
+              <p className="text-xs font-medium text-red-500 leading-snug">
+                주제 설정 및 가이드라인 항목은 필수로 입력해주세요.
+              </p>
+            </div>
 
-  {/* 말풍선 꼬리표 (SVG) */}
-  <div
-    className="absolute z-0 pointer-events-none"
-    style={{
-      width: '32px',
-      height: '32px',
-      top: '38px',
-      right: '39px',
-      borderRadius: '1px',
-      opacity: 1,
-    }}
-  >
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-      <path d="M0 0 H32 L16 32 Z" fill="white" />
-    </svg>
-  </div>
-</div>
-
-</div>
+            {/* 말풍선 꼬리표 (SVG) */}
+            <div
+              className="absolute z-0 pointer-events-none"
+              style={{
+                width: '32px',
+                height: '32px',
+                top: '38px',
+                right: '39px',
+                borderRadius: '1px',
+                opacity: 1,
+              }}
+            >
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                <path d="M0 0 H32 L16 32 Z" fill="white" />
+              </svg>
+            </div>
+          </div>
+        </div>
 
         {/* 2. 메인 콘텐츠 2단 배치 */}
         <div className="w-full flex flex-col lg:flex-row justify-center items-center lg:items-start gap-6 lg:gap-[30px]">
