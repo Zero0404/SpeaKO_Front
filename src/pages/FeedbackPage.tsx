@@ -70,18 +70,27 @@ export const FeedbackPage: React.FC<FeedbackPageProps> = ({ onComplete }) => {
       easing: 'easeOutQuart' as const, // 👈 'as const'를 붙여 TypeScript 타입 오류를 방지합니다.
     },
   };
-  // 특정 키워드 하이라이트 처리 함수
-  // 1) 구성, 조금, 배열: duration (장단음 - 핑크)
-  // 2) "특정 기호나"의 특정: mismatch (표기 불일치 - 주황/앰버)
-  // 3) "특정한 개념이나"의 특정: 하이라이트 안 함
+  // 특정 키워드 하이라이트 처리 함수 (피그마 25px 높이, 4px/5px 패딩, 4px 모서리 스펙 반영)
   const renderHighlightedOriginalText = (text: string) => {
+    const highlightBoxBaseStyle = {
+      height: '25px',
+      borderRadius: '4px',
+      paddingTop: '4px',
+      paddingRight: '4px',
+      paddingBottom: '5px',
+      paddingLeft: '4px',
+      gap: '4px',
+    };
+
     const durationStyle = {
+      ...highlightBoxBaseStyle,
       backgroundColor: 'rgba(247, 53, 142, 0.1)',
       color: 'rgba(247, 53, 142, 1)',
       boxShadow: 'inset 0px -2px 0px 0px rgba(247, 53, 142, 1)',
     };
 
     const mismatchStyle = {
+      ...highlightBoxBaseStyle,
       backgroundColor: 'rgba(247, 147, 34, 0.1)',
       color: 'rgba(247, 147, 34, 1)',
       boxShadow: 'inset 0px -2px 0px 0px rgba(247, 147, 34, 1)',
@@ -95,7 +104,7 @@ export const FeedbackPage: React.FC<FeedbackPageProps> = ({ onComplete }) => {
           <span
             key={i}
             style={durationStyle}
-            className="relative inline-block rounded-sm px-1 font-semibold mx-0.5"
+            className="relative inline-flex items-center justify-center font-semibold mx-0.5 box-border align-middle"
           >
             {part}
           </span>
@@ -106,7 +115,7 @@ export const FeedbackPage: React.FC<FeedbackPageProps> = ({ onComplete }) => {
           <React.Fragment key={i}>
             <span
               style={mismatchStyle}
-              className="relative inline-block rounded-sm px-1 font-semibold mx-0.5"
+              className="relative inline-flex items-center justify-center font-semibold mx-0.5 box-border align-middle"
             >
               특정
             </span>
