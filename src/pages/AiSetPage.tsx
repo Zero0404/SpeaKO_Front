@@ -260,7 +260,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4 md:gap-0">
                   <div className="w-full md:w-[352px]">
                     <label className="block text-sm font-bold mb-2" style={{ color: 'var(--color-text-heading)' }}>
-                      발표 주제 <span className="font-bold text-[#5B6CFB]" style={{ color: 'var(--color-primary-500, #5B6CFB)' }}>(필수)</span>
+                      발표 주제 
                     </label>
                     <div
                       style={{
@@ -325,7 +325,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                 <div className="flex flex-col md:flex-row justify-between items-start gap-6 md:gap-0">
                   <div className="w-full md:w-[352px]">
                    <label className="block text-sm font-bold mb-2" style={{ color: 'var(--color-text-heading)' }}>
-                      목차/가이드라인 <span className="font-bold text-[#5B6CFB]" style={{ color: 'var(--color-primary-500, #5B6CFB)' }}>(필수)</span>
+                      목차/가이드라인 
                     </label>
                     <textarea
                       value={outline}
