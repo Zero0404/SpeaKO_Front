@@ -5,7 +5,7 @@ import Navbar from '../components/Navbar';
 import { useScriptJobStore } from '../store/scriptJobStore';
 
 export interface CoachLoadingModalProps {
-  isOpen: boolean;
+  isOpen?: boolean;
   onClose?: () => void;
   onNext?: () => void;
 }
@@ -52,12 +52,12 @@ export const CoachLoadingModal: React.FC<CoachLoadingModalProps> = ({
         backgroundColor: '#F8FAFC',
       }}
     >
-      {/* 1바퀴(1초 회전) + 1초 멈춤 애니메이션 */}
+      {/* 시작점을 30도 옆으로 기울이고 1바퀴(1초 회전) + 1초 멈춤 애니메이션 */}
       <style>{`
         @keyframes spinAndPause {
-          0% { transform: rotate(0deg); }
-          50% { transform: rotate(360deg); }
-          100% { transform: rotate(360deg); }
+          0% { transform: rotate(30deg); }
+          50% { transform: rotate(390deg); }
+          100% { transform: rotate(390deg); }
         }
         .animate-spin-pause {
           animation: spinAndPause 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
@@ -71,7 +71,7 @@ export const CoachLoadingModal: React.FC<CoachLoadingModalProps> = ({
 
       {/* 로딩 콘텐츠 메인 박스 */}
       <div className="flex-1 flex flex-col items-center justify-center text-center max-w-2xl mx-auto w-full px-4 py-8 relative z-10">
-        {/* 회전 스피너 (원 전체의 1/4 크기 보라색 아크 회전) */}
+        {/* 회전 스피너 (시작점 30도 오프셋, 원 전체의 1/4 크기 보라색 아크 회전) */}
         <div className="relative flex items-center justify-center mb-8 md:mb-10">
           <div
             className="w-[62px] h-[62px] rounded-full border-[5px] border-gray-200/80 animate-spin-pause"
@@ -122,7 +122,7 @@ export const CoachLoadingModal: React.FC<CoachLoadingModalProps> = ({
 
           <span className="text-[#6E8BFF] font-light text-lg sm:text-xl pb-6">≫</span>
 
-          {/* 3단계 - 진행 중("하이라이팅 중") -> 완료("하이라이팅")로 전환 */}
+          {/* 3단계 - 진행 중("하이라이팅 중") 메인 스피너와 동일 스타일 적용 */}
           <div className="flex flex-col items-center gap-2">
             {currentStep >= 4 ? (
               <div
@@ -132,7 +132,12 @@ export const CoachLoadingModal: React.FC<CoachLoadingModalProps> = ({
                 3
               </div>
             ) : (
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-gray-200 border-t-[#6E8BFF] border-r-[#6E8BFF] animate-spin" />
+              <div
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-gray-200 animate-spin-pause"
+                style={{
+                  borderTopColor: 'rgba(91, 108, 251, 1)',
+                }}
+              />
             )}
             <span className="text-xs sm:text-sm font-bold text-gray-900 mt-1">
               {currentStep >= 4 ? '하이라이팅' : '하이라이팅 중'}
@@ -190,6 +195,5 @@ export const CoachLoadingModal: React.FC<CoachLoadingModalProps> = ({
   );
 };
 
-// named export와 default export 둘 다 지원하도록 설정
 export const CoachLoading = CoachLoadingModal;
 export default CoachLoadingModal;
