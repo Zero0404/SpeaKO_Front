@@ -1,5 +1,6 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import featureScriptIllustration from '../assets/feature-script-illustration.svg';
+import { apiFetch } from '../apis/client';
 
 export type FileUploadType = 'ppt' | 'docx' | 'mp3';
 
@@ -8,6 +9,7 @@ interface FileUploadConfig {
   subText: string;
   width: string;
   height: string;
+  endpoint: string;
 }
 
 const TYPE_CONFIG: Record<FileUploadType, FileUploadConfig> = {
@@ -16,43 +18,74 @@ const TYPE_CONFIG: Record<FileUploadType, FileUploadConfig> = {
     subText: 'PPT, PPTX, PDF 지원 · 최대 20MB',
     width: '530px',
     height: '472px',
+    endpoint: '/api/presentations',
   },
   docx: {
     accept: '.docx, .txt, .pdf',
     subText: 'DOCX, TXT, PDF 지원 · 최대 20MB',
     width: '530px',
     height: '472px',
+    endpoint: '/api/scripts',
   },
   mp3: {
     accept: '.mp3, .wav, .m4a',
     subText: '음성 파일 선택 (MP3 / WAV / M4A) · 최대 20MB',
     width: '1440px',
     height: '472px',
+    endpoint: '/api/audio',
   },
 };
 
-// 1. 빠져있던 maxSizeMB와 onError 속성 추가
 interface FileUploadProps {
-  type: FileUploadType;
+  type?: FileUploadType;
   file?: File | null;
-  maxSizeMB?: number; // 추가
+  maxSizeMB?: number;
+  uploadEndpoint?: string; // 지정할 백엔드 API 엔드포인트
+  autoUpload?: boolean;    // 파일 선택 시 즉시 백엔드 API 업로드 실행 여부
   onFileSelect?: (file: File) => void;
-  onError?: (message: string) => void; // 추가
+  onUploadSuccess?: (response: any) => void; // API 업로드 성공 시 콜백
+  onError?: (message: string) => void;
   className?: string;
 }
 
 export const FileUpload: React.FC<FileUploadProps> = ({
   type = 'ppt',
   file = null,
-  maxSizeMB = 20, // 기본값 설정
+  maxSizeMB = 20,
+  uploadEndpoint,
+  autoUpload = true,
   onFileSelect,
+  onUploadSuccess,
   onError,
   className = '',
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const config = TYPE_CONFIG[type];
+  const [isUploading, setIsUploading] = useState(false);
 
-  // 2. 파일 용량 검증 로직 추가 (선택 사항이지만 권장)
+  // 백엔드 API 연동 업로드 함수 (.env의 VITE_API_BASE_URL 자동 사용)
+  const uploadFileToApi = async (selectedFile: File) => {
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      const targetEndpoint = uploadEndpoint || config.endpoint;
+      const data = await apiFetch<any>(targetEndpoint, {
+        method: 'POST',
+        body: formData,
+      });
+
+      console.log('API 파일 업로드 성공:', data);
+      onUploadSuccess?.(data);
+    } catch (err: any) {
+      console.error('API 파일 업로드 실패:', err);
+      onError?.(err.message || '파일 업로드 중 오류가 발생했습니다.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const validateAndSelectFile = (selectedFile: File) => {
     // 1) 확장자 검증
     const allowedExtensions = config.accept
@@ -72,8 +105,13 @@ export const FileUpload: React.FC<FileUploadProps> = ({
       return;
     }
 
-    // 3) 통과 시 콜백 실행
+    // 3) 파일 선택 콜백 실행
     onFileSelect?.(selectedFile);
+
+    // 4) autoUpload 설정 시 백엔드 API 자동 호출
+    if (autoUpload) {
+      uploadFileToApi(selectedFile);
+    }
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -103,12 +141,21 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         height: config.height,
       }}
     >
-      {/* 3D 로고 일러스트 */}
-      <div className="mb-4 flex items-center justify-center">
+      {/* 3D 로고 일러스트 (피그마 스펙: width 200px, height 166.67px, padding 6.67px, gap 6.67px) */}
+      <div 
+        className="mb-4 flex items-center justify-center box-border"
+        style={{
+          width: '200px',
+          height: '166.67px',
+          padding: '6.67px',
+          gap: '6.67px',
+          opacity: 1,
+        }}
+      >
         <img
           src={featureScriptIllustration}
           alt="File Upload Icon"
-          className="h-28 w-28 object-contain drop-shadow-sm select-none"
+          className="w-full h-full object-contain drop-shadow-sm select-none"
         />
       </div>
 
@@ -136,11 +183,12 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         className="hidden"
       />
 
-      {/* 고정 규격 파일 선택 버튼 */}
+      {/* 고정 규격 파일 선택 및 업로드 버튼 */}
       <button
         type="button"
+        disabled={isUploading}
         onClick={() => fileInputRef.current?.click()}
-        className="hover-effect-btn is-active flex items-center justify-center shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer box-border border-0"
+        className="hover-effect-btn is-active flex items-center justify-center shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer box-border border-0 disabled:opacity-50 disabled:cursor-not-allowed"
         style={{
           width: '220px',
           minWidth: '220px',
@@ -157,20 +205,24 @@ export const FileUpload: React.FC<FileUploadProps> = ({
         }}
       >
         <svg
-          className="w-4 h-4 text-white shrink-0"
+          className={`w-4 h-4 text-white shrink-0 ${isUploading ? 'animate-spin' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth="2.5"
-            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-          />
+          {isUploading ? (
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v1m0 14v1m8-8h-1M5 12H4m15.364-6.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707" />
+          ) : (
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2.5"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+            />
+          )}
         </svg>
         <span className="text-sm font-semibold whitespace-nowrap">
-          {file ? '파일 변경' : '파일 선택'}
+          {isUploading ? '업로드 중...' : file ? '파일 변경' : '파일 선택'}
         </span>
       </button>
     </div>
