@@ -21,7 +21,7 @@ interface SlideItem {
 }
 
 type RegenMode = "full" | "partial";
-type SpeakingStyle = "formal" | "casual";
+type SpeakingStyle = "formal" | "casual" | null;
 
 const PRESENTATION_TIME_OPTIONS = ["5분", "10분", "15분", "20분", "30분"];
 
@@ -139,7 +139,7 @@ const ScriptEditPage = () => {
 
   const [regenMode, setRegenMode] = useState<RegenMode>("full");
   const [presentationTime, setPresentationTime] = useState("5분");
-  const [speakingStyle, setSpeakingStyle] = useState<SpeakingStyle>("formal");
+  const [speakingStyle, setSpeakingStyle] = useState<SpeakingStyle>(null);
   const [regenRequest, setRegenRequest] = useState("");
 
   // 실데이터가 들어오면 슬라이드 목록 또는 전체 대본 상태를 채움
