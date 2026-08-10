@@ -112,11 +112,11 @@ const FEATURES: FeatureCardData[] = [
   },
 ];
 
-// easeInOutCubic
-const ease = (t: number) =>
-  t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+// easeOutCubic — 빠르게 시작해서 끝에서만 부드럽게 감속 (묵직한 느낌 해소)
+const ease = (t: number) => 1 - Math.pow(1 - t, 3);
 
-const SECTION_SCROLL_DURATION = 500; // ms, 영상 체감과 맞춘 값
+const SECTION_SCROLL_DURATION = 420; // ms, 500 → 420으로 살짝 단축
+const REVEAL_START_DELAY = 180; // ms, 스냅 완료 후 카드 등장까지의 텀
 
 const HomePage: FC = () => {
   const [isTopButtonVisible, setIsTopButtonVisible] = useState(false);
@@ -168,7 +168,10 @@ const HomePage: FC = () => {
         } else {
           isAnimatingRef.current = false;
           activeIndexRef.current = targetIndex;
-          setActiveSection(targetIndex);
+          // 스냅이 멈춘 뒤 살짝 텀을 두고 카드 등장 시작
+          window.setTimeout(() => {
+            setActiveSection(targetIndex);
+          }, REVEAL_START_DELAY);
         }
       };
 
