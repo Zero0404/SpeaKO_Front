@@ -1,5 +1,5 @@
 import type { FC } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
 import {
@@ -82,7 +82,7 @@ const FEATURES: FeatureCardData[] = [
     image: FeatureCard1,
     title: "AI 대본 생성",
     description:
-      "PPT/PDF 업로드 또는 텍스트 입력으로 AI가자동으로 발표 대본을 생성합니다. 발표 시간·청중·말투 설정 가능",
+      "PPT/PDF 업로드 또는 텍스트 입력으로 AI가\n자동으로 발표 대본을 생성합니다.\n발표 시간·청중·말투 설정 가능",
     tags: [
       { icon: FileText, label: "PPT/PDF" },
       { icon: FileText, label: "TEXT" },
@@ -95,7 +95,7 @@ const FEATURES: FeatureCardData[] = [
     image: FeatureCard2,
     title: "발음 코칭",
     description:
-      "생성된 대본에서 발음 주의 단어를 자동 추출하고 표준 발음 표기를 제공합니다. 대본 내 위치 하이라이트",
+      "생성된 대본에서 발음 주의 단어를\n자동 추출하고 표준 발음 표기를 제공합니다.\n대본 내 위치 하이라이트",
     tags: [
       { icon: Volume2, label: "편해 [펼레]" },
       { icon: Highlighter, label: "예시 하이라이트" },
@@ -107,13 +107,28 @@ const FEATURES: FeatureCardData[] = [
     image: FeatureCard3,
     title: "발음 평가",
     description:
-      "음성 파일(MP3/MPA)을 업로드하면 AI가 발음 정확도를 0~5점으로 평가하고  실제 인식된 텍스트를 확인할 수 있습니다.",
+      "음성 파일(MP3/MPA)을 업로드하면\nAI가 발음 정확도를 0~5점으로 평가하고\n실제 인식된 텍스트를 확인할 수 있습니다.",
     tags: [{ icon: CheckCircle2, label: "점수 미리보기" }],
   },
 ];
 
+// easeOutCubic — 빠르게 시작해서 끝에서만 부드럽게 감속 (묵직한 느낌 해소)
+const ease = (t: number) => 1 - Math.pow(1 - t, 3);
+
+const SECTION_SCROLL_DURATION = 420; // ms, 500 → 420으로 살짝 단축
+const REVEAL_START_DELAY = 180; // ms, 스냅 완료 후 카드 등장까지의 텀
+
 const HomePage: FC = () => {
   const [isTopButtonVisible, setIsTopButtonVisible] = useState(false);
+  const [activeSection, setActiveSection] = useState(0); // 0: Hero, 1: Why, 2: Main Function
+
+  const heroRef = useRef<HTMLElement | null>(null);
+  const whyRef = useRef<HTMLElement | null>(null);
+  const mainRef = useRef<HTMLElement | null>(null);
+  const footerRef = useRef<HTMLElement | null>(null);
+
+  const isAnimatingRef = useRef(false);
+  const activeIndexRef = useRef(0);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -122,6 +137,105 @@ const HomePage: FC = () => {
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // 섹션 단위 휠/터치 스크롤 인터랙션
+  useEffect(() => {
+    const sectionRefs = [heroRef, whyRef, mainRef, footerRef];
+
+    const getSectionTop = (index: number) => {
+      const el = sectionRefs[index]?.current;
+      if (!el) return null;
+      return el.getBoundingClientRect().top + window.scrollY;
+    };
+
+    const animateTo = (targetIndex: number) => {
+      const targetY = getSectionTop(targetIndex);
+      if (targetY === null) return;
+
+      isAnimatingRef.current = true;
+      const startY = window.scrollY;
+      const diff = targetY - startY;
+      const startTime = performance.now();
+
+      const step = (now: number) => {
+        const elapsed = now - startTime;
+        const t = Math.min(elapsed / SECTION_SCROLL_DURATION, 1);
+        window.scrollTo({ top: startY + diff * ease(t), behavior: "auto" });
+
+        if (t < 1) {
+          requestAnimationFrame(step);
+        } else {
+          isAnimatingRef.current = false;
+          activeIndexRef.current = targetIndex;
+          // 스냅이 멈춘 뒤 살짝 텀을 두고 카드 등장 시작
+          window.setTimeout(() => {
+            setActiveSection(targetIndex);
+          }, REVEAL_START_DELAY);
+        }
+      };
+
+      requestAnimationFrame(step);
+    };
+
+    const isWithinPaginatedZone = () => {
+      const footerTop = footerRef.current
+        ? footerRef.current.getBoundingClientRect().top + window.scrollY
+        : Infinity;
+      // Main Function 섹션 중간까지는 페이지네이션 영역으로 간주
+      return window.scrollY < footerTop - 40;
+    };
+
+    const handleWheel = (e: WheelEvent) => {
+      if (isAnimatingRef.current) {
+        e.preventDefault();
+        return;
+      }
+
+      const vh = window.innerHeight;
+      const currentIndex = Math.round(window.scrollY / vh);
+      const direction = e.deltaY > 0 ? 1 : -1;
+      const targetIndex = currentIndex + direction;
+
+      if (targetIndex < 0 || targetIndex > 3) return; // 범위 밖이면 기본 스크롤 허용
+
+      e.preventDefault();
+      animateTo(targetIndex);
+    };
+
+    let touchStartY = 0;
+
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartY = e.touches[0].clientY;
+    };
+
+    const handleTouchEnd = (e: TouchEvent) => {
+      if (!isWithinPaginatedZone() || isAnimatingRef.current) return;
+
+      const touchEndY = e.changedTouches[0].clientY;
+      const delta = touchStartY - touchEndY;
+
+      if (Math.abs(delta) < 50) return; // 짧은 스와이프는 무시
+
+      const vh = window.innerHeight;
+      const currentIndex = Math.round(window.scrollY / vh);
+      const direction = delta > 0 ? 1 : -1;
+      const targetIndex = currentIndex + direction;
+
+      if (targetIndex < 0 || targetIndex > 2) return;
+
+      animateTo(targetIndex);
+    };
+
+    window.addEventListener("wheel", handleWheel, { passive: false });
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
+
+    return () => {
+      window.removeEventListener("wheel", handleWheel);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
   }, []);
 
   const scrollToTop = () => {
@@ -166,8 +280,12 @@ const HomePage: FC = () => {
           }}
         />
 
-        <section className="relative isolate overflow-hidden h-screen w-full snap-start flex items-center">
-          <div className="mx-auto flex h-full w-full max-w-[1600px] items-center justify-between px-28">
+        <section
+          id="hero-section"
+          ref={heroRef}
+          className="relative isolate flex min-h-screen w-full items-center overflow-hidden pt-24 sm:pt-28 lg:pt-32"
+        >
+          <div className="mx-auto flex w-full max-w-[1600px] flex-col items-center justify-center gap-10 px-6 lg:flex-row lg:justify-between lg:px-28">
             {/* Left */}
             <div className="w-full text-center lg:w-auto lg:shrink-0 lg:text-left">
               <div className="flex justify-center lg:justify-start">
@@ -214,20 +332,21 @@ const HomePage: FC = () => {
               </div>
             </div>
 
-            {/* Right */}
             <div className="flex w-full flex-1 justify-center lg:justify-end">
               <img
                 src={img}
                 alt="Hero"
-                className="w-[240px] max-w-full sm:w-[360px] md:w-[480px] lg:w-[760px] lg:max-w-none"
+                className="hero-float w-[240px] max-w-full sm:w-[360px] md:w-[480px] lg:w-[760px] lg:max-w-none"
               />
             </div>
           </div>
         </section>
 
         {/* Why SpeaKO Section */}
-       <section className="relative isolate overflow-hidden flex w-full snap-start scroll-mt-20 items-center px-6 py-16 sm:px-10 md:px-16 lg:h-screen lg:px-28 lg:py-24">
-
+        <section
+          ref={whyRef}
+          className="relative isolate overflow-hidden flex w-full scroll-mt-20 sm:scroll-mt-24 lg:scroll-mt-28 items-center px-6 py-16 sm:px-10 md:px-16 lg:h-screen lg:px-28 lg:py-24"
+        >
           <div
             aria-hidden="true"
             className="hidden lg:block absolute pointer-events-none -z-10"
@@ -246,7 +365,7 @@ const HomePage: FC = () => {
           />
           <div className="mx-auto flex w-full max-w-[1600px] flex-col items-start gap-10 lg:flex-row lg:gap-4">
             {/* Left - 텍스트 */}
-            <div className="w-full text-center lg:mt-8 lg:w-[500px] lg:shrink-0 lg:text-left">
+            <div className="w-full text-center lg:-mt-4 lg:w-[500px] lg:shrink-0 lg:text-left">
               <p className="text-left text-[20px] font-bold bg-[image:var(--gradient-brand-active)] bg-clip-text text-transparent sm:text-[22px] lg:mt-4 lg:text-[25px]">
                 Why SpeaKO
               </p>
@@ -265,14 +384,18 @@ const HomePage: FC = () => {
             </div>
 
             {/* Right - 카드 3개 */}
-            <div className="grid w-full grid-cols-1 gap-8 sm:grid-cols-2 lg:mt-16 lg:flex lg:flex-1 lg:grid-cols-none lg:gap-8">
+            <div
+              className={`grid w-full grid-cols-1 gap-8 sm:grid-cols-2 lg:mt-40 lg:flex lg:flex-1 lg:grid-cols-none lg:gap-8 ${
+                activeSection === 1 ? "reveal-active" : ""
+              }`}
+            >
               {REASONS.map((reason) => {
                 const Icon = reason.icon;
 
                 return (
                   <div
                     key={reason.id}
-                    className="relative w-full pt-8 lg:w-[340px]"
+                    className="reveal-item relative w-full pt-8 lg:w-[340px]"
                   >
                     {/* Number */}
                     <span className="absolute left-8 -top-6 z-0 select-none text-[56px] font-semibold leading-none text-indigo-100 lg:text-[72px]">
@@ -282,13 +405,13 @@ const HomePage: FC = () => {
                     {/* Card */}
                     <div
                       className="
-              relative z-10 flex h-auto min-h-[360px] w-full flex-col items-start gap-11
-              rounded-[20px] bg-gradient-to-br from-white/10 to-indigo-500/10
-              outline outline-1 outline-offset-[-1px] outline-white
-              px-7 py-8
-              transition-all duration-300 hover:-translate-y-2
-              lg:h-[400px] lg:w-[340px] lg:px-9
-            "
+                        relative z-10 flex h-auto min-h-[360px] w-full flex-col items-start gap-11
+                        rounded-[20px] bg-gradient-to-br from-white/10 to-indigo-500/10
+                        outline outline-1 outline-offset-[-1px] outline-white
+                        px-7 py-8
+                        transition-all duration-300 hover:-translate-y-2
+                        lg:h-[400px] lg:w-[340px] lg:px-9
+                      "
                     >
                       <div className="glass-icon-box flex h-14 w-14 items-center justify-center rounded-2xl lg:h-16 lg:w-16">
                         <Icon
@@ -298,7 +421,7 @@ const HomePage: FC = () => {
                       </div>
 
                       <div className="flex flex-col items-start gap-5">
-                        <h3 className="text-[24px] font-bold leading-snug text-[var(--color-text-heading)] lg:text-[28px]">
+                        <h3 className="whitespace-nowrap text-[24px] font-bold leading-snug text-[var(--color-text-heading)] lg:text-[26px]">
                           {reason.title}
                         </h3>
                         <p className="whitespace-pre-line text-[15px] leading-7 text-[var(--color-text-body)] lg:text-[17px] lg:leading-8">
@@ -315,7 +438,10 @@ const HomePage: FC = () => {
       </div>
 
       {/* Main Function Section */}
-      <section className="relative isolate overflow-hidden flex w-full snap-start scroll-mt-20 flex-col items-center justify-center bg-[#F8F9FF] px-6 py-16 sm:px-10 md:px-16 lg:min-h-screen lg:px-28 lg:py-20">
+      <section
+        ref={mainRef}
+        className="relative isolate overflow-hidden flex w-full scroll-mt-20 sm:scroll-mt-24 lg:scroll-mt-28 flex-col items-center justify-center bg-[#F8F9FF] px-6 pt-16 pb-16 sm:px-10 sm:pt-20 md:px-16 lg:min-h-screen lg:px-28 lg:pt-24 lg:pb-20"
+      >
         <div className="absolute inset-0 -z-10 pointer-events-none">
           <img
             src={mainfunctionbackground}
@@ -327,29 +453,33 @@ const HomePage: FC = () => {
 
         <MainChip text="Main Function" />
 
-        <h2 className="mt-6 text-center text-[28px] font-bold leading-tight text-[var(--color-text-heading)] sm:text-[38px] md:text-[48px] lg:mt-8 lg:text-[60px]">
+        <h2 className="mt-4 text-center text-[24px] font-bold leading-tight text-[var(--color-text-heading)] sm:text-[32px] md:text-[40px] lg:mt-6 lg:text-[50px]">
           SpeaKO의 3가지 핵심 기능
         </h2>
 
-        <p className="mt-4 text-center text-sm text-[var(--color-text-body)] sm:text-base lg:text-[20px]">
+        <p className="mt-3 text-center text-sm text-[var(--color-text-body)] sm:text-base lg:text-[18px]">
           대본 생성부터 발음 평가까지, 발표의 모든 과정을 케어합니다.
         </p>
 
-        <div className="mx-auto mt-10 flex w-full max-w-[1600px] flex-col items-center justify-center gap-8 lg:flex-row lg:flex-nowrap lg:mt-12 lg:gap-8">
+       <div
+          className={`mx-auto mt-6 flex w-full max-w-[1600px] flex-col items-center justify-center gap-10 lg:flex-row lg:flex-nowrap lg:mt-8 lg:gap-12 ${
+            activeSection === 2 ? "reveal-active" : ""
+          }`}
+        >
           {FEATURES.map((feature) => (
             <div
               key={feature.id}
               className="
-    group flex h-auto w-full max-w-[420px] flex-col items-center
-    rounded-[20px] bg-gradient-to-br from-white/10 to-indigo-500/10
-    outline outline-1 outline-offset-[-1px] outline-white
-    px-8 py-10
-    transition-all duration-300 hover:-translate-y-2
-    md:w-[340px] lg:h-[576px] lg:w-[472px] lg:px-12 lg:py-12
-  "
+            reveal-item group flex h-auto w-full max-w-[420px] flex-col items-center
+            rounded-[20px] bg-gradient-to-br from-white/10 to-indigo-500/10
+            outline outline-1 outline-offset-[-1px] outline-white
+            px-7 py-9
+            transition-all duration-300 hover:-translate-y-2
+            md:w-[320px] lg:h-[500px] lg:w-[460px] lg:px-10 lg:py-10
+          "
             >
               {/* Icon */}
-              <div className="flex h-[190px] w-72 items-center justify-center p-2.5 lg:h-[256px]">
+              <div className="flex h-[165px] w-64 items-center justify-center p-2.5 lg:h-[220px]">
                 <img
                   src={feature.image}
                   alt={feature.title}
@@ -357,18 +487,18 @@ const HomePage: FC = () => {
                 />
               </div>
 
-              <div className="flex w-full flex-col items-start gap-4">
+              <div className="flex w-full flex-col items-start gap-3">
                 {/* Badge */}
-                <span className="text-lg font-semibold text-indigo-500">
+                <span className="text-base font-semibold text-indigo-500">
                   {feature.badge}
                 </span>
 
                 {/* Title + Description */}
-                <div className="flex flex-col items-start gap-5 pl-1">
-                  <h3 className="text-3xl font-bold leading-8 text-[var(--color-text-heading)] lg:text-[38px]">
+                <div className="flex flex-col items-start gap-4 pl-1">
+                  <h3 className="text-2xl font-bold leading-7 text-[var(--color-text-heading)] lg:text-[32px]">
                     {feature.title}
                   </h3>
-                  <p className="text-xl leading-8 text-[var(--color-text-body)]">
+                  <p className="whitespace-pre-line text-base leading-7 text-[var(--color-text-body)]">
                     {feature.description}
                   </p>
                 </div>
@@ -391,7 +521,10 @@ const HomePage: FC = () => {
       </section>
 
       {/* Footer */}
-      <footer className="w-full border-t border-gray-100 bg-white px-6 py-12 sm:px-10 md:px-16 lg:px-28 lg:py-16">
+      <footer
+        ref={footerRef}
+        className="w-full border-t border-gray-100 bg-white px-6 py-12 sm:px-10 md:px-16 lg:px-28 lg:py-16"
+      >
         <div className="mx-auto flex w-full max-w-[1600px] flex-col items-center gap-10 text-center md:flex-row md:flex-wrap md:items-start md:justify-center md:gap-16 md:text-left lg:gap-50">
           {/* Brand */}
           <div className="max-w-xs">
