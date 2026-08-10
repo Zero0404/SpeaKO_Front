@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import logo from "../assets/SpeaKO-logo.svg";
 import LinkButton from "./LinkButton";
 import Login from "../modals/Login";
@@ -10,15 +10,23 @@ import AccountMenu from "../modals/AccountMenu";
 import SetModal from "../modals/SetModal";
 import type { SettingsTab } from "../modals/SetModal";
 import { User } from "lucide-react";
+import { useAuthStore } from "../store/authStore";
 
-// TODO: 로그인 상태/유저 정보를 전역 상태(Context 등)로 관리하게 되면 이 mock 값을 대체합니다.
-// (백엔드 로그인 API 정상화 전까지 마이페이지 화면 테스트용으로 임시 고정)
+// TODO: 로그인 유저 정보를 API로 받아오게 되면 이 mock 값을 대체합니다.
 const CURRENT_USER = {
   name: "홍길동",
   email: "honggildong@naver.com",
 };
 
 const Navbar = () => {
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const isLoggedIn = !!accessToken;
+
+  const location = useLocation();
+  const isHomePage = location.pathname === "/";
+
+  const [isScrolled, setIsScrolled] = useState(false);
+
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isSignupOpen, setIsSignupOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
@@ -26,78 +34,112 @@ const Navbar = () => {
   const [isLogoutOpen, setIsLogoutOpen] = useState(false);
   const [isDeleteAccountOpen, setIsDeleteAccountOpen] = useState(false);
 
+  // 스크롤 시 배경 전환 (HomePage가 아닌 페이지에서만 사용)
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 10);
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // HomePage: 3개 섹션 내내 항상 투명 / 다른 페이지: 스크롤하면 배경 켜짐
+  const showNavbarBackground = !isHomePage && isScrolled;
+
   const handleLogoutConfirm = () => {
     // TODO: 로그아웃 API 연동 시 여기서 함께 호출
-    console.log("로그아웃 처리");
+    useAuthStore.getState().logout();
+    setIsAccountMenuOpen(false);
+    setIsLogoutOpen(false);
+    window.location.reload();
   };
 
   const handleDeleteAccountConfirm = () => {
     // TODO: 회원 탈퇴 API 연동 시 여기서 함께 호출
-    console.log("회원 탈퇴 처리");
+    useAuthStore.getState().logout();
+    setIsDeleteAccountOpen(false);
+    window.location.reload();
   };
 
   return (
     <>
-      <header className="absolute top-0 left-0 right-0 z-50 w-full h-28 transparent-bg">
-        <div className="flex h-full w-full items-center justify-between py-6 px-6 lg:px-12">
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 w-full h-20 sm:h-24 lg:h-28 transition-colors duration-300 ${
+          showNavbarBackground
+            ? "bg-white/90 backdrop-blur-md shadow-sm"
+            : "transparent-bg"
+        }`}
+      >
+        <div className="flex h-full w-full items-center justify-between py-4 px-4 sm:py-5 sm:px-6 lg:py-6 lg:px-12">
           {/* 왼쪽 */}
-          <div className="flex items-center gap-20">
-            <Link to="/">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-8 lg:gap-20">
+            <Link to="/" className="shrink-0">
               <img
                 src={logo}
                 alt="SpeaKO"
-                className="h-14 w-auto"
+                className="h-9 w-auto sm:h-11 lg:h-14"
               />
             </Link>
 
-            <nav className="flex items-center gap-14">
-              <LinkButton to="/service">서비스 소개</LinkButton>
-              <LinkButton to="/pricing">요금 안내</LinkButton>
+            <nav className="flex items-center gap-3 sm:gap-8 lg:gap-14">
+              <LinkButton
+                to="/service"
+                className="hidden md:inline-flex text-base lg:text-lg"
+              >
+                서비스 소개
+              </LinkButton>
+              <LinkButton
+                to="/pricing"
+                className="text-xs sm:text-sm md:text-base lg:text-lg"
+              >
+                요금 안내
+              </LinkButton>
             </nav>
           </div>
 
           {/* 오른쪽 */}
-          <div className="flex items-center gap-7">
-            <div className="relative">
+          <div className="flex shrink-0 items-center gap-3 sm:gap-5 lg:gap-7">
+            {isLoggedIn ? (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsAccountMenuOpen((prev) => !prev)}
+                  aria-label="마이페이지"
+                  className="flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)] sm:size-10 lg:size-11"
+                >
+                  <User size={18} className="text-[color:var(--color-white)] sm:size-5 lg:size-[22px]" />
+                </button>
+
+                {isAccountMenuOpen && (
+                  <AccountMenu
+                    name={CURRENT_USER.name}
+                    email={CURRENT_USER.email}
+                    onClose={() => setIsAccountMenuOpen(false)}
+                    onOpenSettings={(tab) => setSettingsTab(tab)}
+                    onLogoutClick={() => setIsLogoutOpen(true)}
+                    onContactClick={() => {
+                      // TODO: 문의하기 플로우 연동
+                      console.log("문의하기");
+                    }}
+                    onNotificationClick={() => {
+                      // TODO: 알림 플로우 연동
+                      console.log("알림");
+                    }}
+                  />
+                )}
+              </div>
+            ) : (
               <button
-                type="button"
-                onClick={() => setIsAccountMenuOpen((prev) => !prev)}
-                aria-label="마이페이지"
-                className="flex size-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)]"
+                onClick={() => setIsLoginOpen(true)}
+                className="whitespace-nowrap rounded-xl px-4 py-2 text-sm hover-effect-btn is-active font-semibold text-white shadow-md transition hover:scale-105 sm:rounded-2xl sm:px-6 sm:py-3 sm:text-base lg:px-8 lg:py-3.5"
               >
-                <User size={22} className="text-[color:var(--color-white)]" />
+                로그인
               </button>
-
-              {isAccountMenuOpen && (
-                <AccountMenu
-                  name={CURRENT_USER.name}
-                  email={CURRENT_USER.email}
-                  onClose={() => setIsAccountMenuOpen(false)}
-                  onOpenSettings={(tab) => setSettingsTab(tab)}
-                  onLogoutClick={() => setIsLogoutOpen(true)}
-                  onContactClick={() => {
-                    // TODO: 문의하기 플로우 연동
-                    console.log("문의하기");
-                  }}
-                  onNotificationClick={() => {
-                    // TODO: 알림 플로우 연동
-                    console.log("알림");
-                  }}
-                />
-              )}
-            </div>
-
-            <button
-              onClick={() => setIsLoginOpen(true)}
-              className="rounded-2xl hover-effect-btn is-active px-8 py-3.5 text-base font-semibold text-white shadow-md transition hover:scale-105"
-            >
-              로그인
-            </button>
+            )}
           </div>
         </div>
       </header>
 
-      {/* 로그인 모달 */}
+      {/* 모달들은 이전과 동일 */}
       <Login
         open={isLoginOpen}
         onClose={() => setIsLoginOpen(false)}
@@ -106,8 +148,6 @@ const Navbar = () => {
           setIsSignupOpen(true);
         }}
       />
-
-      {/* 회원가입 모달 */}
       <Signup
         open={isSignupOpen}
         onClose={() => setIsSignupOpen(false)}
@@ -116,30 +156,21 @@ const Navbar = () => {
           setIsLoginOpen(true);
         }}
       />
-
-      {/* 설정 모달 (계정 설정 / 요금제 업그레이드에서 진입) */}
       {settingsTab && (
         <SetModal
           initialTab={settingsTab}
           user={CURRENT_USER}
           onClose={() => setSettingsTab(null)}
-          onSaveProfile={(data) => {
-            // TODO: 프로필 저장 API 연동
-            console.log("프로필 저장", data);
-          }}
+          onSaveProfile={(data) => console.log("프로필 저장", data)}
           onDeleteAccountClick={() => {
             setSettingsTab(null);
             setIsDeleteAccountOpen(true);
           }}
         />
       )}
-
-      {/* 로그아웃 확인 */}
       {isLogoutOpen && (
         <Logout onClose={() => setIsLogoutOpen(false)} onConfirm={handleLogoutConfirm} />
       )}
-
-      {/* 회원 탈퇴 확인 */}
       {isDeleteAccountOpen && (
         <DeleteAccount
           onClose={() => setIsDeleteAccountOpen(false)}
