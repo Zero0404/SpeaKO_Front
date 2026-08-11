@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
   FileText,
   Download,
@@ -10,6 +10,7 @@ import {
   BarChart3,
   CheckCircle2,
   Timer,
+  Loader2,
   ChevronLeft,
   ChevronRight,
   ChevronRight as ArrowIcon,
@@ -293,6 +294,23 @@ const pronunciationTips: PronunciationTip[] = [
 ];
 
 // 점수 구간별로 보여줄 한줄 메시지 + 상세 피드백 (실제로는 평가 API 응답으로 교체될 자리)
+// [MOCK] 실제 발음 평가 API가 아직 없어서, 네트워크 요청을 흉내내는 목업 함수로 대체해둔 상태.
+// 나중에 실제 API가 준비되면 이 함수 내부만 실제 fetch 호출로 바꾸면 되고,
+// 호출하는 쪽(handleRealtimeEvaluation)의 로딩/에러 처리 흐름은 그대로 재사용된다.
+const mockEvaluateRecording = (_recording: {
+  blob: Blob;
+  durationSeconds: number;
+}): Promise<number> => {
+  return new Promise((resolve) => {
+    // 실제 네트워크 요청처럼 약간의 지연을 흉내낸다.
+    setTimeout(() => {
+      // 60~95 사이 랜덤 점수 — 매번 다른 값이 나와서 로딩→완료 흐름이 눈으로 확인된다.
+      const mockScore = Math.floor(60 + Math.random() * 36);
+      resolve(mockScore);
+    }, 1500);
+  });
+};
+
 const getScoreFeedback = (value: number) => {
   if (value >= 90) {
     return {
@@ -433,7 +451,7 @@ const HighlightSpan = ({
       onClick={onClick}
       onMouseEnter={openTooltip}
       onMouseLeave={scheduleCloseTooltip}
-      className={`relative inline-block rounded-sm px-1 font-semibold leading-6 outline-none ${meta.bgClass} ${meta.textClass} ${meta.shadow} ${
+      className={`relative inline-block rounded-sm px-1 font-semibold leading-5 outline-none ${meta.bgClass} ${meta.textClass} ${meta.shadow} ${
         onClick ? "cursor-pointer" : ""
       }`}
     >
@@ -610,7 +628,6 @@ type WordFilter = "all" | HighlightType;
 
 const CoachViewPage = () => {
   const navigate = useNavigate();
-  const location = useLocation();
   const [activeTab, setActiveTab] = useState<TabKey>("viewer");
   const [wordFilter, setWordFilter] = useState<WordFilter>("all");
   const [focusedId, setFocusedId] = useState<string | null>(null);
@@ -634,40 +651,84 @@ const CoachViewPage = () => {
     return () => window.removeEventListener("resize", updateUnderline);
   }, [activeTab]);
 
-  // FeedbackLoading 페이지에서 평가를 마치고 돌아올 때 navigate(..., { state: { score } })로 점수를 넘겨준다.
-  // 그 state가 있으면 처음부터 "done" 상태로 보여주고, 없으면 아직 평가 전(idle)이다.
-  // evalStatus/score는 마운트 시 location.state로 한 번 정해지고 그 이후로는 값을 바꾸지 않으므로
-  // (다시 바뀌려면 페이지가 새로 마운트돼야 함) setter는 필요 없다 — 남겨두면 "선언했지만 사용 안 함" 빌드 에러가 난다.
-  const scoreFromLoadingPage = (location.state as { score?: number } | null)?.score;
-  const [evalStatus] = useState<"idle" | "done">(
-    typeof scoreFromLoadingPage === "number" ? "done" : "idle",
-  );
-  const [score] = useState<number | null>(scoreFromLoadingPage ?? null);
+  // "실시간 평가받기"는 이 페이지 안에서 직접 녹음 파일을 API로 보내고 응답을 받는다.
+  // (FeedbackLoading/FeedbackPage로 이동했다가 state로 점수를 받아오는 방식이 아님 —
+  //  그 페이지들은 다른 담당자 영역이라 이 페이지 로직과 무관하다.)
+  const [evalStatus, setEvalStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [score, setScore] = useState<number | null>(null);
+  const [evalError, setEvalError] = useState<string | null>(null);
+  // VoiceRecorder에서 녹음이 끝날 때마다 최신 녹음본을 여기 보관해뒀다가, 평가 요청 시 사용한다.
+  const lastRecordingRef = useRef<{ blob: Blob; durationSeconds: number } | null>(null);
 
   const handleCheckScript = () => {};
   const handleDownload = () => {};
 
-  // "파일로 평가받기" — 파일 업로드로 평가받는 플로우로 이동
+  // "파일로 평가받기" — 파일 업로드로 평가받는 플로우로 이동 (다른 담당자 영역)
   const handleFileEvaluation = () => {
     navigate("/feedback-fileupload");
   };
 
-  // "실시간 평가받기" — 기존 FeedbackLoading 페이지로 이동해서 로딩을 보여주고,
-  // 평가가 끝나면 FeedbackLoading이 이 페이지로 다시 navigate(..., { state: { score } })해서 돌아온다.
-  const handleRealtimeEvaluation = () => {
-    navigate("/feedback-loading");
+  // "실시간 평가받기" — 방금 녹음한 오디오를 실제 발음 평가 API로 전송하고, 응답 점수를 그대로 반영한다.
+  const handleRealtimeEvaluation = async () => {
+    const recording = lastRecordingRef.current;
+    if (!recording) {
+      setEvalStatus("error");
+      setEvalError("먼저 대본을 녹음한 뒤 평가를 요청해주세요.");
+      return;
+    }
+
+    setEvalStatus("loading");
+    setEvalError(null);
+
+    try {
+      // [MOCK] 실제 발음 평가 API가 준비되기 전까지는 mockEvaluateRecording으로 흉내낸다.
+      const resultScore = await mockEvaluateRecording(recording);
+
+      /* 실제 API 연동 시 위 mockEvaluateRecording 호출을 지우고 아래 코드로 교체하면 됨:
+      const formData = new FormData();
+      formData.append("audio", recording.blob, "recording.webm");
+      formData.append("durationSeconds", String(recording.durationSeconds));
+
+      const res = await fetch("/api/pronunciation/evaluate", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) {
+        throw new Error(`평가 요청에 실패했습니다. (status: ${res.status})`);
+      }
+      const data = await res.json();
+      // TODO: 실제 응답 형태에 맞게 필드명 조정 (예: data.result.score 등)
+      const resultScore = data?.score;
+      if (typeof resultScore !== "number") {
+        throw new Error("평가 응답에서 점수를 찾을 수 없습니다.");
+      }
+      */
+
+      setScore(resultScore);
+      setEvalStatus("done");
+    } catch (err) {
+      console.error(err);
+      setEvalError(
+        err instanceof Error ? err.message : "평가 중 오류가 발생했습니다.",
+      );
+      setEvalStatus("error");
+    }
   };
 
-  // 사이드바의 "상세 분석 보기" — 상세 피드백 페이지로 이동
+  // 사이드바의 "상세 분석 보기" — 상세 피드백 페이지로 이동 (다른 담당자 영역)
   const handleViewDetailedAnalysis = () => {
-    navigate("/feedback");
+    navigate("/feedback", { state: { score } });
   };
 
   const handleRecordingComplete = (
     audioBlob: Blob,
     durationSeconds: number,
   ) => {
-    console.log("recording complete", audioBlob, durationSeconds);
+    lastRecordingRef.current = { blob: audioBlob, durationSeconds };
+    // 새로 녹음했으면 이전 평가 결과/에러는 더 이상 유효하지 않으니 초기화한다.
+    setEvalStatus("idle");
+    setEvalError(null);
+    setScore(null);
   };
 
   const focusHighlight = (id: string, targetTab: TabKey) => {
@@ -721,6 +782,19 @@ const CoachViewPage = () => {
               </button>
             )}
           </div>
+
+          {evalStatus === "loading" && (
+            <div className="flex flex-col items-center justify-center gap-3 py-6">
+              <Loader2 size={26} className="animate-spin text-[color:var(--color-brand-primary)]" />
+              <p className="text-sm font-medium font-['Pretendard'] text-[color:var(--color-text-body)]">
+                발음을 분석하고 있어요...
+              </p>
+            </div>
+          )}
+
+          {evalStatus === "error" && evalError && (
+            <p className="pl-1 text-sm font-medium font-['Pretendard'] text-red-500">{evalError}</p>
+          )}
 
           {evalStatus === "done" && score !== null && (
             <div className="flex flex-col items-center gap-2 py-2 text-center sm:flex-row sm:items-center sm:gap-4 sm:text-left">
@@ -818,10 +892,15 @@ const CoachViewPage = () => {
       <button
         type="button"
         onClick={handleRealtimeEvaluation}
-        className="mt-auto flex w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)] py-2.5 text-sm font-bold font-['Pretendard'] text-[color:var(--color-white)] transition hover:opacity-90"
+        disabled={evalStatus === "loading"}
+        className="mt-auto flex w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)] py-2.5 text-sm font-bold font-['Pretendard'] text-[color:var(--color-white)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        <CheckCircle2 size={18} />
-        실시간 평가받기
+        {evalStatus === "loading" ? (
+          <Loader2 size={18} className="animate-spin" />
+        ) : (
+          <CheckCircle2 size={18} />
+        )}
+        {evalStatus === "loading" ? "평가 중..." : "실시간 평가받기"}
       </button>
     </aside>
   );

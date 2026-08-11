@@ -1,6 +1,6 @@
 import type { FC } from "react";
-import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
 import {
   Upload,
@@ -26,6 +26,9 @@ import FeatureCard3 from "../assets/feature-feedback-illustration.svg";
 
 import MainChip from "../components/MainChip";
 import SubChip from "../components/SubChip";
+
+import { useAuthStore } from "../store/authStore";
+import { useUIStore } from "../store/uiStore";
 
 interface ReasonCardData {
   id: string;
@@ -112,15 +115,22 @@ const FEATURES: FeatureCardData[] = [
   },
 ];
 
-// easeOutCubic — 빠르게 시작해서 끝에서만 부드럽게 감속 (묵직한 느낌 해소)
-const ease = (t: number) => 1 - Math.pow(1 - t, 3);
+// easeInOutCubic — 시작엔 살짝 붙잡히듯 느리게 반응하다가 중반에 훅 내려가고
+// 끝에서 부드럽게 멈춤 (요청하신 "무겁게 잡혔다가 내려가는" 느낌)
+const ease = (t: number) =>
+  t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 
-const SECTION_SCROLL_DURATION = 420; // ms, 500 → 420으로 살짝 단축
-const REVEAL_START_DELAY = 180; // ms, 스냅 완료 후 카드 등장까지의 텀
+const SECTION_SCROLL_DURATION = 480; // ms, 420(너무 가벼움)과 500(예전 무거운 버전) 사이
+const REVEAL_START_DELAY = 80; // ms, 스냅 완료 후 카드 등장까지의 텀 (조금 더 빠르게)
 
 const HomePage: FC = () => {
   const [isTopButtonVisible, setIsTopButtonVisible] = useState(false);
   const [activeSection, setActiveSection] = useState(0); // 0: Hero, 1: Why, 2: Main Function
+
+  const navigate = useNavigate();
+  // 로그인 여부에 따라 "파일 업로드하고 시작하기" 클릭 시 동작을 분기합니다.
+  const isLoggedIn = !!useAuthStore((state) => state.accessToken);
+  const openLogin = useUIStore((state) => state.openLogin);
 
   const heroRef = useRef<HTMLElement | null>(null);
   const whyRef = useRef<HTMLElement | null>(null);
@@ -130,26 +140,18 @@ const HomePage: FC = () => {
   const isAnimatingRef = useRef(false);
   const activeIndexRef = useRef(0);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsTopButtonVisible(window.scrollY > 400);
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+  // 특정 섹션(0: Hero, 1: Why, 2: Main Function, 3: Footer)의 실제 위치를 구합니다.
+  const getSectionTop = useCallback((index: number) => {
+    const refs = [heroRef, whyRef, mainRef, footerRef];
+    const el = refs[index]?.current;
+    if (!el) return null;
+    return el.getBoundingClientRect().top + window.scrollY;
   }, []);
 
-  // 섹션 단위 휠/터치 스크롤 인터랙션
-  useEffect(() => {
-    const sectionRefs = [heroRef, whyRef, mainRef, footerRef];
-
-    const getSectionTop = (index: number) => {
-      const el = sectionRefs[index]?.current;
-      if (!el) return null;
-      return el.getBoundingClientRect().top + window.scrollY;
-    };
-
-    const animateTo = (targetIndex: number) => {
+  // 지정한 섹션으로 부드럽게 스크롤 이동 (휠/터치 인터랙션과 "서비스 가이드"
+  // 버튼처럼 컴포넌트 어디서든 같은 방식으로 섹션 이동을 트리거할 때 재사용)
+  const animateTo = useCallback(
+    (targetIndex: number) => {
       const targetY = getSectionTop(targetIndex);
       if (targetY === null) return;
 
@@ -176,7 +178,22 @@ const HomePage: FC = () => {
       };
 
       requestAnimationFrame(step);
+    },
+    [getSectionTop]
+  );
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsTopButtonVisible(window.scrollY > 400);
     };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // 섹션 단위 휠/터치 스크롤 인터랙션
+  useEffect(() => {
+    const sectionRefs = [heroRef, whyRef, mainRef, footerRef];
 
     const isWithinPaginatedZone = () => {
       const footerTop = footerRef.current
@@ -186,16 +203,42 @@ const HomePage: FC = () => {
       return window.scrollY < footerTop - 40;
     };
 
+    // "지금 몇 번째 섹션에 있는가"는 화면 위치를 다시 재보고 추측(픽셀 거리 비교)하지
+    // 않고, activeIndexRef(마지막으로 애니메이션이 도착한 인덱스)를 그대로 신뢰합니다.
+    // 예전엔 매번 getBoundingClientRect로 "가장 가까운 섹션"을 다시 계산했는데,
+    // Footer처럼 화면보다 짧아서 끝까지 스크롤해도 실제 위치가 그 섹션의 top까지
+    // 못 미치는 경우 계산이 어긋나서 한 섹션을 건너뛰는 문제가 있었습니다.
+    // animateTo가 성공적으로 끝날 때마다 activeIndexRef를 갱신해주므로, 그 값만
+    // 그대로 쓰면 실제 픽셀 위치와 무관하게 항상 "논리적으로 맞는" 다음/이전 섹션으로 이동합니다.
+    const getCurrentIndex = () => {
+      const scrollY = window.scrollY;
+      let nearestIndex = 0;
+      let smallestDiff = Infinity;
+
+      sectionRefs.forEach((_, index) => {
+        const top = getSectionTop(index);
+        if (top === null) return;
+        const diff = Math.abs(scrollY - top);
+        if (diff < smallestDiff) {
+          smallestDiff = diff;
+          nearestIndex = index;
+        }
+      });
+
+      return nearestIndex;
+    };
+
+    // 페이지가 스크롤된 채로 마운트되는 경우(새로고침 등)를 대비해 초기값만 한 번 보정
+    activeIndexRef.current = getCurrentIndex();
+
     const handleWheel = (e: WheelEvent) => {
       if (isAnimatingRef.current) {
         e.preventDefault();
         return;
       }
 
-      const vh = window.innerHeight;
-      const currentIndex = Math.round(window.scrollY / vh);
       const direction = e.deltaY > 0 ? 1 : -1;
-      const targetIndex = currentIndex + direction;
+      const targetIndex = activeIndexRef.current + direction;
 
       if (targetIndex < 0 || targetIndex > 3) return; // 범위 밖이면 기본 스크롤 허용
 
@@ -217,10 +260,8 @@ const HomePage: FC = () => {
 
       if (Math.abs(delta) < 50) return; // 짧은 스와이프는 무시
 
-      const vh = window.innerHeight;
-      const currentIndex = Math.round(window.scrollY / vh);
       const direction = delta > 0 ? 1 : -1;
-      const targetIndex = currentIndex + direction;
+      const targetIndex = activeIndexRef.current + direction;
 
       if (targetIndex < 0 || targetIndex > 2) return;
 
@@ -236,11 +277,36 @@ const HomePage: FC = () => {
       window.removeEventListener("touchstart", handleTouchStart);
       window.removeEventListener("touchend", handleTouchEnd);
     };
-  }, []);
+  }, [animateTo, getSectionTop]);
 
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  // "서비스 가이드" 버튼 → Main Function(3번째) 섹션으로 부드럽게 스크롤 이동
+  const handleGuideClick = () => {
+    animateTo(2);
+  };
+
+  // "파일 업로드하고 시작하기" 버튼 → 로그인 상태면 /select로 이동,
+  // 비로그인 상태면 로그인 모달을 띄웁니다.
+  const handleStartClick = () => {
+    if (isLoggedIn) {
+      navigate("/select");
+    } else {
+      openLogin();
+    }
+  };
+
+  // Navbar의 "서비스 소개" 링크(/#why-section)로 들어왔을 때 Why 섹션으로 스크롤 이동
+  const location = useLocation();
+  useEffect(() => {
+    if (location.hash === "#why-section") {
+      requestAnimationFrame(() => {
+        animateTo(1);
+      });
+    }
+  }, [location.hash, animateTo]);
 
   return (
     <div className="w-full">
@@ -307,16 +373,18 @@ const HomePage: FC = () => {
               </p>
 
               <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center lg:mt-14 lg:justify-start lg:gap-6">
-                <Link
-                  to="/select"
+                <button
+                  type="button"
+                  onClick={handleStartClick}
                   className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[image:var(--gradient-brand-active)] px-8 py-4 text-base font-semibold text-white shadow-xl transition-[var(--transition-hover)] hover:scale-105 sm:w-auto lg:px-10 lg:py-5 lg:text-lg"
                 >
                   <Upload size={20} />
                   파일 업로드하고 시작하기
-                </Link>
+                </button>
 
-                <Link
-                  to="/guide"
+                <button
+                  type="button"
+                  onClick={handleGuideClick}
                   className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[var(--color-white)] px-8 py-4 text-base font-semibold text-[var(--color-text-heading)] shadow-xl transition-[var(--transition-hover)] hover:scale-105 sm:w-auto lg:px-10 lg:py-5 lg:text-lg"
                 >
                   <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--color-brand-primary)]">
@@ -328,7 +396,7 @@ const HomePage: FC = () => {
                     />
                   </span>
                   서비스 가이드
-                </Link>
+                </button>
               </div>
             </div>
 
@@ -344,6 +412,7 @@ const HomePage: FC = () => {
 
         {/* Why SpeaKO Section */}
         <section
+          id="why-section"
           ref={whyRef}
           className="relative isolate overflow-hidden flex w-full scroll-mt-20 sm:scroll-mt-24 lg:scroll-mt-28 items-center px-6 py-16 sm:px-10 md:px-16 lg:h-screen lg:px-28 lg:py-24"
         >
@@ -409,6 +478,7 @@ const HomePage: FC = () => {
                         rounded-[20px] bg-gradient-to-br from-white/10 to-indigo-500/10
                         outline outline-1 outline-offset-[-1px] outline-white
                         px-7 py-8
+                        backdrop-blur-md
                         transition-all duration-300 hover:-translate-y-2
                         lg:h-[400px] lg:w-[340px] lg:px-9
                       "
@@ -580,12 +650,8 @@ const HomePage: FC = () => {
             </h4>
             <ul className="mt-4 space-y-3 text-sm text-[var(--color-text-body)]">
               <li>
-                <Link
-                  to="/guide"
-                  className="transition hover:text-[var(--color-brand-primary)]"
-                >
-                  사용 가이드
-                </Link>
+                {/* 아직 연결할 페이지가 없어 클릭해도 아무 동작 안 함 */}
+                <span className="cursor-default">사용 가이드</span>
               </li>
               <li>
                 <Link

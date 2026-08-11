@@ -11,6 +11,7 @@ import SetModal from "../modals/SetModal";
 import type { SettingsTab } from "../modals/SetModal";
 import { User } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
+import { useUIStore } from "../store/uiStore";
 
 // TODO: 로그인 유저 정보를 API로 받아오게 되면 이 mock 값을 대체합니다.
 const CURRENT_USER = {
@@ -27,7 +28,12 @@ const Navbar = () => {
 
   const [isScrolled, setIsScrolled] = useState(false);
 
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  // 로그인 모달은 HomePage 등 다른 곳에서도 열 수 있어야 해서 전역 스토어로 관리합니다.
+  // (예: 비로그인 상태에서 "파일 업로드하고 시작하기" 클릭 시)
+  const isLoginOpen = useUIStore((state) => state.isLoginOpen);
+  const openLogin = useUIStore((state) => state.openLogin);
+  const closeLogin = useUIStore((state) => state.closeLogin);
+
   const [isSignupOpen, setIsSignupOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab | null>(null);
@@ -81,8 +87,9 @@ const Navbar = () => {
             </Link>
 
             <nav className="flex items-center gap-3 sm:gap-8 lg:gap-14">
+              {/* 홈페이지 2번째 섹션(Why SpeaKO)으로 스크롤 이동 */}
               <LinkButton
-                to="/service"
+                to="/#why-section"
                 className="hidden md:inline-flex text-base lg:text-lg"
               >
                 서비스 소개
@@ -129,7 +136,7 @@ const Navbar = () => {
               </div>
             ) : (
               <button
-                onClick={() => setIsLoginOpen(true)}
+                onClick={openLogin}
                 className="whitespace-nowrap rounded-xl px-4 py-2 text-sm hover-effect-btn is-active font-semibold text-white shadow-md transition hover:scale-105 sm:rounded-2xl sm:px-6 sm:py-3 sm:text-base lg:px-8 lg:py-3.5"
               >
                 로그인
@@ -142,9 +149,9 @@ const Navbar = () => {
       {/* 모달들은 이전과 동일 */}
       <Login
         open={isLoginOpen}
-        onClose={() => setIsLoginOpen(false)}
+        onClose={closeLogin}
         onSignupClick={() => {
-          setIsLoginOpen(false);
+          closeLogin();
           setIsSignupOpen(true);
         }}
       />
@@ -153,7 +160,7 @@ const Navbar = () => {
         onClose={() => setIsSignupOpen(false)}
         onLoginClick={() => {
           setIsSignupOpen(false);
-          setIsLoginOpen(true);
+          openLogin();
         }}
       />
       {settingsTab && (

@@ -15,8 +15,6 @@ import FeedbackFileUploadPage from "./pages/FeedbackFileUploadPage";
 import { FeedbackLoading } from "./pages/FeedbackLoading";
 import { FeedbackPage } from "./pages/FeedbackPage";
 
-import MyPage from "./pages/MyPage";
-
 
 const App = () => {
   return (
@@ -39,8 +37,6 @@ const App = () => {
           <Route path="/feedback-fileupload" element={<FeedbackFileUploadPage />} />
           <Route path="/feedback-loading" element={<FeedbackLoading />} />
           <Route path="/feedback" element={<FeedbackPage />} />
-
-          <Route path="/mypage" element={<MyPage />} />
           </Routes>
 
       </div>
