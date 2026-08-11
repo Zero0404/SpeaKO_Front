@@ -93,7 +93,7 @@ export const FeedbackLoading: React.FC<FeedbackLoadingProps> = ({
             발표 음성 및 대본을 분석하여 피드백 보고서를 작성하는 중입니다.
           </p>
           <p className="text-xs md:text-sm text-gray-400">
-            잠시만 기다려 주세요. 파일의 용량에 따라 최대 4분까지 소요될 수 있습니다.
+            잠시만 기다려 주세요. 파일의 용량에 따라 최대 10분까지 소요될 수 있습니다.
           </p>
         </div>
 
