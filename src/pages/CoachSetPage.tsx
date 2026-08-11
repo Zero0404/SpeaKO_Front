@@ -29,13 +29,13 @@ export const CoachSetPage: React.FC = () => {
 
   return (
     <div
-      className="min-h-screen w-full flex flex-col items-center justify-center p-4 md:p-8 bg-cover bg-center bg-no-repeat font-sans overflow-x-hidden"
+      className="min-h-screen w-full flex flex-col items-center justify-start pt-20 sm:pt-24 md:pt-28 pb-8 md:pb-12 px-4 md:px-8 bg-cover bg-center bg-no-repeat font-sans overflow-x-hidden"
       style={{
         backgroundImage: `url(${bgSvg})`,
         backgroundColor: '#F3F4F6',
       }}
     >
-      <div className="flex flex-col items-center xl:items-start max-w-[1520px] w-full">
+      <div className="flex flex-col items-center xl:items-start max-w-[1520px] w-full mt-2 md:mt-4">
 
         {/* 상단 스텝 배너 */}
         <div
