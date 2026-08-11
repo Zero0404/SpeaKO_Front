@@ -297,7 +297,7 @@ const pronunciationTips: PronunciationTip[] = [
 // [MOCK] 실제 발음 평가 API가 아직 없어서, 네트워크 요청을 흉내내는 목업 함수로 대체해둔 상태.
 // 나중에 실제 API가 준비되면 이 함수 내부만 실제 fetch 호출로 바꾸면 되고,
 // 호출하는 쪽(handleRealtimeEvaluation)의 로딩/에러 처리 흐름은 그대로 재사용된다.
-const mockEvaluateRecording = (recording: {
+const mockEvaluateRecording = (_recording: {
   blob: Blob;
   durationSeconds: number;
 }): Promise<number> => {
