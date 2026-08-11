@@ -32,7 +32,7 @@ const App = () => {
           <Route path="/script-edit" element={<ScriptEditPage />} />
 
           <Route path="/coach-set" element={<CoachSetPage />} />
-          <Route path="/coach-loading" element={<CoachLoading />} />
+          <Route path="/coach-loading" element={<CoachLoading isOpen={true} />} />
           <Route path="/coach-view" element={<CoachViewPage />} />
 
           <Route path="/feedback-fileupload" element={<FeedbackFileUploadPage />} />
