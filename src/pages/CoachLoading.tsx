@@ -1,43 +1,87 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import bgGradient from '../assets/background_gradiant.png';
+import Navbar from '../components/Navbar';
+import { useScriptJobStore } from '../store/scriptJobStore';
 
-export const CoachLoadingPage: React.FC = () => {
+export interface CoachLoadingModalProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+  onNext?: () => void;
+}
+
+export const CoachLoadingModal: React.FC<CoachLoadingModalProps> = ({
+  isOpen = true,
+  onClose,
+  onNext,
+}) => {
   const navigate = useNavigate();
+  const { status, result } = useScriptJobStore();
+  const [currentStep, setCurrentStep] = useState<number>(3); // 3: 하이라이팅 중, 4: 완료
+
+  // 백엔드 API 상태 및 2초 타이머로 3단계 -> 4단계(완료) 전환
+  useEffect(() => {
+    if (!isOpen) return;
+
+    // 2초 후 3단계 -> 4단계 완료 상태로 전환
+    const timerStep4 = setTimeout(() => {
+      setCurrentStep(4);
+    }, 2000);
+
+    return () => {
+      clearTimeout(timerStep4);
+    };
+  }, [isOpen, status]);
 
   const handleNavigateNext = () => {
-    navigate('/coach-view');
+    if (onClose) onClose();
+    if (onNext) {
+      onNext();
+    } else {
+      navigate('/coach-view', { state: { result } });
+    }
   };
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      handleNavigateNext();
-    }, 5000);
-
-    return () => clearTimeout(timer);
-  }, []);
+  if (!isOpen) return null;
 
   return (
     <div
-      className="min-h-screen w-full flex flex-col items-center justify-center p-4 md:p-6 bg-cover bg-center bg-no-repeat font-sans select-none overflow-hidden"
+      className="fixed inset-0 z-50 min-h-screen w-full flex flex-col items-center justify-start bg-cover bg-center bg-no-repeat font-sans select-none overflow-y-auto"
       style={{
         backgroundImage: `url(${bgGradient})`,
         backgroundColor: '#F8FAFC',
       }}
     >
-      <div className="flex flex-col items-center justify-center text-center max-w-2xl mx-auto w-full px-4">
-        {/* 회전 스피너 */}
+      {/* 시작점을 30도 옆으로 기울이고 1바퀴(1초 회전) + 1초 멈춤 애니메이션 */}
+      <style>{`
+        @keyframes spinAndPause {
+          0% { transform: rotate(30deg); }
+          50% { transform: rotate(390deg); }
+          100% { transform: rotate(390deg); }
+        }
+        .animate-spin-pause {
+          animation: spinAndPause 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+      `}</style>
+
+      {/* 상단 Navbar */}
+      <div className="w-full relative z-20">
+        <Navbar />
+      </div>
+
+      {/* 로딩 콘텐츠 메인 박스 */}
+      <div className="flex-1 flex flex-col items-center justify-center text-center max-w-2xl mx-auto w-full px-4 py-8 relative z-10">
+        {/* 회전 스피너 (시작점 30도 오프셋, 원 전체의 1/4 크기 보라색 아크 회전) */}
         <div className="relative flex items-center justify-center mb-8 md:mb-10">
           <div
-            className="w-16 h-16 md:w-20 md:h-20 rounded-full border-[5px] border-gray-200/80 border-t-transparent animate-spin"
+            className="w-[62px] h-[62px] rounded-full border-[5px] border-gray-200/80 animate-spin-pause"
             style={{
               borderTopColor: 'rgba(91, 108, 251, 1)',
-              borderRightColor: 'rgba(91, 108, 251, 0.8)',
             }}
           />
         </div>
 
-        {/* 타이틀 & 설명 문구 */}
+        {/* 타이틀 & 문구 */}
         <div className="space-y-3 mb-12 md:mb-16">
           <h2 className="text-2xl md:text-3xl font-extrabold text-[var(--color-text-heading)] tracking-tight">
             발음 하이라이팅을 적용하고 있어요
@@ -50,7 +94,7 @@ export const CoachLoadingPage: React.FC = () => {
           </p>
         </div>
 
-        {/* 하단 4단계 프로세스 위젯 */}
+        {/* 4단계 프로세스 위젯 */}
         <div className="flex items-center justify-center gap-3 sm:gap-6 flex-wrap mb-12">
           {/* 1단계 - 완료 */}
           <div className="flex flex-col items-center gap-2">
@@ -78,20 +122,45 @@ export const CoachLoadingPage: React.FC = () => {
 
           <span className="text-[#6E8BFF] font-light text-lg sm:text-xl pb-6">≫</span>
 
-          {/* 3단계 - 진행 중 (숫자 없이 회전 링만) */}
+          {/* 3단계 - 진행 중("하이라이팅 중") 메인 스피너와 동일 스타일 적용 */}
           <div className="flex flex-col items-center gap-2">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-gray-200 border-t-[#6E8BFF] border-r-[#6E8BFF] animate-spin" />
-            <span className="text-xs sm:text-sm font-bold text-gray-900 mt-1">하이라이팅 중</span>
+            {currentStep >= 4 ? (
+              <div
+                style={{ backgroundImage: 'var(--gradient-brand-active)' }}
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full text-white font-bold flex items-center justify-center text-xs sm:text-sm shadow-md"
+              >
+                3
+              </div>
+            ) : (
+              <div
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border-2 border-gray-200 animate-spin-pause"
+                style={{
+                  borderTopColor: 'rgba(91, 108, 251, 1)',
+                }}
+              />
+            )}
+            <span className="text-xs sm:text-sm font-bold text-gray-900 mt-1">
+              {currentStep >= 4 ? '하이라이팅' : '하이라이팅 중'}
+            </span>
           </div>
 
-          <span className="text-gray-300 font-light text-xl pb-6">≫</span>
+          <span className={currentStep >= 4 ? "text-[#6E8BFF] font-light text-lg sm:text-xl pb-6" : "text-gray-300 font-light text-xl pb-6"}>≫</span>
 
-          {/* 4단계 - 대기 */}
+          {/* 4단계 - 대기 -> 완료로 활성화 */}
           <div className="flex flex-col items-center gap-2">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-gray-400 text-gray-500 font-medium flex items-center justify-center text-xs sm:text-sm bg-white">
+            <div
+              className={`w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-xs sm:text-sm transition-all duration-300 ${
+                currentStep >= 4
+                  ? 'text-white font-bold shadow-md'
+                  : 'border border-gray-400 text-gray-500 font-medium bg-white'
+              }`}
+              style={currentStep >= 4 ? { backgroundImage: 'var(--gradient-brand-active)' } : {}}
+            >
               4
             </div>
-            <span className="text-xs sm:text-sm font-medium text-gray-400 mt-1">완료</span>
+            <span className={`text-xs sm:text-sm mt-1 ${currentStep >= 4 ? 'font-bold text-gray-900' : 'font-medium text-gray-400'}`}>
+              완료
+            </span>
           </div>
         </div>
 
@@ -118,7 +187,7 @@ export const CoachLoadingPage: React.FC = () => {
             e.currentTarget.style.color = 'var(--color-text-heading)';
           }}
         >
-          <span className="text-base font-semibold">테스트용_삭제예정</span>
+          <span className="text-base font-semibold">다음 페이지로 이동</span>
           <span className="text-xl font-light">&gt;</span>
         </button>
       </div>
@@ -126,4 +195,5 @@ export const CoachLoadingPage: React.FC = () => {
   );
 };
 
-export default CoachLoadingPage;
+export const CoachLoading = CoachLoadingModal;
+export default CoachLoadingModal;

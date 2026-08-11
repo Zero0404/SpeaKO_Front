@@ -87,10 +87,10 @@ export const FeedbackLoading: React.FC<FeedbackLoadingProps> = ({
         {/* 타이틀 & 문구 */}
         <div className="space-y-3 mb-12 md:mb-16">
           <h2 className="text-2xl md:text-3xl font-extrabold text-[var(--color-text-heading)] tracking-tight">
-            녹음 파일을 분석하고 있어요
+            발표 피드백을 생성하고 있어요
           </h2>
           <p className="text-sm md:text-base font-medium text-[var(--color-text-body)]">
-            사용자님의 음성을 분석하여 발음 피드백을 생성하는 중입니다.
+            발표 음성 및 대본을 분석하여 피드백 보고서를 작성하는 중입니다.
           </p>
           <p className="text-xs md:text-sm text-gray-400">
             잠시만 기다려 주세요. 파일의 용량에 따라 최대 10분까지 소요될 수 있습니다.
@@ -107,7 +107,7 @@ export const FeedbackLoading: React.FC<FeedbackLoadingProps> = ({
             >
               1
             </div>
-            <span className="text-xs sm:text-sm font-bold text-gray-900 mt-1">오디오 업로드</span>
+            <span className="text-xs sm:text-sm font-bold text-gray-900 mt-1">파일 수령</span>
           </div>
 
           <span className="text-[#6E8BFF] font-light text-lg sm:text-xl pb-6">≫</span>
@@ -120,12 +120,12 @@ export const FeedbackLoading: React.FC<FeedbackLoadingProps> = ({
             >
               2
             </div>
-            <span className="text-xs sm:text-sm font-bold text-gray-900 mt-1">음성 인식</span>
+            <span className="text-xs sm:text-sm font-bold text-gray-900 mt-1">음성 분석</span>
           </div>
 
           <span className="text-[#6E8BFF] font-light text-lg sm:text-xl pb-6">≫</span>
 
-          {/* 3단계 - 진행 중("코칭 분석 중") 메인 스피너와 동일 스타일 적용 -> 완료 시("코칭 분석") */}
+          {/* 3단계 - 진행 중("피드백 생성 중") 메인 스피너와 동일 스타일 적용 */}
           <div className="flex flex-col items-center gap-2">
             {currentStep >= 4 ? (
               <div
@@ -143,7 +143,7 @@ export const FeedbackLoading: React.FC<FeedbackLoadingProps> = ({
               />
             )}
             <span className="text-xs sm:text-sm font-bold text-gray-900 mt-1">
-              {currentStep >= 4 ? '코칭 분석' : '코칭 분석 중'}
+              {currentStep >= 4 ? '피드백 생성' : '피드백 생성 중'}
             </span>
           </div>
 

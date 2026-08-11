@@ -9,6 +9,9 @@ import {
   Ear,
   BarChart3,
   CheckCircle2,
+  Timer,
+  ChevronLeft,
+  ChevronRight,
   ChevronRight as ArrowIcon,
 } from "lucide-react";
 import ViewPageBackground from "../assets/background_gradiant.png";
@@ -241,6 +244,24 @@ const uniqueWordEntries: WordEntry[] = (() => {
   return result;
 })();
 
+// 같은 단어(예: "특정")가 대본에 여러 번 등장할 때, 그 등장 위치들의 segment.id를
+// "실제 대본에 나오는 순서" 그대로 모아둔다. (wordEntries 배열 순서는 대본 순서와 다를 수 있어서
+// scriptParagraphs를 직접 훑어서 만든다.) 툴팁의 좌우 화살표 이동과, 단어 목록 클릭 시
+// "맨 위(가장 먼저 나오는) 위치로 이동"에 사용한다.
+const occurrenceIdsByWord: Map<string, string[]> = (() => {
+  const map = new Map<string, string[]>();
+  for (const paragraph of scriptParagraphs) {
+    for (const segment of paragraph) {
+      if (segment.highlight && segment.id) {
+        const list = map.get(segment.text) ?? [];
+        list.push(segment.id);
+        map.set(segment.text, list);
+      }
+    }
+  }
+  return map;
+})();
+
 const highlightSummary: { type: HighlightType; count: number }[] = (
   ["duration", "liaison", "mismatch"] as HighlightType[]
 ).map((type) => ({
@@ -263,6 +284,11 @@ const pronunciationTips: PronunciationTip[] = [
     icon: BarChart3,
     title: "강세와 억양",
     description: "중요한 키워드에 강세를 주면 더 전달력이 높아져요.",
+  },
+  {
+    icon: Timer,
+    title: "천천히 강조하기",
+    description: "핵심 문장 앞에서는 속도를 늦춰 또박또박 전달해보세요.",
   },
 ];
 
@@ -313,23 +339,50 @@ const HighlightSpan = ({
   isFocused,
   onClick,
   tooltip,
+  prevId,
+  nextId,
+  onNavigate,
   children,
 }: {
   type: HighlightType;
   isFocused?: boolean;
   onClick?: () => void;
-  /** 마우스오버 시 보여줄 단어 + 발음 툴팁. 없으면 툴팁 미표시 */
+  /** 마우스오버 시 보여줄 발음 툴팁. 없으면 툴팁 미표시 */
   tooltip?: { word: string; pronunciation: string };
+  /** 같은 단어의 이전/다음 등장 위치 id. 없으면 그쪽 화살표가 비활성화된다. */
+  prevId?: string;
+  nextId?: string;
+  /** 좌우 화살표 클릭 시 해당 id 위치로 이동시켜 달라고 상위에 요청 */
+  onNavigate?: (id: string) => void;
   children: React.ReactNode;
 }) => {
   const spanRef = useRef<HTMLSpanElement>(null);
-  const [isHovered, setIsHovered] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [tooltipPos, setTooltipPos] = useState<{ top: number; left: number } | null>(null);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const meta = HIGHLIGHT_META[type];
-  // 포커스(단어 목록에서 넘어왔을 때) 시 배경만 살짝 진하게 + 딸깍 튀어오르는 스케일 효과.
-  const focusedBgClass = meta.bgClass.replace("/10", "/30");
 
-  const showTooltip = Boolean(tooltip) && (isHovered || Boolean(isFocused));
+  // 단어 → 툴팁 사이의 빈 공간을 지나갈 때 바로 닫히지 않도록, 살짝의 유예시간을 두고 닫는다.
+  // (마우스가 그 사이를 지나가는 짧은 순간에도 열려있어야 화살표까지 무사히 이동해서 클릭할 수 있다)
+  const openTooltip = () => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+    setIsOpen(true);
+  };
+  const scheduleCloseTooltip = () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = setTimeout(() => setIsOpen(false), 300);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    };
+  }, []);
+
+  const showTooltip = Boolean(tooltip) && (isOpen || Boolean(isFocused));
 
   // 대본 박스는 overflow-y-auto라서 툴팁을 그 안에 absolute로 띄우면 화면 가장자리(특히 왼쪽)에
   // 붙은 단어는 잘려서 안 보인다. document.body로 포탈해서 fixed 좌표로 띄우고,
@@ -340,7 +393,7 @@ const HighlightSpan = ({
       return;
     }
 
-    const HALF_TOOLTIP_WIDTH = 90; // 툴팁 최대 예상 너비의 절반 (여유 포함)
+    const HALF_TOOLTIP_WIDTH = 100; // 툴팁 최대 예상 너비의 절반 (여유 포함)
     const EDGE_MARGIN = 8;
 
     const updatePosition = () => {
@@ -363,18 +416,25 @@ const HighlightSpan = ({
     };
   }, [showTooltip]);
 
+  const goToOccurrence = (id?: string) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!id) return;
+    // 지금 보고 있던 툴팁은 바로 닫고, 이동한 위치에서 새로 뜨게 한다.
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    setIsOpen(false);
+    onNavigate?.(id);
+  };
+
   return (
     <span
       ref={spanRef}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
       onClick={onClick}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className={`relative inline-block rounded-sm px-1 font-semibold leading-5 outline-none transition-[transform,background-color] duration-300 ease-out ${
-        isFocused ? focusedBgClass : meta.bgClass
-      } ${meta.textClass} ${meta.shadow} ${onClick ? "cursor-pointer" : ""} ${
-        isFocused ? "scale-110" : "scale-100"
+      onMouseEnter={openTooltip}
+      onMouseLeave={scheduleCloseTooltip}
+      className={`relative inline-block rounded-sm px-1 font-semibold leading-6 outline-none ${meta.bgClass} ${meta.textClass} ${meta.shadow} ${
+        onClick ? "cursor-pointer" : ""
       }`}
     >
       {children}
@@ -383,17 +443,43 @@ const HighlightSpan = ({
         tooltipPos &&
         createPortal(
           <span
-            className="pointer-events-none fixed z-50 -translate-x-1/2 -translate-y-full"
-            style={{ top: tooltipPos.top - 8, left: tooltipPos.left }}
+            className="fixed z-50 -translate-x-1/2 -translate-y-full"
+            style={{ top: tooltipPos.top - 10, left: tooltipPos.left }}
           >
-            <span className="flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-[color:var(--color-white)] px-3 py-2 shadow-[0px_4px_16px_0px_rgba(30,41,59,0.15)] outline outline-1 outline-offset-[-1px] outline-slate-500/10">
-              <span className="text-sm font-bold font-['Pretendard'] leading-4 text-[color:var(--color-text-heading)]">
-                {tooltip!.word}
-              </span>
-              <ArrowIcon size={12} className="text-[color:var(--color-text-body)]" />
-              <span className={`text-sm font-bold font-['Pretendard'] leading-4 ${meta.textClass}`}>
+            <span
+              onMouseEnter={openTooltip}
+              onMouseLeave={scheduleCloseTooltip}
+              className="flex h-12 items-center gap-3 whitespace-nowrap rounded-xl bg-[color:var(--color-white)] px-3 shadow-[0px_6px_20px_0px_rgba(30,41,59,0.18)] outline outline-1 outline-offset-[-1px] outline-slate-500/10"
+            >
+              <button
+                type="button"
+                aria-label="같은 단어의 이전 위치로 이동"
+                disabled={!prevId}
+                onClick={goToOccurrence(prevId)}
+                className={`flex size-8 shrink-0 items-center justify-center rounded-lg transition ${
+                  prevId
+                    ? `${meta.textClass} hover:opacity-60`
+                    : "cursor-default text-slate-300"
+                }`}
+              >
+                <ChevronLeft size={20} />
+              </button>
+              <span className={`text-lg font-bold font-['Pretendard'] leading-4 ${meta.textClass}`}>
                 {tooltip!.pronunciation}
               </span>
+              <button
+                type="button"
+                aria-label="같은 단어의 다음 위치로 이동"
+                disabled={!nextId}
+                onClick={goToOccurrence(nextId)}
+                className={`flex size-8 shrink-0 items-center justify-center rounded-lg transition ${
+                  nextId
+                    ? `${meta.textClass} hover:opacity-60`
+                    : "cursor-default text-slate-300"
+                }`}
+              >
+                <ChevronRight size={20} />
+              </button>
             </span>
             <span className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-white" />
           </span>,
@@ -430,9 +516,7 @@ const WordListCard = ({
       id={`word-${entry.id}`}
       onClick={onClick}
       className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 transition-colors sm:gap-4 sm:px-6 sm:py-4 ${
-        isFocused
-          ? "bg-slate-100 ring-2 ring-[color:var(--color-brand-primary)] ring-offset-2"
-          : "bg-[color:var(--color-white)]"
+        isFocused ? "bg-slate-100" : "bg-[color:var(--color-white)]"
       }`}
     >
       <TypeBadge type={entry.type} />
@@ -531,6 +615,24 @@ const CoachViewPage = () => {
   const [wordFilter, setWordFilter] = useState<WordFilter>("all");
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const clearFocusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 탭 밑줄 위치 - 고정 px 대신 실제 탭 버튼 크기를 측정해서 반응형으로 정확히 맞춘다.
+  const tabButtonRefs = useRef<Record<TabKey, HTMLButtonElement | null>>({
+    viewer: null,
+    words: null,
+  });
+  const [tabUnderline, setTabUnderline] = useState({ left: 0, width: 0 });
+
+  useEffect(() => {
+    const updateUnderline = () => {
+      const el = tabButtonRefs.current[activeTab];
+      if (!el) return;
+      setTabUnderline({ left: el.offsetLeft, width: el.offsetWidth });
+    };
+    updateUnderline();
+    window.addEventListener("resize", updateUnderline);
+    return () => window.removeEventListener("resize", updateUnderline);
+  }, [activeTab]);
 
   // FeedbackLoading 페이지에서 평가를 마치고 돌아올 때 navigate(..., { state: { score } })로 점수를 넘겨준다.
   // 그 state가 있으면 처음부터 "done" 상태로 보여주고, 없으면 아직 평가 전(idle)이다.
@@ -716,7 +818,7 @@ const CoachViewPage = () => {
       <button
         type="button"
         onClick={handleRealtimeEvaluation}
-        className="mt-auto flex w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)] py-3.5 text-m font-bold font-['Pretendard'] text-[color:var(--color-white)] transition hover:opacity-90"
+        className="mt-auto flex w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)] py-2.5 text-sm font-bold font-['Pretendard'] text-[color:var(--color-white)] transition hover:opacity-90"
       >
         <CheckCircle2 size={18} />
         실시간 평가받기
@@ -776,21 +878,27 @@ const CoachViewPage = () => {
       </div>
 
       <div className="relative mt-6 flex border-b border-slate-500/25">
-        {[
-          { id: "viewer", label: "대본 뷰어" },
-          { id: "words", label: "단어 목록" },
-        ].map((tab) => (
+        {(
+          [
+            { id: "viewer", label: "대본 뷰어" },
+            { id: "words", label: "단어 목록" },
+          ] as { id: TabKey; label: string }[]
+        ).map((tab) => (
           <button
             key={tab.id}
+            ref={(el) => {
+              tabButtonRefs.current[tab.id] = el;
+            }}
             type="button"
-            onClick={() => setActiveTab(tab.id as TabKey)}
+            onClick={() => setActiveTab(tab.id)}
             className={`relative px-4 py-3 text-lg transition-colors duration-300 sm:px-6 sm:text-xl ${activeTab === tab.id ? "font-semibold text-[color:var(--color-brand-primary)]" : "font-medium text-[color:var(--color-text-body)]"}`}
           >
             {tab.label}
           </button>
         ))}
         <span
-          className={`absolute -bottom-px h-0.5 bg-[color:var(--color-brand-primary)] transition-all duration-300 ease-out ${activeTab === "viewer" ? "left-0 w-[124px]" : "left-[124px] w-[124px]"}`}
+          className="absolute -bottom-px h-0.5 bg-[color:var(--color-brand-primary)] transition-all duration-300 ease-out"
+          style={{ left: tabUnderline.left, width: tabUnderline.width }}
         />
       </div>
 
@@ -816,8 +924,18 @@ const CoachViewPage = () => {
               <div className="flex flex-col gap-5 text-base font-semibold font-['Pretendard'] leading-8 text-[color:var(--color-text-heading)]">
                 {scriptParagraphs.map((paragraph, pIdx) => (
                   <p key={pIdx}>
-                    {paragraph.map((segment, sIdx) =>
-                      segment.highlight && segment.id ? (
+                    {paragraph.map((segment, sIdx) => {
+                      if (!(segment.highlight && segment.id)) {
+                        return <span key={sIdx}>{segment.text}</span>;
+                      }
+                      const occIds = occurrenceIdsByWord.get(segment.text) ?? [];
+                      const occIndex = occIds.indexOf(segment.id);
+                      const prevId = occIndex > 0 ? occIds[occIndex - 1] : undefined;
+                      const nextId =
+                        occIndex >= 0 && occIndex < occIds.length - 1
+                          ? occIds[occIndex + 1]
+                          : undefined;
+                      return (
                         <span key={sIdx} id={`script-${segment.id}`}>
                           <HighlightSpan
                             type={segment.highlight}
@@ -825,6 +943,9 @@ const CoachViewPage = () => {
                             onClick={() =>
                               focusHighlight(segment.id as string, "words")
                             }
+                            prevId={prevId}
+                            nextId={nextId}
+                            onNavigate={(id) => focusHighlight(id, "viewer")}
                             tooltip={
                               wordEntryById.get(segment.id)
                                 ? {
@@ -838,10 +959,8 @@ const CoachViewPage = () => {
                             {segment.text}
                           </HighlightSpan>
                         </span>
-                      ) : (
-                        <span key={sIdx}>{segment.text}</span>
-                      ),
-                    )}
+                      );
+                    })}
                   </p>
                 ))}
               </div>
@@ -855,7 +974,7 @@ const CoachViewPage = () => {
               <button
                 type="button"
                 onClick={() => setWordFilter("all")}
-                className={`rounded-full px-5 py-2.5 text-base font-semibold font-['Pretendard'] leading-4 transition ${wordFilter === "all" ? "bg-[color:var(--color-brand-primary)] text-[color:var(--color-white)]" : "bg-[color:var(--color-white)] text-[color:var(--color-text-heading)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20"}`}
+                className={`rounded-full px-5 py-2.5 text-base font-semibold font-['Pretendard'] leading-4 transition ${wordFilter === "all" ? "bg-gradient-to-r from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)] text-[color:var(--color-white)]" : "bg-[color:var(--color-white)] text-[color:var(--color-text-heading)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20"}`}
               >
                 전체
               </button>
@@ -869,7 +988,7 @@ const CoachViewPage = () => {
                       key={type}
                       type="button"
                       onClick={() => setWordFilter(type)}
-                      className={`rounded-full px-5 py-2.5 text-base font-semibold font-['Pretendard'] leading-4 transition ${wordFilter === type ? "bg-[color:var(--color-brand-primary)] text-[color:var(--color-white)]" : "bg-[color:var(--color-white)] text-[color:var(--color-text-heading)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20"}`}
+                      className={`rounded-full px-5 py-2.5 text-base font-semibold font-['Pretendard'] leading-4 transition ${wordFilter === type ? "bg-gradient-to-r from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)] text-[color:var(--color-white)]" : "bg-[color:var(--color-white)] text-[color:var(--color-text-heading)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20"}`}
                     >
                       {meta.shortLabel} ({count})
                     </button>
@@ -884,22 +1003,27 @@ const CoachViewPage = () => {
                     해당하는 단어가 없습니다.
                   </div>
                 ) : (
-                  filteredWordEntries.map((entry, idx) => (
-                    <div
-                      key={`${entry.id}-${idx}`}
-                      style={{
-                        animation:
-                          "wordCardSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both",
-                        animationDelay: `${idx * 100}ms`,
-                      }}
-                    >
-                      <WordListCard
-                        entry={entry}
-                        isFocused={focusedId === entry.id}
-                        onClick={() => focusHighlight(entry.id, "viewer")}
-                      />
-                    </div>
-                  ))
+                  filteredWordEntries.map((entry, idx) => {
+                    // 같은 단어가 대본에 여러 번 나와도, 목록에서 클릭하면 항상
+                    // "맨 위(가장 먼저 나오는)" 위치로 이동시킨다.
+                    const topOccurrenceId = occurrenceIdsByWord.get(entry.word)?.[0] ?? entry.id;
+                    return (
+                      <div
+                        key={`${entry.id}-${idx}`}
+                        style={{
+                          animation:
+                            "wordCardSlideIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) both",
+                          animationDelay: `${idx * 100}ms`,
+                        }}
+                      >
+                        <WordListCard
+                          entry={entry}
+                          isFocused={focusedId === topOccurrenceId}
+                          onClick={() => focusHighlight(topOccurrenceId, "viewer")}
+                        />
+                      </div>
+                    );
+                  })
                 )}
               </div>
             </div>

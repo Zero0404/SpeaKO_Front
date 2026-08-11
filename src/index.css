@@ -2,18 +2,16 @@
 /* SelectPage.tsx에서 추출한 공통 색상 변수 */
 :root {
   --color-white: #ffffff;
-  --color-text-heading: #27272a;   /* zinc-800: 제목 텍스트 */
-  --color-text-body: #64748b;      /* slate-500: 설명/본문 텍스트 */
-  --color-brand-primary: #6366f1;  /* indigo-500: 포인트 컬러 (강조 텍스트) */
-  --color-brand-light: #a5b4fc;    /* indigo-300: 연한 포인트 컬러 (배경 블러) */
+  --color-text-heading: #27272a;
+  --color-text-body: #64748b;
+  --color-brand-primary: #6366f1;
+  --color-brand-light: #a5b4fc;
 
-  /* 그라데이션 */
-  --gradient-brand-active: linear-gradient(to bottom right, #a5b4fc, #6366f1); /* from-indigo-300 to-indigo-500 */
-  --color-inactive-bg: rgba(255, 255, 255, 0.8); /* bg-white/80 */
-  --transition-hover: all 300ms ease; /* transition-all duration-300 */
+  --gradient-brand-active: linear-gradient(to bottom right, #a5b4fc, #6366f1);
+  --color-inactive-bg: rgba(255, 255, 255, 0.8);
+  --transition-hover: all 300ms ease;
 }
 
-/* 재사용 가능한 호버 버튼 효과 클래스 */
 .hover-effect-btn {
   transition: var(--transition-hover);
   background-color: var(--color-inactive-bg);
@@ -46,5 +44,46 @@
 }
 
 html {
-  scroll-snap-type: y proximity;  /* proximity 추천 */
+  scroll-behavior: smooth;
 }
+
+/* Hero 오른쪽 이미지 float */
+@keyframes hero-float {
+  0%, 100% {
+    transform: translate(0, 0);
+  }
+  25% {
+    transform: translate(-14px, -18px);
+  }
+  50% {
+    transform: translate(6px, -28px);
+  }
+  75% {
+    transform: translate(14px, -8px);
+  }
+}
+
+.hero-float {
+  animation: hero-float 6s ease-in-out infinite;
+  display: inline-block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-float {
+    animation: none;
+  }
+}
+
+.reveal-item {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.reveal-active .reveal-item {
+  opacity: 1;
+  transform: translateY(0);
+}
+.reveal-active .reveal-item:nth-child(1) { transition-delay: 0ms; }
+.reveal-active .reveal-item:nth-child(2) { transition-delay: 180ms; }
+.reveal-active .reveal-item:nth-child(3) { transition-delay: 360ms; }
