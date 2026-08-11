@@ -28,7 +28,7 @@ const App = () => {
           <Route path="/select" element={<SelectPage />} />
 
           <Route path="/ai-set" element={<AiSetPage />} />
-          <Route path="/ai-loading" element={<AiLoading isOpen={true} />} />
+          <Route path="/ai-loading" element={<AiLoading />} />
           <Route path="/script-edit" element={<ScriptEditPage />} />
 
           <Route path="/coach-set" element={<CoachSetPage />} />
