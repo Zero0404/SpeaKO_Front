@@ -1,19 +1,73 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement } from 'chart.js';
-import { Doughnut } from 'react-chartjs-2';
 
 // 에셋 및 컴포넌트 불러오기
 import bgSvg from '../assets/select-page-background.svg';
 import MainChip from '../components/MainChip';
 import TextInput from '../components/TextInput';
 
-// Chart.js 모듈 등록
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
-
 export interface FeedbackPageProps {
   onComplete?: () => void;
 }
+
+/**
+ * 발음 종합 점수 도넛 차트.
+ * CoachViewPage의 ScoreDonut과 동일한 방식(SVG stroke-dashoffset 애니메이션)을 사용해
+ * 앱 전체에서 점수 도넛의 두께/애니메이션이 일관되게 보이도록 맞췄습니다.
+ * mount 시 0%에서 목표 점수까지 시계방향으로 자연스럽게 채워집니다.
+ */
+const ScoreDonut = ({ score }: { score: number }) => {
+  const [animatedScore, setAnimatedScore] = useState(0);
+
+  useEffect(() => {
+    // 0으로 리셋한 다음 프레임에 목표 점수로 올려야 transition이 실제로 재생됩니다.
+    setAnimatedScore(0);
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setAnimatedScore(score));
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [score]);
+
+  const SIZE = 158;
+  const STROKE = 14; // 기존 90% cutout(약 8px)보다 두껍게 잡아 카드 안에서 더 안정적으로 보이게 함
+  const radius = (SIZE - STROKE) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - animatedScore / 100);
+
+  return (
+    <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} className="shrink-0">
+      <defs>
+        <linearGradient id="feedbackScoreDonutGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#a5b4fc" />
+          <stop offset="100%" stopColor="#6366f1" />
+        </linearGradient>
+      </defs>
+      {/* 배경 트랙 */}
+      <circle
+        cx={SIZE / 2}
+        cy={SIZE / 2}
+        r={radius}
+        fill="none"
+        stroke="#E2E8F0"
+        strokeWidth={STROKE}
+      />
+      {/* 진행률 - 12시 방향에서 시작해서 시계방향으로 채워짐 */}
+      <circle
+        cx={SIZE / 2}
+        cy={SIZE / 2}
+        r={radius}
+        fill="none"
+        stroke="url(#feedbackScoreDonutGradient)"
+        strokeWidth={STROKE}
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}
+        style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.22, 1, 0.36, 1)' }}
+      />
+    </svg>
+  );
+};
 
 export const FeedbackPage: React.FC<FeedbackPageProps> = ({ onComplete }) => {
   const navigate = useNavigate();
@@ -21,7 +75,7 @@ export const FeedbackPage: React.FC<FeedbackPageProps> = ({ onComplete }) => {
   // 데이터 상태 관리
   const [feedbackData] = useState({
     overallScore: 87,
-    aiComment: '', 
+    aiComment: '',
   });
   const [originalText] = useState(
     `안녕하세요, 여러분!\n오늘 저희는 특별한 주제로 여러분께 소개해드리고자 이 자리에 섰습니다.\n지금부터 보여드릴 내용은 다소 난해하게 느껴질 수도 있지만, 흥미로운 점들이 많이 담겨 있으니 끝까지 함께 해주시길 바랍니다.\n\n먼저 첫 번째 슬라이드를 통해 기본적인 구성 요소를 알아보도록 하겠습니다.\n여기에는 다양한 기호와 문자들이 조합되어 있는데요, 이는 저희 주제에서 자주 등장하는 심벌들입니다. 이 심벌들은 각각의 의미를 가지고 있으며, 앞으로의 설명에서도 반복해서 등장할 것 입니다.\n특정 기호나 숫자들은 특정한 개념이나 방향을 나타내고 있습니다.\n\n다음 두 번째 슬라이드로 넘어가면, 조금 더 복잡한 형태의 패턴이 나타나고 있습니다.\n이 패턴들은 단순한 배열 이상의 의미를 가지며, 서로 다른 요소들이 어떻게 연결되고 상호작용하는지 보여줍니다.\n이러한 패턴을 이해함으로써, 전체적인 구조와 원리를 파악하는데 큰 도움이 될 것 입니다.\n\n...(하이라이팅이 적용된 대본이 들어갑니다)`
@@ -32,45 +86,12 @@ export const FeedbackPage: React.FC<FeedbackPageProps> = ({ onComplete }) => {
   );
 
   const handleRetest = () => {
-    navigate('/ai-set');
+    navigate('/coach-view');
   };
 
-  // 도넛 차트 설정 (브랜드 그라데이션 적용: #a5b4fc -> #6366f1)
-  const doughnutData = {
-    labels: ['Score', 'Remaining'],
-    datasets: [{
-      data: [feedbackData.overallScore, 100 - feedbackData.overallScore],
-      backgroundColor: (context: any) => {
-        if (context.dataIndex === 1) return 'transparent';
-        const chart = context.chart;
-        const { ctx, chartArea } = chart;
-        if (!chartArea) return '#6366f1';
-
-        // --gradient-brand-active: to bottom right (#a5b4fc -> #6366f1)
-        const gradient = ctx.createLinearGradient(0, 0, chartArea.width, chartArea.height);
-        gradient.addColorStop(0, '#a5b4fc');
-        gradient.addColorStop(1, '#6366f1');
-        return gradient;
-      },
-      borderWidth: 0,
-      borderRadius: 5,
-    }],
-  };
-
-  const doughnutOptions = {
-    responsive: true,
-    maintainAspectRatio: false,
-    cutout: '90%', // 원 두께를 얇게 조절 (기존 84% -> 90%)
-    plugins: { 
-      legend: { display: false }, 
-      tooltip: { enabled: false } 
-    },
-    animation: {
-      duration: 1200,
-      easing: 'easeOutQuart' as const, // 👈 'as const'를 붙여 TypeScript 타입 오류를 방지합니다.
-    },
-  };
   // 특정 키워드 하이라이트 처리 함수 (피그마 25px 높이, 4px/5px 패딩, 4px 모서리 스펙 반영)
+  // 여기서는 CoachViewPage의 HighlightSpan과 달리 호버 툴팁/클릭 인터랙션 없이
+  // 순수하게 시각적 하이라이트만 적용합니다.
   const renderHighlightedOriginalText = (text: string) => {
     const highlightBoxBaseStyle = {
       height: '25px',
@@ -136,9 +157,9 @@ export const FeedbackPage: React.FC<FeedbackPageProps> = ({ onComplete }) => {
       }}>
       {/*  반응형 전체 페이지 래퍼  */}
       <div className="w-full max-w-[1920px] mx-auto px-4 md:px-8 lg:px-[50px] py-[120px] flex flex-col gap-6 box-border">
-        
+
         {/* ================= 1. Title Bar ================= */}
-        <div 
+        <div
           className="w-full bg-white/90 backdrop-blur-md shadow-sm border border-white/80 flex items-center justify-between box-border"
           style={{
             height: '66px',
@@ -167,7 +188,7 @@ export const FeedbackPage: React.FC<FeedbackPageProps> = ({ onComplete }) => {
         </div>
 
         {/* ================= 2. Score Box ================= */}
-        <div 
+        <div
           className="w-full bg-white/90 backdrop-blur-md shadow-md border border-white/80 flex flex-col justify-between box-border"
           style={{
             minHeight: '288px',
@@ -190,21 +211,16 @@ export const FeedbackPage: React.FC<FeedbackPageProps> = ({ onComplete }) => {
 
           <div className="flex flex-col md:flex-row items-center md:items-center gap-6 md:gap-10">
             {/* 피그마 스펙 158px x 158px 차트 영역 */}
-            <div 
+            <div
               className="relative flex-shrink-0 flex items-center justify-center"
               style={{ width: '158px', height: '158px' }}
             >
-              {/* 고정된 얇은 회색 배경 링 (8px) */}
-              <div className="absolute inset-0 rounded-full border-[8px] border-[#E2E8F0] pointer-events-none box-border" />
-              
-              {/* 보라색 차트 (인터랙션 차오르는 애니메이션) */}
-              <div className="relative w-full h-full z-10">
-                <Doughnut data={doughnutData} options={doughnutOptions} />
-              </div>
+              {/* 보라색 차트 (인터랙션 차오르는 애니메이션, 배경 트랙 포함) */}
+              <ScoreDonut score={feedbackData.overallScore} />
 
               {/* 중앙 점수 표시 (피그마 폰트 스펙 & TextInput 방식 상속 적용) */}
               <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
-                <div 
+                <div
                   className="flex flex-col items-center justify-center box-border"
                   style={{
                     width: '57.68px',
@@ -238,9 +254,9 @@ export const FeedbackPage: React.FC<FeedbackPageProps> = ({ onComplete }) => {
 
         {/* ================= 3 & 4. 원본 텍스트 및 인식 텍스트 상자 (피그마 중첩 2단계 상자 스펙 100% 반영) ================= */}
         <div className="w-full grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
-          
+
           {/* 원본 텍스트 외부 큰 상자 (769px, radius 20px, padding 30/25/30/25, gap 12px) */}
-          <div 
+          <div
             className="w-full bg-white/95 backdrop-blur-md shadow-md border border-white/80 flex flex-col box-border"
             style={{
               height: '769px',
@@ -257,7 +273,7 @@ export const FeedbackPage: React.FC<FeedbackPageProps> = ({ onComplete }) => {
             </h3>
 
             {/* 원본 텍스트 내부 상자 (671px, radius 12px, border 0.5px #cbd5e1, padding 25px, gap 10px) */}
-            <div 
+            <div
               className="w-full bg-white box-border overflow-y-auto"
               style={{
                 height: '671px',
@@ -279,7 +295,7 @@ export const FeedbackPage: React.FC<FeedbackPageProps> = ({ onComplete }) => {
           </div>
 
           {/* 인식 텍스트 외부 큰 상자 (769px, radius 20px, padding 30/25/30/25, gap 12px) */}
-          <div 
+          <div
             className="w-full bg-white/95 backdrop-blur-md shadow-md border border-white/80 flex flex-col box-border"
             style={{
               height: '769px',
@@ -296,7 +312,7 @@ export const FeedbackPage: React.FC<FeedbackPageProps> = ({ onComplete }) => {
             </h3>
 
             {/* 인식 텍스트 내부 상자 (671px, radius 12px, border 0.5px #cbd5e1, padding 25px, gap 10px) */}
-            <div 
+            <div
               className="w-full bg-white box-border overflow-y-auto"
               style={{
                 height: '671px',
@@ -320,7 +336,7 @@ export const FeedbackPage: React.FC<FeedbackPageProps> = ({ onComplete }) => {
         </div>
 
         {/* ================= 5. Feedback Box (상세 피드백) ================= */}
-        <div 
+        <div
           className="w-full bg-white/90 backdrop-blur-md shadow-md border border-white/80 flex flex-col box-border"
           style={{
             height: '276px',
