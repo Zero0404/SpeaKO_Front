@@ -130,21 +130,21 @@ export const CoachSetPage: React.FC = () => {
               `}</style>
               <div
                 style={{
-                  width: '882px',
-                  height: '472px',
                   borderRadius: '12px',
                   border: '1px solid rgba(128, 136, 146, 1)',
                   padding: '25px',
                   gap: '10px',
                   opacity: 1,
                 }}
-                className="box-border bg-white flex flex-col focus-within:border-[#7A5CFF] transition-colors script-input-wrapper"
+                className="box-border bg-white flex flex-col focus-within:border-[#7A5CFF] transition-colors script-input-wrapper w-full max-w-full h-[260px] sm:h-[340px] xl:w-[882px] xl:h-[472px]"
               >
                 <TextInput
                   label=""
                   value={scriptText}
                   onChange={setScriptText}
                   placeholder="발표 연습을 진행할 대본 전체를 입력하거나 붙여넣기 해주세요."
+                  multiline
+                  rows={12}
                 />
               </div>
 
