@@ -3,29 +3,49 @@ import { useNavigate } from 'react-router-dom';
 
 import bgSvg from '../assets/select-page-background.svg';
 import FileUpload from '../components/FileUpload';
+import { recordEvaluation, type EvaluationResult } from '../apis/feedback';
 
 export const FeedbackPage: React.FC = () => {
   const navigate = useNavigate();
 
   const [file, setFile] = useState<File | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 파일 업로드 여부 확인
   const isFormValid = Boolean(file);
 
-  // [평가 시작하기] 버튼 클릭 시
-  const handleStartFeedback = () => {
+  // [평가 시작하기] 버튼 클릭 시 -> 실제로 서버에 평가 요청을 보낸다.
+  const handleStartFeedback = async () => {
     setErrorMessage('');
 
-    if (!isFormValid) {
+    if (!file) {
       setErrorMessage('음성 파일을 업로드해주세요.');
       return;
     }
 
-    // 피드백 분석 로딩 페이지로 이동
-    // FeedbackLoading은 location.state.file 유무로 "파일로 평가받기" 플로우인지 판단해서
-    // 완료 후 /feedback-result로 보내주기 때문에, 여기서 file을 state로 반드시 같이 넘겨야 한다.
-    navigate('/feedback-loading', { state: { file } });
+    setIsSubmitting(true);
+
+    try {
+      // TODO: scriptId / userId를 실제 값으로 교체해야 합니다.
+      // - scriptId: 이 업로드 플로우는 특정 대본에 연결되어 있지 않아서 우선 1로 고정해뒀어요.
+      //   (실제로 어떤 scriptId를 써야 하는지는 백엔드팀과 다시 확인 필요)
+      // - userId: 로그인한 사용자 id를 알 수 있는 곳(authStore 등)이 있으면 그걸로 교체하세요.
+      const result: EvaluationResult = await recordEvaluation({
+        userId: 1,
+        scriptId: 1,
+        file,
+      });
+
+      // 피드백 분석 로딩 페이지로 이동. 이미 받아온 실제 평가 결과를 같이 넘겨준다.
+      navigate('/feedback-loading', { state: { file, evaluationResult: result } });
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error ? err.message : '평가 요청 중 오류가 발생했습니다.',
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -77,6 +97,7 @@ export const FeedbackPage: React.FC = () => {
           <button
             type="button"
             onClick={handleStartFeedback}
+            disabled={!isFormValid || isSubmitting}
             style={{
               width: '250px',
               height: '60px',
@@ -90,7 +111,7 @@ export const FeedbackPage: React.FC = () => {
               color: isFormValid ? 'var(--color-white, #ffffff)' : '#9CA3AF',
             }}
             className={`group flex items-center justify-between shadow-md transition-all duration-300 box-border border border-slate-200 ${
-              isFormValid
+              isFormValid && !isSubmitting
                 ? 'cursor-pointer hover:shadow-xl hover:border-transparent'
                 : 'cursor-not-allowed pointer-events-none'
             }`}
@@ -108,7 +129,7 @@ export const FeedbackPage: React.FC = () => {
             }}
           >
             <span className="text-sm sm:text-base font-bold transition-colors">
-              평가 시작하기
+              {isSubmitting ? '전송 중...' : '평가 시작하기'}
             </span>
             <svg
               className={`w-5 h-5 transition-colors shrink-0 ${

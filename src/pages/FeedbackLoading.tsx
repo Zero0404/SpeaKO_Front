@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import LoadingScreen, { type LoadingStepInfo } from '../components/LoadingScreen';
-import { useScriptJobStore } from '../store/scriptJobStore';
+import type { EvaluationResult } from '../apis/feedback';
 
 export interface FeedbackLoadingProps {
   isOpen?: boolean;
@@ -23,14 +23,13 @@ export const FeedbackLoading: React.FC<FeedbackLoadingProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { status, result } = useScriptJobStore();
   const [currentStep, setCurrentStep] = useState<number>(3); // 3: 진행 중, 4: 완료
 
-  // 이전 페이지(FeedbackFileUploadPage)에서 전달받은 파일 정보
   const uploadedFile = location.state?.file as File | undefined;
+  const evaluationResult = location.state?.evaluationResult as EvaluationResult | undefined;
 
-  // TODO: 백엔드 연동 후에는 아래 하드코딩된 2초 타이머 대신, 실제 피드백 분석 job의
-  // 상태(loading/success/error)에 맞춰 currentStep을 갱신하도록 교체하기.
+  // 실제 평가는 FeedbackFileUploadPage에서 이미 끝난 상태로 이 화면에 들어오기 때문에,
+  // 여기서는 (순수 연출용으로) 2초 뒤 3단계 -> 4단계 완료로 전환합니다.
   useEffect(() => {
     if (!isOpen) return;
 
@@ -41,17 +40,15 @@ export const FeedbackLoading: React.FC<FeedbackLoadingProps> = ({
     return () => {
       clearTimeout(timerStep4);
     };
-  }, [isOpen, status]);
+  }, [isOpen]);
 
   const handleNavigateNext = () => {
     if (onClose) onClose();
     if (onNext) {
       onNext();
     } else {
-      // TODO: App.tsx / 기능명세서에는 '/feedback-result' 경로로 FeedbackPage가 등록되어 있는데
-      // 여기는 '/feedback'으로 이동하고 있어요. 기존 동작을 그대로 유지했으니, 실제 연동 작업
-      // 들어갈 때 라우팅 경로가 맞는지 한번 확인해보면 좋을 것 같아요.
-      navigate('/feedback', { state: { result, file: uploadedFile } });
+
+      navigate('/feedback', { state: { evaluationResult, file: uploadedFile } });
     }
   };
 
