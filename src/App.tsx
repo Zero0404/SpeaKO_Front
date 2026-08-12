@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import HomePage from "./pages/HomePage";
 import SelectPage from "./pages/SelectPage";
+import PricingPage from "./pages/PricingPage";
 
 import AiSetPage from "./pages/AiSetPage";
 import AiLoading from './pages/AiLoading';
@@ -25,6 +26,7 @@ const App = () => {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/select" element={<SelectPage />} />
+          <Route path="/pricing" element={<PricingPage />} />
 
           <Route path="/ai-set" element={<AiSetPage />} />
           <Route path="/ai-loading" element={<AiLoading />} />
