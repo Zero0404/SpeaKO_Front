@@ -39,7 +39,7 @@ export interface EvaluationResult {
 const RECORD_EVALUATION_ENDPOINT = '/api/evaluations/record';
 
 // 백엔드 연동 전까지는 true로 두고, 연동되면 false로 바꿔주세요.
-const USE_MOCK = true;
+const USE_MOCK = false;
 
 const MOCK_DELAY_MS = 2000;
 
