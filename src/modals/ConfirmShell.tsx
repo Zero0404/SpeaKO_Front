@@ -9,8 +9,9 @@ interface ConfirmShellProps {
   onCancel: () => void;
   onConfirm: () => void;
   confirmDisabled?: boolean;
-  /** danger: 빨강 그라디언트(탈퇴/로그아웃 등 위험한 액션), primary: 인디고 그라디언트(일반 확인) */
   confirmVariant?: "danger" | "primary";
+  /** description과 버튼 사이에 들어갈 추가 콘텐츠 (예: 비밀번호 확인 입력창) */
+  children?: ReactNode;
 }
 
 const CONFIRM_GRADIENTS: Record<NonNullable<ConfirmShellProps["confirmVariant"]>, string> = {
@@ -28,6 +29,7 @@ const ConfirmShell = ({
   onConfirm,
   confirmDisabled,
   confirmVariant = "danger",
+  children,
 }: ConfirmShellProps) => {
   return (
     <div
@@ -46,6 +48,8 @@ const ConfirmShell = ({
         <p className="mx-auto mt-3 max-w-[280px] whitespace-pre-line text-sm font-medium leading-5 text-slate-500 font-['Pretendard']">
           {description}
         </p>
+
+        {children && <div className="mt-5 text-left">{children}</div>}
 
         <div className="mt-8 flex justify-center gap-3">
           <button

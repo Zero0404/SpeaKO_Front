@@ -1,7 +1,7 @@
 import { useState } from "react";
 import TextInput from "../components/TextInput";
 import Logo from "../assets/Logo.png";
-import { loginApi } from "../apis/auth.api";
+import { loginApi } from "../apis/apiclient";
 import { useAuthStore } from "../store/authStore";
 import { getErrorMessage } from "../utils/getErrorMessage";
 
@@ -14,7 +14,6 @@ interface LoginProps {
 const Login = ({ open, onClose, onSignupClick }: LoginProps) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -25,23 +24,15 @@ const Login = ({ open, onClose, onSignupClick }: LoginProps) => {
     setIsLoading(true);
 
     try {
-      const result = await loginApi({
-        email,
-        password,
-      });
+      const result = await loginApi({ email, password });
 
       if (result.success) {
         const { accessToken } = result.result;
-
         useAuthStore.getState().setAccessToken(accessToken);
 
         onClose();
         window.location.reload();
       } else {
-        // 백엔드가 401/400 같은 에러 상태코드가 아니라 200 OK + success:false로
-        // "이메일/비밀번호 불일치"를 내려주는 경우 여기로 들어옵니다.
-        // (에러가 throw되지 않아 catch 블록까지 못 가므로 별도로 처리해야 함)
-        // 백엔드가 실패 사유를 어떤 필드명으로 주는지 몰라도 되도록 여러 후보를 시도합니다.
         setErrorMessage(getErrorMessage(result, "이메일 또는 비밀번호가 일치하지 않습니다."));
       }
     } catch (error: any) {
@@ -75,7 +66,6 @@ const Login = ({ open, onClose, onSignupClick }: LoginProps) => {
             <TextInput label="비밀번호" type="password" placeholder="비밀번호를 입력해주세요." value={password} onChange={setPassword} />
           </div>
 
-          {/* 에러 메시지 표시 */}
           {errorMessage && (
             <div className="mt-4 whitespace-pre-line text-center text-sm text-red-500">
               {errorMessage}

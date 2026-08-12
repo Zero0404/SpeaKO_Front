@@ -1,7 +1,7 @@
 import { useState } from "react";
 import logo from "../assets/Logo.png";
 import TextInput from "../components/TextInput";
-import { signupApi } from "../apis/auth.api";
+import { signupApi } from "../apis/apiclient";
 
 interface SignupProps {
   open: boolean;

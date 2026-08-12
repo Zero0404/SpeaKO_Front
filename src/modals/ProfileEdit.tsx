@@ -2,23 +2,36 @@
 import { useState } from "react";
 import ModalShell from "./ModalShell";
 import TextInput from "../components/TextInput";
+import { patchNameApi, ApiError } from "../apis/apiclient";
 
 interface ProfileEditProps {
   onClose: () => void;
   currentName?: string;
-  /** TODO: 실제 API 연동 시 여기서 이름 변경 요청 호출 */
   onSave?: (name: string) => void;
 }
 
 const ProfileEdit = ({ onClose, currentName = "", onSave }: ProfileEditProps) => {
   const [name, setName] = useState(currentName);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const canSubmit = name.trim().length > 0;
+  const trimmed = name.trim();
+  const isLengthValid = trimmed.length >= 2 && trimmed.length <= 15;
+  const canSubmit = isLengthValid && !isSubmitting;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!canSubmit) return;
-    onSave?.(name.trim());
-    onClose();
+    setErrorMessage("");
+    setIsSubmitting(true);
+    try {
+      await patchNameApi(trimmed);
+      onSave?.(trimmed);
+      onClose();
+    } catch (err) {
+      setErrorMessage(err instanceof ApiError ? err.message : "닉네임 변경에 실패했습니다.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -28,8 +41,13 @@ const ProfileEdit = ({ onClose, currentName = "", onSave }: ProfileEditProps) =>
           label="이름(닉네임)"
           value={name}
           onChange={setName}
-          placeholder="새 이름을 입력하세요"
+          placeholder="새 이름을 입력하세요 (2~15자)"
         />
+
+        {name.length > 0 && !isLengthValid && (
+          <p className="-mt-4 text-sm text-rose-500">닉네임은 2자 이상 15자 이하로 입력해주세요.</p>
+        )}
+        {errorMessage && <p className="-mt-4 text-sm text-rose-500">{errorMessage}</p>}
 
         <div className="flex gap-3">
           <button
@@ -38,12 +56,10 @@ const ProfileEdit = ({ onClose, currentName = "", onSave }: ProfileEditProps) =>
             disabled={!canSubmit}
             style={canSubmit ? { backgroundImage: "var(--gradient-brand-active)" } : undefined}
             className={`flex-1 rounded-xl py-3 text-sm font-semibold transition ${
-              canSubmit
-                ? "text-white hover:opacity-90"
-                : "bg-gray-200 text-gray-400 cursor-not-allowed"
+              canSubmit ? "text-white hover:opacity-90" : "bg-gray-200 text-gray-400 cursor-not-allowed"
             }`}
           >
-            변경 사항 저장
+            {isSubmitting ? "저장 중..." : "변경 사항 저장"}
           </button>
         </div>
       </div>

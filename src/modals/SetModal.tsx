@@ -14,6 +14,7 @@ import ModalShell from "./ModalShell";
 import ProfileEdit from "./ProfileEdit";
 import EmailChange from "./EmailChange";
 import PasswordChange from "./PasswordChange";
+import { useAuthStore } from "../store/authStore";
 
 export type SettingsTab = "profile" | "plan" | "records";
 type FieldModal = "name" | "email" | "password" | null;
@@ -30,13 +31,11 @@ interface PlanInfo {
 
 interface SetModalProps {
   onClose: () => void;
-  /** 어떤 탭을 열어둔 채로 시작할지 (드롭다운의 "계정 설정" / "요금제 업그레이드"에서 각각 다르게 진입) */
   initialTab?: SettingsTab;
+  /** authStore에 아직 값이 없을 때(예: 마이그레이션 전 세션)만 쓰이는 fallback */
   user: UserInfo;
-  /** 없으면 Free 플랜 기본값으로 표시 */
   plan?: PlanInfo;
-  /** 닉네임/이메일/비밀번호 변경 모달에서 저장했을 때 (필드 하나씩 호출됨) */
-  onSaveProfile?: (data: { nickname: string; email: string; password: string }) => void;
+  onSaveProfile?: (data: { nickname: string; email: string }) => void;
   onPlanClick?: () => void;
   onScriptHistoryClick?: () => void;
   onCoachHistoryClick?: () => void;
@@ -55,12 +54,7 @@ const TAB_META: Record<SettingsTab, { title: string; description: string }> = {
   records: { title: "기록 관리", description: "사용한 기록과 내역을 확인하세요." },
 };
 
-// "개인 정보" 탭(가장 내용이 긴 탭) 기준으로 실측한 콘텐츠 높이.
-// 데스크톱(md 이상)에서만 강제해서 탭을 바꿔도 모달 크기가 흔들리지 않게 하고,
-// 모바일에서는 강제하지 않아 불필요한 빈 공간이 생기지 않도록 합니다.
 const CONTENT_MIN_HEIGHT = "md:min-h-[450px]";
-
-// 비밀번호는 서버에서 평문으로 내려오지 않으므로 실제 값이 아니라 자리표시용 마스킹입니다.
 const PASSWORD_MASK = "•".repeat(14);
 
 interface ReadOnlyFieldProps {
@@ -105,8 +99,12 @@ const SetModal = ({
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
   const [fieldModal, setFieldModal] = useState<FieldModal>(null);
 
-  const [nickname, setNickname] = useState(user.name);
-  const [email, setEmail] = useState(user.email);
+  // authStore가 계정 정보의 단일 소스. 값이 없을 때만 부모가 넘긴 user prop으로 fallback.
+  const storeUser = useAuthStore((state) => state.user);
+  const updateStoreUser = useAuthStore((state) => state.updateUser);
+
+  const nickname = storeUser?.name || user.name;
+  const email = storeUser?.email || user.email;
 
   return (
     <>
@@ -115,16 +113,13 @@ const SetModal = ({
         maxWidthClassName="max-w-[668px]"
         paddingClassName="p-4 sm:p-6"
       >
-        {/* 모바일/태블릿(md 미만)에서는 사이드바가 위, 콘텐츠가 아래로 세로 스택 */}
         <div className="flex flex-col gap-6 md:flex-row md:items-stretch">
-          {/* 사이드바 — md 이상에서만 오른쪽 콘텐츠 높이에 맞춰 늘어남 */}
           <div className="flex w-full flex-col gap-4 md:w-48 md:shrink-0 md:self-stretch">
             <h2 className="pl-1 text-xl font-bold leading-7 text-black font-['Pretendard']">
               설정
             </h2>
 
             <div className="flex flex-col gap-3 md:flex-1 md:justify-between">
-              {/* 탭 목록 — 모바일에서는 가로 스크롤 칩, md 이상에서는 세로 리스트 */}
               <nav className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 md:mx-0 md:flex-col md:overflow-visible md:px-0 md:pb-0">
                 {TABS.map((tab) => (
                   <button
@@ -156,10 +151,8 @@ const SetModal = ({
             </div>
           </div>
 
-          {/* 구분선 — 모바일에서는 가로선, md 이상에서는 세로선 */}
           <div className="h-px w-full shrink-0 bg-slate-500/25 md:h-auto md:w-px md:self-stretch" />
 
-          {/* 콘텐츠 — md 이상에서만 최소 높이 고정 (탭 전환 시 모달 크기 유지) */}
           <div className={`flex flex-1 flex-col gap-4 md:pr-6 ${CONTENT_MIN_HEIGHT}`}>
             <div className="flex flex-col gap-1.5">
               <h3 className="text-lg font-semibold leading-6 text-black font-['Pretendard']">
@@ -287,14 +280,13 @@ const SetModal = ({
         </div>
       </ModalShell>
 
-      {/* 필드별 변경 모달 (기존에 만들어둔 컴포넌트 재사용) */}
       {fieldModal === "name" && (
         <ProfileEdit
           currentName={nickname}
           onClose={() => setFieldModal(null)}
           onSave={(name) => {
-            setNickname(name);
-            onSaveProfile?.({ nickname: name, email, password: "" });
+            updateStoreUser({ name });
+            onSaveProfile?.({ nickname: name, email });
             setFieldModal(null);
           }}
         />
@@ -305,8 +297,8 @@ const SetModal = ({
           currentEmail={email}
           onClose={() => setFieldModal(null)}
           onSave={(newEmail) => {
-            setEmail(newEmail);
-            onSaveProfile?.({ nickname, email: newEmail, password: "" });
+            updateStoreUser({ email: newEmail });
+            onSaveProfile?.({ nickname, email: newEmail });
             setFieldModal(null);
           }}
         />
@@ -315,9 +307,8 @@ const SetModal = ({
       {fieldModal === "password" && (
         <PasswordChange
           onClose={() => setFieldModal(null)}
-          onSave={(_currentPassword, newPassword) => {
-            // TODO: 실제 API 연동 시 currentPassword 서버 검증 후 처리
-            onSaveProfile?.({ nickname, email, password: newPassword });
+          onSave={() => {
+            // 비밀번호 자체는 화면에 표시되는 계정 정보가 아니라 store에 반영할 게 없음
             setFieldModal(null);
           }}
         />
