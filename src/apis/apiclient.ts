@@ -1,8 +1,14 @@
 import axios from "axios";
 import { useAuthStore } from "../store/authStore";
 
+// 배포(Vercel, https)에서는 vercel.json의 rewrites가 "/api/..."를
+// http://15.164.171.107:8080/api/...로 서버 쪽에서 중계해주므로 상대경로("")를 씁니다.
+// (브라우저가 http://로 직접 요청하면 mixed content로 막히기 때문)
+// 로컬 개발(localhost, http)에서는 mixed content 문제가 없으니 백엔드로 바로 요청합니다.
+const baseURL = import.meta.env.PROD ? "" : "http://15.164.171.107:8080";
+
 const apiClient = axios.create({
-  baseURL: "http://15.164.171.107:8080",
+  baseURL,
   headers: {
     "Content-Type": "application/json",
   },
