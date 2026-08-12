@@ -2,7 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import HomePage from "./pages/HomePage";
 import SelectPage from "./pages/SelectPage";
-import PricingPage from "./pages/Pricing";
+import PricingPage from "./pages/PricingPage";
 
 import AiSetPage from "./pages/AiSetPage";
 import AiLoading from './pages/AiLoading';

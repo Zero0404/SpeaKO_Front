@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Check, X } from "lucide-react";
 import MainChip from "../components/MainChip";
-import SubChip from "../components/SubChip";
 import bgImage from "../assets/select-page-background.svg";
 
 interface PricingFeature {
@@ -85,22 +84,22 @@ const PricingCard: React.FC<PricingCardProps> = ({ plan, isActive, onSelect }) =
     <button
       type="button"
       onClick={onSelect}
-      className={`w-full rounded-3xl p-6 text-left transition-all duration-300 sm:p-8 ${
+      className={`w-full rounded-[20px] bg-gradient-to-br from-white/10 to-indigo-500/10 p-8 text-left outline outline-offset-[-1px] transition-all duration-300 hover:-translate-y-2 sm:p-10 ${
         isActive
-          ? "scale-[1.02] bg-white shadow-xl shadow-indigo-500/10 outline outline-2 outline-indigo-500"
-          : "bg-white/40 outline outline-1 outline-gray-300/60 hover:bg-white/60"
+          ? "scale-[1.02] shadow-[0_0_40px_8px_rgba(99,102,241,0.25)] outline-2 outline-indigo-500 backdrop-blur-md"
+          : "outline-1 outline-white"
       }`}
     >
       {/* 헤더 */}
       <div className="mb-2 flex items-center gap-2">
         <h3
           className={`text-xl font-bold ${
-            isActive ? "text-[color:var(--color-text-heading)]" : "text-gray-400"
+            isActive ? "text-[color:var(--color-brand-primary)]" : "text-gray-400"
           }`}
         >
           {plan.name}
         </h3>
-        {plan.badge && <SubChip text={plan.badge} size="sm" />}
+        {plan.badge && <MainChip text={plan.badge} scale={0.8} className="!py-1.5" />}
       </div>
 
       <p className={`mb-6 text-sm leading-relaxed ${isActive ? "text-gray-600" : "text-gray-400"}`}>
@@ -151,7 +150,7 @@ const PricingCard: React.FC<PricingCardProps> = ({ plan, isActive, onSelect }) =
         {plan.features.map((feature, idx) => (
           <li key={idx} className="flex items-center gap-2">
             {feature.included ? (
-              <Check size={16} className={isActive ? "text-indigo-500" : "text-gray-300"} />
+              <Check size={16} className={isActive ? "text-black" : "text-gray-300"} />
             ) : (
               <X size={16} className="text-gray-300" />
             )}
@@ -181,14 +180,14 @@ const PricingPage: React.FC = () => {
         className="absolute inset-0 h-full w-full object-cover"
       />
 
-      <div className="relative flex flex-col items-center px-4 pb-24 pt-24 sm:pt-28 lg:pt-32">
+      <div className="relative flex flex-col items-center px-4 pb-24 pt-32 sm:pt-36 lg:pt-44">
         <MainChip text="Pricing Plans" />
 
         <h1 className="mt-6 text-center text-2xl font-bold text-[color:var(--color-text-heading)] sm:text-3xl lg:text-4xl">
           원하는 플랜을 선택하고, <span style={{ color: "#5B6CFB" }}>발표 준비</span>를 완성하세요
         </h1>
 
-        <div className="mt-12 grid w-full max-w-6xl grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="mt-12 grid w-full max-w-6xl grid-cols-1 gap-9 md:grid-cols-3">
           {PRICING_PLANS.map((plan) => (
             <PricingCard
               key={plan.id}
