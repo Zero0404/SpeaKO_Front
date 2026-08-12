@@ -13,15 +13,13 @@ import { User } from "lucide-react";
 import { useAuthStore } from "../store/authStore";
 import { useUIStore } from "../store/uiStore";
 
-// TODO: 로그인 유저 정보를 API로 받아오게 되면 이 mock 값을 대체합니다.
-const CURRENT_USER = {
-  name: "홍길동",
-  email: "honggildong@naver.com",
-};
+
 
 const Navbar = () => {
   const accessToken = useAuthStore((state) => state.accessToken);
   const isLoggedIn = !!accessToken;
+  const storeUser = useAuthStore((state) => state.user);
+
 
   const location = useLocation();
   const isHomePage = location.pathname === "/";
@@ -118,8 +116,8 @@ const Navbar = () => {
 
                 {isAccountMenuOpen && (
                   <AccountMenu
-                    name={CURRENT_USER.name}
-                    email={CURRENT_USER.email}
+                    name={storeUser?.name ?? ""}
+                    email={storeUser?.email ?? ""}
                     onClose={() => setIsAccountMenuOpen(false)}
                     onOpenSettings={(tab) => setSettingsTab(tab)}
                     onLogoutClick={() => setIsLogoutOpen(true)}
@@ -166,7 +164,10 @@ const Navbar = () => {
       {settingsTab && (
         <SetModal
           initialTab={settingsTab}
-          user={CURRENT_USER}
+          user={{
+            name: storeUser?.name ?? "",
+            email: storeUser?.email ?? "",
+          }}
           onClose={() => setSettingsTab(null)}
           onSaveProfile={(data) => console.log("프로필 저장", data)}
           onDeleteAccountClick={() => {
