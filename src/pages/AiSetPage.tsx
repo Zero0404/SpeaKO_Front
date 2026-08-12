@@ -17,16 +17,17 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
   const [topic, setTopic] = useState('');
   const [time, setTime] = useState('5분');
   const [outline, setOutline] = useState('');
-  const [style, setStyle] = useState<'formal' | 'casual'>('formal');
+  // 페이지 진입 시에는 아무 스타일도 선택되지 않은 상태(둘 다 화이트)로 시작한다.
+  const [style, setStyle] = useState<'formal' | 'casual' | null>(null);
   const [file, setFile] = useState<File | null>(null);
 
   const [isSetModalOpen, setIsSetModalOpen] = useState(false);
   const [hasSubmittedWithoutFile, setHasSubmittedWithoutFile] = useState(false);
 
-  // 필수 조건: 파일이 있으면 주제만, 없으면 주제 + 가이드라인 모두 필요
+  // 필수 조건: 파일이 있으면 주제 + 스타일, 없으면 주제 + 가이드라인 + 스타일 모두 필요
   const isFormValid = file
-    ? topic.trim() !== ''
-    : topic.trim() !== '' && outline.trim() !== '';
+    ? topic.trim() !== '' && style !== null
+    : topic.trim() !== '' && outline.trim() !== '' && style !== null;
 
   useEffect(() => {
     const fontId = 'pretendard-font-cdn';
@@ -65,6 +66,10 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
       }
     }
 
+    if (!style) {
+      return;
+    }
+
     setIsSetModalOpen(true);
   };
 
@@ -82,6 +87,10 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
   const parseDurationMinutes = (label: string) => parseInt(label.replace('분', ''), 10);
 
   const handleConfirmStart = async () => {
+    if (!style) {
+      return;
+    }
+
     setIsSetModalOpen(false);
 
     await runCreate({
@@ -109,7 +118,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
       <div className="w-full max-w-[1520px] flex flex-col items-center mt-15">
 
         {/* 1. 상단 스텝 바 & 경고 메시지 상자 */}
-        <div className="w-full flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-0 mb-6">
+        <div className="relative w-full flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-0 mb-6">
           <div
             style={{
               height: '38px',
@@ -138,54 +147,47 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                 2
               </div>
               <span className="font-medium text-gray-500 text-sm md:text-base whitespace-nowrap">
-                대본 미리보기
-              </span>
-            </div>
-
-            <span className="text-gray-400 font-light text-base shrink-0">≫</span>
-
-            {/* 3단계 - 비활성 */}
-            <div className="flex items-center gap-2.5 shrink-0">
-              <div className="w-8 h-8 rounded-full border-2 border-gray-400 text-gray-500 font-medium flex items-center justify-center text-sm">
-                3
-              </div>
-              <span className="font-medium text-gray-500 text-sm md:text-base whitespace-nowrap">
                 대본 생성
               </span>
             </div>
           </div>
 
-          {/* 경고 상자 */}
-          <div className="relative self-end md:self-auto shrink-0">
+          {/* 경고 상자 (항상 표시) */}
+          <div className="absolute right-0 top-[-18px] z-50 flex flex-col items-end pointer-events-none">
+            {/* 경고 메시지 본문 박스 */}
             <div
-              className="bg-white border border-red-100 shadow-sm flex flex-col items-start justify-center box-border relative z-10"
+              className="bg-white flex items-center justify-center box-border relative z-10"
               style={{
-                width: '329px',
-                height: '68px',
+                width: '336px',
+                height: '50px',
                 borderRadius: '12px',
                 paddingTop: '16px',
                 paddingRight: '20px',
                 paddingBottom: '16px',
                 paddingLeft: '20px',
+                gap: '10px',
+                opacity: 1,
               }}
             >
               <p className="text-xs font-medium text-red-500 leading-snug">
-                파일 업로드를 하지 않을 시,<br />
-                <span className="font-bold">발표 주제와 가이드라인을 필수</span>로 입력하셔야합니다.
+                주제 설정 및 가이드라인 항목은 필수로 입력해주세요.
               </p>
             </div>
 
+            {/* 말풍선 꼬리표 (SVG) */}
             <div
               className="absolute z-0 pointer-events-none"
               style={{
                 width: '32px',
                 height: '32px',
-                bottom: '-12px',
-                right: '24px',
+                top: '38px',
+                right: '39px',
+                borderRadius: '1px',
+                opacity: 1,
               }}
             >
               <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                <path d="M16 32L0 0H32L16 32Z" fill="white" stroke="#FEE2E2" strokeWidth="1" />
+                <path d="M0 0 H32 L16 32 Z" fill="white" />
               </svg>
             </div>
           </div>
@@ -254,7 +256,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4 md:gap-0">
                   <div className="w-full md:w-[352px]">
                     <label className="block text-sm font-bold mb-2" style={{ color: 'var(--color-text-heading)' }}>
-                      발표 주제 <span className="font-bold text-[#5B6CFB]" style={{ color: 'var(--color-primary-500, #5B6CFB)' }}>(필수)</span>
+                      발표 주제
                     </label>
                     <div
                       style={{
@@ -303,8 +305,6 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                         <option value="5분">5분</option>
                         <option value="10분">10분</option>
                         <option value="15분">15분</option>
-                        <option value="20분">20분</option>
-                        <option value="30분">30분</option>
                       </select>
                       <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-slate-700">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -318,8 +318,8 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                 {/* 하단: 목차/가이드라인 + 발표 스타일 & 추천 상자 */}
                 <div className="flex flex-col md:flex-row justify-between items-start gap-6 md:gap-0">
                   <div className="w-full md:w-[352px]">
-                    <label className="block text-sm font-bold mb-2" style={{ color: 'var(--color-text-heading)' }}>
-                      목차 / 가이드라인
+                   <label className="block text-sm font-bold mb-2" style={{ color: 'var(--color-text-heading)' }}>
+                      목차/가이드라인
                     </label>
                     <textarea
                       value={outline}
@@ -342,7 +342,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                           style={style === 'formal' ? {} : defaultBorderStyle}
                           className={`flex-1 md:flex-none w-full md:w-[198px] h-[160px] rounded-[16px] transition-all flex flex-col justify-center items-center cursor-pointer p-4 ${
                             style === 'formal'
-                              ? 'border-[#5b6cfb] border bg-[#EEF2FF] shadow-sm'
+                              ? 'border-[#5b6cfb] border bg-[#EEF2FF] shadow-[0_0_16px_2px_rgba(91,108,251,0.18)]'
                               : 'bg-white hover:border-slate-400'
                           }`}
                         >
@@ -368,7 +368,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                           style={style === 'casual' ? {} : defaultBorderStyle}
                           className={`flex-1 md:flex-none w-full md:w-[198px] h-[160px] rounded-[16px] transition-all flex flex-col justify-center items-center cursor-pointer p-4 ${
                             style === 'casual'
-                              ? 'border-[#5b6cfb] border bg-[#EEF2FF] shadow-sm'
+                              ? 'border-[#5b6cfb] border bg-[#EEF2FF] shadow-[0_0_16px_2px_rgba(91,108,251,0.18)]'
                               : 'bg-white hover:border-slate-400'
                           }`}
                         >
@@ -391,22 +391,35 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                     </div>
 
                     <div className="w-full md:w-[408px] h-[150px] bg-[#F5F7FF] rounded-[16px] p-4 flex flex-col justify-center">
-                      <p className="text-sm font-bold mb-2.5 flex items-center gap-2 text-[#4f46e5]">
-                        <svg className="w-4 h-4 text-[#4f46e5] shrink-0" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3a7 7 0 00-7 7c0 2.38 1.19 4.47 3 5.74V17a1 1 0 001 1h6a1 1 0 001-1v-1.26C17.81 14.47 19 12.38 19 10a7 7 0 00-7-7z" />
-                        </svg>
-                        <span>이런 상황에 추천해요</span>
-                      </p>
-                      <ul className="text-xs space-y-2 list-none p-0 m-0">
-                        {recommendations[style].map((item, index) => (
-                          <li key={index} className="flex items-center gap-2 text-slate-600">
-                            <svg className="w-4 h-4 text-slate-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      {style ? (
+                        <>
+                          <p className="text-sm font-bold mb-2.5 flex items-center gap-2 text-[#4f46e5]">
+                            <svg className="w-4 h-4 text-[#4f46e5] shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
                             </svg>
-                            <span>{item}</span>
-                          </li>
-                        ))}
-                      </ul>
+                            <span>이런 상황에 추천해요</span>
+                          </p>
+                          <ul className="text-xs space-y-2 list-none p-0 m-0">
+                            {recommendations[style].map((item, index) => (
+                              <li key={index} className="flex items-center gap-2 text-slate-600">
+                                <svg className="w-4 h-4 text-slate-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                </svg>
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center gap-1.5 text-center">
+                          <svg className="w-5 h-5 text-slate-300 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 0 0 1.5-.189m-1.5.189a6.01 6.01 0 0 1-1.5-.189m3.75 7.478a12.06 12.06 0 0 1-4.5 0m3.75 2.383a14.406 14.406 0 0 1-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 1 0-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
+                          </svg>
+                          <p className="text-xs text-slate-400 leading-relaxed">
+                            발표 스타일을 선택하면<br />추천 상황을 안내해드려요.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -471,10 +484,10 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
         onRecheck={() => setIsSetModalOpen(false)}
         onConfirm={handleConfirmStart}
         time={time}
-        tone={style == 'casual' ? '편안한 말투' : '격식체'}
+        tone={style === 'casual' ? '편안한 말투' : '격식체'}
       />
     </div>
   );
-};
+}
 
 export default AiSetPage;
