@@ -1,6 +1,6 @@
 import { useAuthStore } from '../store/authStore';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://15.164.171.107:8080';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://13.209.87.115:8080';
 
 function mapStatusToMessage(status: number, fallback: string): string {
   switch (status) {

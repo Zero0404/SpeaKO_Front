@@ -1,79 +1,142 @@
 import { create } from 'zustand';
-import { createScript, type CreateScriptParams, type ScriptResponse } from '../apis/script';
+import {
+  createPresentation,
+  getPresentation,
+  regenerateScript,
+  type PresentationResult,
+  type ToneType,
+} from '../apis/script';
 
-type JobStatus = 'idle' | 'running' | 'success' | 'error' | 'paywall';
+export type ScriptJobStatus = 'idle' | 'running' | 'success' | 'error' | 'paywall';
+
+interface RunCreatePayload {
+  file: File | null;
+  guideline?: string;
+  title: string;
+  duration: number;
+  style: ToneType;
+}
+
+interface RegeneratePayload {
+  scriptId?: number; // 부분 재생성 대상 슬라이드의 scriptId (없으면 전체 재생성)
+  duration: number;
+  tone: ToneType;
+  requirement?: string;
+}
 
 interface ScriptJobState {
-  status: JobStatus;
-  result: ScriptResponse | null;
+  status: ScriptJobStatus;
   error: string | null;
+
+  presentationId: number | null;
+  result: PresentationResult | null;
+
+  topic: string | null;
   hasSourceFile: boolean;
   sourceFileName: string | null;
 
-  runCreate: (params: CreateScriptParams) => Promise<void>;
+  runCreate: (payload: RunCreatePayload) => Promise<void>;
+  fetchResult: (presentationId?: number) => Promise<void>;
+  regenerate: (payload: RegeneratePayload) => Promise<void>;
   reset: () => void;
 }
 
-export const useScriptJobStore = create<ScriptJobState>((set) => ({
-  status: 'idle',
-  result: null,
-  error: null,
+const initialState = {
+  status: 'idle' as ScriptJobStatus,
+  error: null as string | null,
+  presentationId: null as number | null,
+  result: null as PresentationResult | null,
+  topic: null as string | null,
   hasSourceFile: false,
-  sourceFileName: null,
+  sourceFileName: null as string | null,
+};
 
-  runCreate: async (params) => {
-    console.group('%c[scriptJobStore] runCreate 시작', 'color: #6E8BFF; font-weight: bold;');
-    console.log('요청 파라미터:', {
-      title: params.title,
-      duration: params.duration,
-      style: params.style,
-      guideline: params.guideline,
-      file: params.file
-        ? { name: params.file.name, size: params.file.size, type: params.file.type }
-        : null,
-    });
-    console.time('[scriptJobStore] createScript 소요시간');
+export const useScriptJobStore = create<ScriptJobState>((set, get) => ({
+  ...initialState,
 
-    set({
-      status: 'running',
-      error: null,
-      hasSourceFile: !!params.file,
-      sourceFileName: params.file?.name ?? null,
-    });
-    console.log('상태 전환: idle → running');
+  // AiSetPage에서 파일 + 설정값 업로드 → POST 응답에 슬라이드/대본까지 전부 포함되어 옴
+  runCreate: async (payload) => {
+    if (!payload.file) {
+      set({ status: 'error', error: '업로드할 파일이 없습니다.' });
+      return;
+    }
+
+    set({ status: 'running', error: null, result: null, topic: payload.title });
 
     try {
-      const result = await createScript(params);
-      console.timeEnd('[scriptJobStore] createScript 소요시간');
-      console.log('%c요청 성공', 'color: #22c55e; font-weight: bold;', result);
-      console.log('scriptId:', result.scriptId);
-      console.log('slides 개수:', result.slides?.length ?? 0);
-      console.table(result.slides);
+      const result = await createPresentation({
+        file: payload.file,
+        topic: payload.title,
+        duration: payload.duration,
+        tone: payload.style,
+        guideline: payload.guideline,
+      });
 
-      set({ status: 'success', result });
-      console.log('상태 전환: running → success');
-    } catch (e) {
-      console.timeEnd('[scriptJobStore] createScript 소요시간');
-      const err = e as Error & { status?: number };
-      console.log('%c요청 실패', 'color: #ef4444; font-weight: bold;');
-      console.log('HTTP status:', err.status ?? '(알 수 없음, 네트워크 오류 가능성)');
-      console.log('에러 메시지:', err.message);
-      console.error('원본 에러 객체:', err);
-
-      if (err.status === 403) {
-        set({ status: 'paywall', error: err.message });
-        console.log('상태 전환: running → paywall (무료 이용 횟수 초과)');
-      } else {
-        set({ status: 'error', error: err.message });
-        console.log('상태 전환: running → error');
-      }
-    } finally {
-      console.groupEnd();
+      set({
+        status: 'success',
+        presentationId: result.presentationId,
+        result,
+        topic: result.topic,
+        hasSourceFile: true,
+        sourceFileName: payload.file.name,
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '대본 생성 요청에 실패했습니다.';
+      const isPaywall = message.includes('결제') || message.includes('구독');
+      set({ status: isPaywall ? 'paywall' : 'error', error: message });
     }
   },
 
-  reset: () => {
-    console.log('%c[scriptJobStore] reset 호출', 'color: #94a3b8;');
-    set({ status: 'idle', result: null, error: null, hasSourceFile: false, sourceFileName: null });
+  // 새로고침 등으로 result가 비어있을 때 presentationId로 다시 조회 (단발성, 폴링 아님)
+  fetchResult: async (id) => {
+  const presentationId = id ?? get().presentationId;
+
+  if (!presentationId) {
+    set({ status: 'error', error: '조회할 발표 자료 ID가 없습니다.' });
+    return;
+  }
+
+  set({ status: 'running', error: null });
+
+  try {
+    const result = await getPresentation(presentationId);
+
+    set({
+      result,
+      status: 'success',
+      presentationId,
+      topic: result.topic,
+      hasSourceFile: result.slides.length > 0,
+    });
+  } catch (err) {
+    const message =
+      err instanceof Error ? err.message : '발표 자료 조회에 실패했습니다.';
+
+    set({
+      status: 'error',
+      error: message,
+    });
+  }
+},
+
+  // ScriptEditPage 우측 편집 도구 "재생성" 버튼
+  regenerate: async (payload) => {
+    const { presentationId } = get();
+    if (!presentationId) {
+      set({ status: 'error', error: '재생성할 발표 자료가 없습니다.' });
+      return;
+    }
+
+    set({ status: 'running', error: null });
+
+    try {
+      const result = await regenerateScript({ presentationId, ...payload });
+      set({ result, status: 'success' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '대본 재생성에 실패했습니다.';
+      set({ status: 'error', error: message });
+    }
   },
+
+  reset: () => set({ ...initialState }),
 }));

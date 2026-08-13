@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import LoadingScreen, { type LoadingStepInfo } from '../components/LoadingScreen';
 import { useScriptJobStore } from '../store/scriptJobStore';
 
-export interface AiLoadingModalProps {
+export interface AiLoadingProps {
   isOpen?: boolean;
   onClose?: () => void;
   onNext?: () => void;
@@ -16,40 +16,61 @@ const STEPS: LoadingStepInfo[] = [
   { label: '완료' },
 ];
 
-export const AiLoadingModal: React.FC<AiLoadingModalProps> = ({
+export const AiLoading: React.FC<AiLoadingProps> = ({
   isOpen = true,
   onClose,
   onNext,
 }) => {
   const navigate = useNavigate();
-  const { status, result } = useScriptJobStore();
-  const [currentStep, setCurrentStep] = useState<number>(3); // 3: 대본 작성 중, 4: 완료
+  const { status, result, error, presentationId, fetchResult } = useScriptJobStore();
+  const [currentStep, setCurrentStep] = useState<number>(3);
 
-  // TODO: 백엔드 연동 후에는 아래 하드코딩된 2초 타이머 대신, useScriptJobStore의 status
-  // (running/success/error/paywall)에 맞춰 currentStep을 갱신하도록 교체하기.
-  // 예) status === 'success' -> setCurrentStep(4), status === 'error' -> 에러 UI 분기 등
+
   useEffect(() => {
     if (!isOpen) return;
-
-    const timerStep4 = setTimeout(() => {
+    if (result) {
       setCurrentStep(4);
-    }, 2000);
+      return;
+    }
+    if (presentationId) {
+      void fetchResult(presentationId);
+    }
+  }, [isOpen, presentationId, result, fetchResult]);
 
-    return () => {
-      clearTimeout(timerStep4);
-    };
-  }, [isOpen, status]);
+  useEffect(() => {
+    if (status === 'success' && result) {
+      setCurrentStep(4);
+    }
+  }, [status, result]);
+
+  const isReady = status === 'success' && result !== null;
 
   const handleNavigateNext = () => {
+    if (!isReady) return; // 아직 결과가 없으면 이동하지 않음
     if (onClose) onClose();
     if (onNext) {
       onNext();
     } else {
-      navigate('/script-edit', { state: { result } });
+      
+      navigate('/script-edit');
     }
   };
 
   if (!isOpen) return null;
+
+  if (status === 'error') {
+    return (
+      <LoadingScreen
+        title="대본 생성에 실패했어요"
+        description={error ?? '잠시 후 다시 시도해주세요.'}
+        note="문제가 계속되면 파일을 다시 업로드해주세요."
+        steps={STEPS}
+        currentStep={currentStep}
+        buttonLabel="다시 시도"
+        onButtonClick={() => navigate('/ai-set')}
+      />
+    );
+  }
 
   return (
     <LoadingScreen
@@ -58,11 +79,10 @@ export const AiLoadingModal: React.FC<AiLoadingModalProps> = ({
       note="잠시만 기다려 주세요. 파일의 용량에 따라 최대 4분까지 소요될 수 있습니다."
       steps={STEPS}
       currentStep={currentStep}
-      buttonLabel="대본 편집으로 이동"
+      buttonLabel={isReady ? '대본 편집으로 이동' : '생성 중...'}
       onButtonClick={handleNavigateNext}
     />
   );
 };
 
-export const AiLoading = AiLoadingModal;
-export default AiLoadingModal;
+export default AiLoading;

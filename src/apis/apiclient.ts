@@ -2,7 +2,7 @@ import axios from "axios";
 import { useAuthStore } from "../store/authStore";
 
 
-const baseURL = import.meta.env.PROD ? "" : "http://15.164.171.107:8080";
+const baseURL = import.meta.env.PROD ? "" : "http://13.209.87.115:8080";
 
 const apiClient = axios.create({
   baseURL,
@@ -11,7 +11,7 @@ const apiClient = axios.create({
   },
 });
 
-// 요청 인터셉터: 로그인되어 있으면 모든 요청에 토큰 자동 첨부
+
 apiClient.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
   if (token) {
