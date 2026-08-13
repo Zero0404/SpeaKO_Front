@@ -47,8 +47,10 @@ export const FeedbackLoading: React.FC<FeedbackLoadingProps> = ({
     if (onNext) {
       onNext();
     } else {
-
-      navigate('/feedback', { state: { evaluationResult, file: uploadedFile } });
+      // ⚠️ 이전에는 '/feedback'으로 이동했는데, App.tsx / 기능명세서 기준 실제
+      // 등록된 경로는 '/feedback-result'였습니다(App.tsx에는 아예 등록조차 안 돼
+      // 있었음). 그래서 평가가 끝나도 결과 화면에 도달할 수 없었습니다.
+      navigate('/feedback-result', { state: { evaluationResult, file: uploadedFile } });
     }
   };
 
