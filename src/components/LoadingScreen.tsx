@@ -20,10 +20,12 @@ export interface LoadingScreenProps {
   steps: LoadingStepInfo[];
   /** 현재 진행 단계 (1부터 시작). steps.length에 도달하면 전체 완료 상태로 표시됨 */
   currentStep: number;
-  /** 하단 버튼 라벨 */
-  buttonLabel: string;
-  /** 하단 버튼 클릭 핸들러 */
-  onButtonClick: () => void;
+  /** 하단 버튼 라벨 (hideButton이 true면 무시됨) */
+  buttonLabel?: string;
+  /** 하단 버튼 클릭 핸들러 (hideButton이 true면 무시됨) */
+  onButtonClick?: () => void;
+  /** true면 하단 버튼을 아예 렌더링하지 않는다 (예: 자동으로 다음 화면으로 넘어가서 수동 버튼이 필요 없는 화면). 기본값 false */
+  hideButton?: boolean;
 }
 
 /**
@@ -42,8 +44,10 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
   currentStep,
   buttonLabel,
   onButtonClick,
+  hideButton = false,
 }) => {
   const totalSteps = steps.length;
+  const showButton = !hideButton && Boolean(buttonLabel) && Boolean(onButtonClick);
 
   return (
     <div
@@ -151,32 +155,34 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({
           })}
         </div>
 
-        {/* 하단 이동 버튼 */}
-        <button
-          type="button"
-          onClick={onButtonClick}
-          style={{
-            width: '250px',
-            height: '60px',
-            borderRadius: '16px',
-            paddingTop: '16px',
-            paddingRight: '20px',
-            paddingBottom: '16px',
-            paddingLeft: '20px',
-          }}
-          className="hover-effect-btn flex items-center justify-between font-semibold text-base shadow-md border border-gray-100 transition-all duration-300 cursor-pointer active:scale-95 box-border bg-white"
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--gradient-brand-active)';
-            e.currentTarget.style.color = 'var(--color-white)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = '#ffffff';
-            e.currentTarget.style.color = 'var(--color-text-heading)';
-          }}
-        >
-          <span className="text-base font-semibold">{buttonLabel}</span>
-          <span className="text-xl font-light">&gt;</span>
-        </button>
+        {/* 하단 이동 버튼 (hideButton이거나 label/handler가 없으면 렌더링하지 않음) */}
+        {showButton && (
+          <button
+            type="button"
+            onClick={onButtonClick}
+            style={{
+              width: '250px',
+              height: '60px',
+              borderRadius: '16px',
+              paddingTop: '16px',
+              paddingRight: '20px',
+              paddingBottom: '16px',
+              paddingLeft: '20px',
+            }}
+            className="hover-effect-btn flex items-center justify-between font-semibold text-base shadow-md border border-gray-100 transition-all duration-300 cursor-pointer active:scale-95 box-border bg-white"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'var(--gradient-brand-active)';
+              e.currentTarget.style.color = 'var(--color-white)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#ffffff';
+              e.currentTarget.style.color = 'var(--color-text-heading)';
+            }}
+          >
+            <span className="text-base font-semibold">{buttonLabel}</span>
+            <span className="text-xl font-light">&gt;</span>
+          </button>
+        )}
       </div>
     </div>
   );

@@ -24,10 +24,11 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
   const [isSetModalOpen, setIsSetModalOpen] = useState(false);
   const [hasSubmittedWithoutFile, setHasSubmittedWithoutFile] = useState(false);
 
-  // 필수 조건: 파일이 있으면 주제 + 스타일, 없으면 주제 + 가이드라인 + 스타일 모두 필요
+  // 필수 조건: 파일이 있으면 주제만, 없으면 주제 + 가이드라인만 있으면 됨.
+  // 발표 스타일은 선택 사항이며, 고르지 않으면 '격식체'가 기본값으로 적용된다.
   const isFormValid = file
-    ? topic.trim() !== '' && style !== null
-    : topic.trim() !== '' && outline.trim() !== '' && style !== null;
+    ? topic.trim() !== ''
+    : topic.trim() !== '' && outline.trim() !== '';
 
   useEffect(() => {
     const fontId = 'pretendard-font-cdn';
@@ -66,10 +67,6 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
       }
     }
 
-    if (!style) {
-      return;
-    }
-
     setIsSetModalOpen(true);
   };
 
@@ -86,45 +83,51 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
 
   const parseDurationMinutes = (label: string) => parseInt(label.replace('분', ''), 10);
 
-  const handleConfirmStart = async () => {
-    if (!style) {
-      return;
-    }
-
+  // ⚠️ 이전에는 여기서 `await runCreate(...)`로 생성이 "끝날 때까지" 이 페이지에서
+  // 기다린 다음 성공하면 /ai-loading으로 이동했습니다. 그러면 실제 대기 시간은
+  // 전부 이 페이지(버튼이 "생성 요청 중..."으로 바뀐 상태)에서 소모되고,
+  // /ai-loading에 도착했을 때는 이미 result가 다 채워져 있어서 로딩 화면이
+  // 사실상 "로딩하는 모습" 없이 곧바로 완료 상태로 보였던 것이 원인입니다.
+  //
+  // 이제는 요청만 시작시켜 두고(await 하지 않음) 바로 /ai-loading으로 이동합니다.
+  // 실제 생성 완료를 기다리는 로직은 AiLoading 페이지가 스토어의 status를
+  // 구독해서 처리합니다.
+  const handleConfirmStart = () => {
     setIsSetModalOpen(false);
 
-    await runCreate({
+    // 발표 스타일을 고르지 않았다면 기본값(격식체)으로 진행한다.
+    const resolvedStyle = style ?? 'formal';
+
+    // runCreate가 내부적으로 status를 'running'으로 먼저 바꿔주기 때문에
+    // (AiSetPage 버튼이 "생성 요청 중..."으로 바뀌던 기존 동작과 동일),
+    // 아래 navigate가 실행될 때 AiLoading은 이미 'running' 상태를 보게 됩니다.
+    void runCreate({
       file,
       guideline: outline || undefined,
       title: topic,
       duration: parseDurationMinutes(time),
-      style,
+      style: resolvedStyle,
     });
 
-    // runCreate 완료 후 스토어 상태로 성공/실패 판단
-    const currentStatus = useScriptJobStore.getState().status;
-    if (currentStatus === 'success') {
-      if (onNext) onNext();
-      navigate('/ai-loading');
-    }
-    // 'error' / 'paywall'이면 이동하지 않고 아래 submitError 메시지가 화면에 표시됨
+    navigate('/ai-loading');
+    if (onNext) onNext();
   };
 
   return (
     <div
       style={{ ...fontStyle, backgroundImage: `url(${bgSvg})` }}
-      className="min-h-screen w-full bg-cover bg-center bg-no-repeat flex flex-col justify-center items-center py-8 md:py-12 px-4 sm:px-6"
+      className="min-h-screen w-full bg-cover bg-center bg-no-repeat flex flex-col items-center pt-24 sm:pt-28 lg:pt-32 pb-8 md:pb-12 px-4 sm:px-6"
     >
-      <div className="w-full max-w-[1520px] flex flex-col items-center mt-15">
+      <div className="w-full max-w-[1520px] flex flex-col items-center">
 
         {/* 1. 상단 스텝 바 & 경고 메시지 상자 */}
-        <div className="relative w-full flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-0 mb-6">
+        <div className="relative w-full flex flex-col gap-3 md:gap-0 mb-6">
           <div
             style={{
               height: '38px',
               opacity: 1,
             }}
-            className="flex items-center gap-4 md:gap-[45px] pl-1 select-none"
+            className="flex flex-wrap items-center gap-3 sm:gap-4 md:gap-[45px] pl-1 select-none"
           >
             {/* 1단계 - 활성 */}
             <div className="flex items-center gap-2.5 shrink-0">
@@ -134,7 +137,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
               >
                 1
               </div>
-              <span className="font-bold text-[var(--color-text-heading)] text-sm md:text-base whitespace-nowrap">
+              <span className="font-bold text-[var(--color-text-heading)] text-xs sm:text-sm md:text-base whitespace-nowrap">
                 자료 업로드 / 가이드라인 입력
               </span>
             </div>
@@ -146,44 +149,31 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
               <div className="w-8 h-8 rounded-full border-2 border-gray-400 text-gray-500 font-medium flex items-center justify-center text-sm">
                 2
               </div>
-              <span className="font-medium text-gray-500 text-sm md:text-base whitespace-nowrap">
+              <span className="font-medium text-gray-500 text-xs sm:text-sm md:text-base whitespace-nowrap">
                 대본 생성
               </span>
             </div>
           </div>
 
-          {/* 경고 상자 (항상 표시) */}
-          <div className="absolute right-0 top-[-18px] z-50 flex flex-col items-end pointer-events-none">
-            {/* 경고 메시지 본문 박스 */}
-            <div
-              className="bg-white flex items-center justify-center box-border relative z-10"
-              style={{
-                width: '336px',
-                height: '50px',
-                borderRadius: '12px',
-                paddingTop: '16px',
-                paddingRight: '20px',
-                paddingBottom: '16px',
-                paddingLeft: '20px',
-                gap: '10px',
-                opacity: 1,
-              }}
-            >
+          {/* 경고 상자 (항상 표시)
+              - 모바일(<md): absolute를 쓰면 세로로 쌓인 스텝바 위에 겹쳐 보였기 때문에,
+                일반 블록으로 스텝바 아래에 자연스럽게 배치.
+              - md 이상: 기존처럼 우측 상단 말풍선으로 표시. */}
+          <div className="static md:absolute md:right-0 md:top-[-18px] z-50 flex flex-col items-stretch md:items-end">
+            <div className="bg-white flex items-center box-border relative z-10 w-full md:w-[336px] rounded-xl px-5 py-3 md:py-4 gap-2.5 shadow-sm">
               <p className="text-xs font-medium text-red-500 leading-snug">
                 주제 설정 및 가이드라인 항목은 필수로 입력해주세요.
               </p>
             </div>
 
-            {/* 말풍선 꼬리표 (SVG) */}
+            {/* 말풍선 꼬리표 (SVG) — md 이상에서만 표시 */}
             <div
-              className="absolute z-0 pointer-events-none"
+              className="hidden md:block absolute z-0 pointer-events-none"
               style={{
                 width: '32px',
                 height: '32px',
                 top: '38px',
                 right: '39px',
-                borderRadius: '1px',
-                opacity: 1,
               }}
             >
               <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
@@ -197,20 +187,11 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
         <div className="w-full flex flex-col lg:flex-row justify-center items-center lg:items-start gap-6 lg:gap-[30px]">
 
           {/* 좌측 패널: PPT / PDF 업로드 */}
-          <div
-            className="bg-white shadow-lg flex flex-col justify-start box-border shrink-0 w-full lg:w-[610px] h-auto lg:h-[670px]"
-            style={{
-              borderRadius: '20px',
-              paddingTop: '50px',
-              paddingRight: '40px',
-              paddingBottom: '60px',
-              paddingLeft: '40px',
-            }}
-          >
-            <h2 className="text-2xl font-bold mb-[12px]" style={{ color: 'var(--color-text-heading)' }}>
+          <div className="bg-white shadow-lg flex flex-col justify-start box-border shrink-0 w-full lg:w-[610px] h-auto lg:h-[670px] rounded-[20px] p-6 sm:p-8 lg:pt-[50px] lg:pr-10 lg:pb-[60px] lg:pl-10">
+            <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-[12px]" style={{ color: 'var(--color-text-heading)' }}>
               PPT / PDF 업로드
             </h2>
-            <p className="text-sm mb-[28px]" style={{ color: 'var(--color-text-body)' }}>
+            <p className="text-sm mb-5 sm:mb-[28px]" style={{ color: 'var(--color-text-body)' }}>
               슬라이드 파일을 업로드하면 AI가 내용을 분석합니다.
             </p>
 
@@ -225,27 +206,23 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                 }}
                 onError={() => {
                 }}
+                // FileUpload 내부가 width/height를 인라인 style(고정 530x472px)로 박아 넣어서
+                // className만으로는 덮어쓸 수 없기 때문에(인라인 style이 항상 우선순위가 높음)
+                // !important 유틸로 강제 오버라이드해서 화면 크기별로 높이를 조정한다.
+                // 너비는 FileUpload 자체에 이미 max-w-full이 있어서 좁은 화면에서도
+                // 부모 폭을 넘치지 않는다.
+                className="!h-[300px] sm:!h-[360px] lg:!h-[472px]"
               />
             </div>
           </div>
 
           {/* 우측 패널: 주제 설정 및 가이드라인 */}
-          <div
-            className="bg-white shadow-lg flex flex-col justify-between box-border shrink-0 w-full lg:w-[880px] h-auto lg:h-[670px]"
-            style={{
-              borderRadius: '20px',
-              paddingTop: '50px',
-              paddingRight: '40px',
-              paddingBottom: '60px',
-              paddingLeft: '40px',
-              gap: '28px',
-            }}
-          >
+          <div className="bg-white shadow-lg flex flex-col justify-between box-border shrink-0 w-full lg:w-[880px] h-auto lg:h-[670px] rounded-[20px] p-6 sm:p-8 lg:pt-[50px] lg:pr-10 lg:pb-[60px] lg:pl-10 gap-7">
             <div>
-              <h2 className="text-2xl font-bold mb-[12px]" style={{ color: 'var(--color-text-heading)' }}>
+              <h2 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-[12px]" style={{ color: 'var(--color-text-heading)' }}>
                 주제 설정 및 가이드라인
               </h2>
-              <p className="text-sm mb-[28px]" style={{ color: 'var(--color-text-body)' }}>
+              <p className="text-sm mb-5 sm:mb-[28px]" style={{ color: 'var(--color-text-body)' }}>
                 발표의 핵심 방향과 스타일을 정하는데 도움을 드려요.
               </p>
 
@@ -260,20 +237,9 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                     </label>
                     <div
                       style={{
-                        width: '352px',
-                        height: '50px',
-                        borderRadius: '12px',
-                        borderWidth: '1px',
-                        borderStyle: 'solid',
                         borderColor: hasSubmittedWithoutFile && !file && !topic.trim() ? 'rgba(255, 118, 118, 1)' : 'rgba(128, 136, 146, 1)',
-                        paddingTop: '10px',
-                        paddingRight: '20px',
-                        paddingBottom: '10px',
-                        paddingLeft: '20px',
-                        display: 'flex',
-                        alignItems: 'center',
                       }}
-                      className="bg-white shadow-sm box-border overflow-hidden [&>div]:w-full [&_input]:w-full [&_input]:border-0 [&_input]:p-0 [&_input]:bg-transparent"
+                      className="w-full h-[50px] rounded-xl border box-border bg-white shadow-sm overflow-hidden flex items-center px-5 [&>div]:w-full [&_input]:w-full [&_input]:border-0 [&_input]:p-0 [&_input]:bg-transparent"
                     >
                       <TextInput
                         label=""
@@ -326,7 +292,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                       onChange={(e) => setOutline(e.target.value)}
                       placeholder={'1. 발표 내용\n2. 설명 대상\n3. 상세한 설명'}
                       style={defaultBorderStyle}
-                      className="w-full h-[322px] p-4 rounded-2xl text-sm font-medium bg-white resize-none focus:outline-none leading-relaxed shadow-sm placeholder:text-slate-400"
+                      className="w-full h-[220px] sm:h-[260px] md:h-[322px] p-4 rounded-2xl text-sm font-medium bg-white resize-none focus:outline-none leading-relaxed shadow-sm placeholder:text-slate-400"
                     />
                   </div>
 
@@ -340,7 +306,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                           type="button"
                           onClick={() => setStyle('formal')}
                           style={style === 'formal' ? {} : defaultBorderStyle}
-                          className={`flex-1 md:flex-none w-full md:w-[198px] h-[160px] rounded-[16px] transition-all flex flex-col justify-center items-center cursor-pointer p-4 ${
+                          className={`flex-1 md:flex-none w-full md:w-[198px] h-[140px] sm:h-[150px] md:h-[160px] rounded-[16px] transition-all flex flex-col justify-center items-center cursor-pointer p-4 ${
                             style === 'formal'
                               ? 'border-[#5b6cfb] border bg-[#EEF2FF] shadow-[0_0_16px_2px_rgba(91,108,251,0.18)]'
                               : 'bg-white hover:border-slate-400'
@@ -366,7 +332,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                           type="button"
                           onClick={() => setStyle('casual')}
                           style={style === 'casual' ? {} : defaultBorderStyle}
-                          className={`flex-1 md:flex-none w-full md:w-[198px] h-[160px] rounded-[16px] transition-all flex flex-col justify-center items-center cursor-pointer p-4 ${
+                          className={`flex-1 md:flex-none w-full md:w-[198px] h-[140px] sm:h-[150px] md:h-[160px] rounded-[16px] transition-all flex flex-col justify-center items-center cursor-pointer p-4 ${
                             style === 'casual'
                               ? 'border-[#5b6cfb] border bg-[#EEF2FF] shadow-[0_0_16px_2px_rgba(91,108,251,0.18)]'
                               : 'bg-white hover:border-slate-400'
@@ -390,7 +356,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
                       </div>
                     </div>
 
-                    <div className="w-full md:w-[408px] h-[150px] bg-[#F5F7FF] rounded-[16px] p-4 flex flex-col justify-center">
+                    <div className="w-full md:w-[408px] min-h-[130px] sm:min-h-[150px] bg-[#F5F7FF] rounded-[16px] p-4 flex flex-col justify-center">
                       {style ? (
                         <>
                           <p className="text-sm font-bold mb-2.5 flex items-center gap-2 text-[#4f46e5]">
@@ -429,7 +395,7 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
         </div>
 
         {/* 3. 하단 대본 생성하기 버튼 */}
-        <div className="w-full flex flex-col items-end mt-6">
+        <div className="w-full flex flex-col items-stretch sm:items-end mt-6">
           {submitError && (
             <p className="mt-3 text-sm font-medium text-red-500">{submitError}</p>
           )}
@@ -437,19 +403,12 @@ export const AiSetPage: React.FC<AiSetPageProps> = ({ onNext }) => {
             type="button"
             onClick={handleOpenModal}
             disabled={isSubmitting}
-            className={`flex items-center justify-between shadow-md transition-all duration-300 group ${
+            className={`flex items-center justify-center sm:justify-between gap-2 shadow-md transition-all duration-300 group w-full sm:w-[250px] h-[60px] rounded-2xl px-5 py-4 ${
               isFormValid
                 ? 'cursor-pointer text-white hover:shadow-xl border-transparent'
                 : 'cursor-not-allowed pointer-events-none bg-white text-slate-500 border border-slate-200'
             }`}
             style={{
-              width: '250px',
-              height: '60px',
-              borderRadius: '16px',
-              paddingTop: '16px',
-              paddingRight: '20px',
-              paddingBottom: '16px',
-              paddingLeft: '20px',
               background: isFormValid
                 ? 'var(--gradient-brand-active, linear-gradient(90deg, #6E8BFF 0%, #7A5CFF 100%))'
                 : '#ffffff',
