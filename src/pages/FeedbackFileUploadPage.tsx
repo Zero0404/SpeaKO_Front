@@ -27,13 +27,13 @@ export const FeedbackFileUploadPage: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // TODO: scriptId / userId를 실제 값으로 교체해야 합니다.
-      // - scriptId: 이 업로드 플로우는 특정 대본에 연결되어 있지 않아서 우선 1로 고정해뒀어요.
-      //   (실제로 어떤 scriptId를 써야 하는지는 백엔드팀과 다시 확인 필요)
-      // - userId: 로그인한 사용자 id를 알 수 있는 곳(authStore 등)이 있으면 그걸로 교체하세요.
+      // ⚠️ userId는 여전히 1로 고정되어 있습니다 (authStore에 userId 필드가 없어서
+      // 실제 로그인 사용자 id를 여기서 가져올 방법이 없습니다 
+      // ⚠️ scriptId: 151은 "진짜 값"이 아니라 테스트용 임시 하드코딩입니다.
+ 
       const result: EvaluationResult = await recordEvaluation({
-        userId: 1,
-        scriptId: 1,
+        userId: 22, // ⚠️ 실제 로그인 사용자 id를 가져올 방법이 없어서 임시로 151로 고정
+        scriptId: 199, // ⚠️ 실제 scriptId를 가져올 방법이 없어서 임시로 151로 고정
         file,
       });
 
