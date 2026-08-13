@@ -4,8 +4,8 @@ import { useNavigate } from "react-router-dom";
 
 // 에셋 import
 import selectPageBackground from "../assets/select-page-background.svg";
-import scriptIllustration from "../assets/feature-script-illustration.svg";
-import coachIllustration from "../assets/feature-coach-illustration.svg";
+import scriptIllustration from "../assets/feature-script-illustration.png";
+import coachIllustration from "../assets/feature-coach-illustration.png";
 
 // 컴포넌트 import
 import MainChip from "../components/MainChip";

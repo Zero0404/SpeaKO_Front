@@ -20,9 +20,9 @@ import mainfunctionbackground from "../assets/Homepage-Section3.png";
 import img from "../assets/Home Image.png";
 import logo from "../assets/SpeaKO-logo.svg";
 
-import FeatureCard1 from "../assets/feature-script-illustration.svg";
-import FeatureCard2 from "../assets/feature-coach-illustration.svg";
-import FeatureCard3 from "../assets/feature-feedback-illustration.svg";
+import FeatureCard1 from "../assets/feature-script-illustration.png";
+import FeatureCard2 from "../assets/feature-coach-illustration.png";
+import FeatureCard3 from "../assets/feature-feedback-illustration.png";
 
 import MainChip from "../components/MainChip";
 import SubChip from "../components/SubChip";
@@ -203,13 +203,6 @@ const HomePage: FC = () => {
       return window.scrollY < footerTop - 40;
     };
 
-    // "지금 몇 번째 섹션에 있는가"는 화면 위치를 다시 재보고 추측(픽셀 거리 비교)하지
-    // 않고, activeIndexRef(마지막으로 애니메이션이 도착한 인덱스)를 그대로 신뢰합니다.
-    // 예전엔 매번 getBoundingClientRect로 "가장 가까운 섹션"을 다시 계산했는데,
-    // Footer처럼 화면보다 짧아서 끝까지 스크롤해도 실제 위치가 그 섹션의 top까지
-    // 못 미치는 경우 계산이 어긋나서 한 섹션을 건너뛰는 문제가 있었습니다.
-    // animateTo가 성공적으로 끝날 때마다 activeIndexRef를 갱신해주므로, 그 값만
-    // 그대로 쓰면 실제 픽셀 위치와 무관하게 항상 "논리적으로 맞는" 다음/이전 섹션으로 이동합니다.
     const getCurrentIndex = () => {
       const scrollY = window.scrollY;
       let nearestIndex = 0;
