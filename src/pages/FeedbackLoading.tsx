@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import LoadingScreen, { type LoadingStepInfo } from '../components/LoadingScreen';
 import type { EvaluationResult } from '../apis/feedback';
@@ -16,6 +16,11 @@ const STEPS: LoadingStepInfo[] = [
   { label: '완료' },
 ];
 
+// '완료' 단계가 된 뒤, 버튼을 안 눌러도 자동으로 결과 화면으로 넘어가기까지 대기하는 시간.
+// 0으로 하면 '완료' 표시가 눈에 보이지도 않고 바로 넘어가버려서, 완료됐다는 걸
+// 잠깐이라도 보여주기 위해 약간의 딜레이를 둡니다.
+const AUTO_NAVIGATE_DELAY_MS = 800;
+
 export const FeedbackLoading: React.FC<FeedbackLoadingProps> = ({
   isOpen = true,
   onClose,
@@ -28,8 +33,17 @@ export const FeedbackLoading: React.FC<FeedbackLoadingProps> = ({
   const uploadedFile = location.state?.file as File | undefined;
   const evaluationResult = location.state?.evaluationResult as EvaluationResult | undefined;
 
-  // 실제 평가는 FeedbackFileUploadPage에서 이미 끝난 상태로 이 화면에 들어오기 때문에,
-  // 여기서는 (순수 연출용으로) 2초 뒤 3단계 -> 4단계 완료로 전환합니다.
+  const handleNavigateNext = useCallback(() => {
+    if (onClose) onClose();
+    if (onNext) {
+      onNext();
+    } else {
+  
+      navigate('/feedback-result', { state: { evaluationResult, file: uploadedFile } });
+    }
+  }, [onClose, onNext, navigate, evaluationResult, uploadedFile]);
+
+  
   useEffect(() => {
     if (!isOpen) return;
 
@@ -42,17 +56,18 @@ export const FeedbackLoading: React.FC<FeedbackLoadingProps> = ({
     };
   }, [isOpen]);
 
-  const handleNavigateNext = () => {
-    if (onClose) onClose();
-    if (onNext) {
-      onNext();
-    } else {
-      // ⚠️ 이전에는 '/feedback'으로 이동했는데, App.tsx / 기능명세서 기준 실제
-      // 등록된 경로는 '/feedback-result'였습니다(App.tsx에는 아예 등록조차 안 돼
-      // 있었음). 그래서 평가가 끝나도 결과 화면에 도달할 수 없었습니다.
-      navigate('/feedback-result', { state: { evaluationResult, file: uploadedFile } });
-    }
-  };
+
+  useEffect(() => {
+    if (!isOpen || currentStep !== 4) return;
+
+    const timerNavigate = setTimeout(() => {
+      handleNavigateNext();
+    }, AUTO_NAVIGATE_DELAY_MS);
+
+    return () => {
+      clearTimeout(timerNavigate);
+    };
+  }, [isOpen, currentStep, handleNavigateNext]);
 
   if (!isOpen) return null;
 
@@ -63,8 +78,6 @@ export const FeedbackLoading: React.FC<FeedbackLoadingProps> = ({
       note="잠시만 기다려 주세요. 파일의 용량에 따라 최대 10분까지 소요될 수 있습니다."
       steps={STEPS}
       currentStep={currentStep}
-      buttonLabel="피드백 결과 보기"
-      onButtonClick={handleNavigateNext}
     />
   );
 };

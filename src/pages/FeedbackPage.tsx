@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 // 에셋 및 컴포넌트 불러오기
@@ -35,16 +35,7 @@ const getScoreFeedback = (value: number) => {
   return { title: '연습이 더 필요해요 🙂', detail: '녹음을 다시 들어보면서 발음을 차근차근 교정해보세요.' };
 };
 
-/** 서버가 JSON 문자열로 내려주는 fillerWordDetail / pauseDetail을 안전하게 파싱 */
-function parseJsonArraySafely(value: string | undefined | null): unknown[] {
-  if (!value) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
+
 
 /**
  * 발음 종합 점수 도넛 차트.
@@ -96,14 +87,7 @@ const ScoreDonut = ({ score }: { score: number }) => {
   );
 };
 
-/** 작은 지표 카드 (발음 정확도 / 필러워드 / 침묵) — 상세 피드백 박스에서 사용 */
-const MetricCard = ({ label, value, sub }: { label: string; value: string; sub?: string }) => (
-  <div className="flex flex-1 min-w-[140px] flex-col gap-1 rounded-xl bg-white px-5 py-4 shadow-sm outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20">
-    <span className="text-xs font-medium text-[#64748B]">{label}</span>
-    <span className="text-2xl font-bold text-[#27272A]">{value}</span>
-    {sub && <span className="text-xs text-[#94A3B8]">{sub}</span>}
-  </div>
-);
+
 
 export const FeedbackPage: React.FC = () => {
   const navigate = useNavigate();
@@ -119,6 +103,7 @@ export const FeedbackPage: React.FC = () => {
   const recognizedText = evaluationResult?.recognizedText ?? MOCK_RECOGNIZED_TEXT;
   const feedbackDetail = evaluationResult?.feedbackDetail ?? null;
   const audioFileName = evaluationResult?.audioFileName ?? resultState?.file?.name ?? null;
+
 
   const scoreFeedback = getScoreFeedback(overallScore);
 
