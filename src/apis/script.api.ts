@@ -145,47 +145,66 @@ export async function getPresentation(presentationId: number): Promise<Presentat
   return data.result;
 }
 
-/* ────────────────────────────────────────────────────────────
-   3. 대본 재생성 — ⚠️ 명세서에 없어 추정으로 작성한 부분
-   실제 재생성 API 명세(URL, method, 요청/응답 필드명)를 받으면
-   이 함수 내부만 바꾸면 되도록 인터페이스는 그대로 유지했습니다.
-   ──────────────────────────────────────────────────────────── */
+
 
 export interface RegenerateScriptPayload {
   presentationId: number;
-  scriptId?: number; // 부분 재생성 시 대상 슬라이드의 scriptId, 없으면 전체 재생성
-  duration: number;
-  tone: ToneType;
-  requirement?: string; // 자유 입력 요구사항
+  scriptId?: number;
+  duration?: number;
+  tone?: ToneType;
+  extraRequirement?: string;
+  currentScript: string;
 }
 
 export async function regenerateScript(
   payload: RegenerateScriptPayload
 ): Promise<PresentationResult> {
-  const url = payload.scriptId
+  const isPartial = payload.scriptId !== undefined;
+
+  const url = isPartial
     ? `${API_BASE_URL}/api/presentations/${payload.presentationId}/scripts/${payload.scriptId}/regenerate`
     : `${API_BASE_URL}/api/presentations/${payload.presentationId}/regenerate`;
 
+  const body = isPartial
+    ? {
+        ...(payload.tone !== undefined ? { tone: payload.tone } : {}),
+        ...(payload.extraRequirement
+          ? { extraRequirement: payload.extraRequirement }
+          : {}),
+        currentScript: payload.currentScript,
+      }
+    : {
+        ...(payload.duration !== undefined
+          ? { duration: payload.duration }
+          : {}),
+        ...(payload.tone !== undefined ? { tone: payload.tone } : {}),
+        ...(payload.extraRequirement
+          ? { extraRequirement: payload.extraRequirement }
+          : {}),
+        currentScript: payload.currentScript,
+      };
+
   const response = await fetch(url, {
-    method: 'PATCH',
+    method: 'POST',
     headers: {
+      'Content-Type': 'application/json',
       ...getAuthHeader(),
     },
-    body: JSON.stringify({
-      duration: payload.duration,
-      tone: payload.tone,
-      requirement: payload.requirement,
-    }),
+    body: JSON.stringify(body),
   });
 
   const data = await parseJsonSafely(response);
+  console.log("[재생성 POST 응답]", data);
 
-  if (!response.ok || data?.isSuccess === false || data?.success === false) {
-    const message = data?.message ?? '대본 재생성에 실패했습니다.';
-    throw new Error(message);
+  if (!response.ok || data?.success === false) {
+    throw new Error(
+      data?.message ?? '대본 재생성에 실패했습니다.'
+    );
   }
 
-  // createPresentation과 마찬가지로, 명세서 확인 전까지는 result로 감싸져 있든
-  // 아니든 둘 다 처리되도록 방어적으로 둡니다.
-  return (data?.result ?? data) as PresentationResult;
+  if (!data?.result) {
+    throw new Error('재생성 결과 데이터가 없습니다.');
+  }
+
+  return data.result as PresentationResult;
 }
