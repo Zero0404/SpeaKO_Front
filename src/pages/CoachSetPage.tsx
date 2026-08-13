@@ -6,7 +6,7 @@ import FileUpload from '../components/FileUpload';
 import TextInput from '../components/TextInput';
 
 // 에셋 불러오기
-import bgSvg from '../assets/select-page-background.svg';
+import bgSvg from '../assets/select-page-background.png';
 
 // 페이지 불러오기
 export const CoachSetPage: React.FC = () => {

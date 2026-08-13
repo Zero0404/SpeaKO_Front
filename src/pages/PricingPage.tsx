@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Check, X } from "lucide-react";
 import MainChip from "../components/MainChip";
-import bgImage from "../assets/select-page-background.svg";
+import bgImage from "../assets/select-page-background.png";
 
 interface PricingFeature {
   text: string;

@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import featureScriptIllustration from '../assets/feature-script-illustration.svg';
+import featureScriptIllustration from '../assets/feature-script-illustration.png';
 
 export type FileUploadType = 'ppt' | 'docx' | 'mp3';
 

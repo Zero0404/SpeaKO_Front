@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import bgSvg from '../assets/select-page-background.svg';
+import bgSvg from '../assets/select-page-background.png';
 import FileUpload from '../components/FileUpload';
 import { recordEvaluation, type EvaluationResult } from '../apis/feedback';
 
