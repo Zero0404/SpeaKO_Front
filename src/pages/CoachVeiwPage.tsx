@@ -293,18 +293,12 @@ const pronunciationTips: PronunciationTip[] = [
   },
 ];
 
-// 점수 구간별로 보여줄 한줄 메시지 + 상세 피드백 (실제로는 평가 API 응답으로 교체될 자리)
-// [MOCK] 실제 발음 평가 API가 아직 없어서, 네트워크 요청을 흉내내는 목업 함수로 대체해둔 상태.
-// 나중에 실제 API가 준비되면 이 함수 내부만 실제 fetch 호출로 바꾸면 되고,
-// 호출하는 쪽(handleRealtimeEvaluation)의 로딩/에러 처리 흐름은 그대로 재사용된다.
 const mockEvaluateRecording = (_recording: {
   blob: Blob;
   durationSeconds: number;
 }): Promise<number> => {
   return new Promise((resolve) => {
-    // 실제 네트워크 요청처럼 약간의 지연을 흉내낸다.
     setTimeout(() => {
-      // 60~95 사이 랜덤 점수 — 매번 다른 값이 나와서 로딩→완료 흐름이 눈으로 확인된다.
       const mockScore = Math.floor(60 + Math.random() * 36);
       resolve(mockScore);
     }, 1500);
@@ -365,12 +359,9 @@ const HighlightSpan = ({
   type: HighlightType;
   isFocused?: boolean;
   onClick?: () => void;
-  /** 마우스오버 시 보여줄 발음 툴팁. 없으면 툴팁 미표시 */
   tooltip?: { word: string; pronunciation: string };
-  /** 같은 단어의 이전/다음 등장 위치 id. 없으면 그쪽 화살표가 비활성화된다. */
   prevId?: string;
   nextId?: string;
-  /** 좌우 화살표 클릭 시 해당 id 위치로 이동시켜 달라고 상위에 요청 */
   onNavigate?: (id: string) => void;
   children: React.ReactNode;
 }) => {
@@ -380,8 +371,6 @@ const HighlightSpan = ({
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const meta = HIGHLIGHT_META[type];
 
-  // 단어 → 툴팁 사이의 빈 공간을 지나갈 때 바로 닫히지 않도록, 살짝의 유예시간을 두고 닫는다.
-  // (마우스가 그 사이를 지나가는 짧은 순간에도 열려있어야 화살표까지 무사히 이동해서 클릭할 수 있다)
   const openTooltip = () => {
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current);
@@ -402,16 +391,13 @@ const HighlightSpan = ({
 
   const showTooltip = Boolean(tooltip) && (isOpen || Boolean(isFocused));
 
-  // 대본 박스는 overflow-y-auto라서 툴팁을 그 안에 absolute로 띄우면 화면 가장자리(특히 왼쪽)에
-  // 붙은 단어는 잘려서 안 보인다. document.body로 포탈해서 fixed 좌표로 띄우고,
-  // 뷰포트 안쪽으로 clamp해서 절대 잘리지 않게 한다.
   useEffect(() => {
     if (!showTooltip || !spanRef.current) {
       setTooltipPos(null);
       return;
     }
 
-    const HALF_TOOLTIP_WIDTH = 100; // 툴팁 최대 예상 너비의 절반 (여유 포함)
+    const HALF_TOOLTIP_WIDTH = 100;
     const EDGE_MARGIN = 8;
 
     const updatePosition = () => {
@@ -425,7 +411,6 @@ const HighlightSpan = ({
     };
 
     updatePosition();
-    // capture: true로 등록해야 중첩된 스크롤 컨테이너(대본 박스)의 스크롤도 감지된다.
     window.addEventListener("scroll", updatePosition, true);
     window.addEventListener("resize", updatePosition);
     return () => {
@@ -437,7 +422,6 @@ const HighlightSpan = ({
   const goToOccurrence = (id?: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!id) return;
-    // 지금 보고 있던 툴팁은 바로 닫고, 이동한 위치에서 새로 뜨게 한다.
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
     setIsOpen(false);
     onNavigate?.(id);
@@ -538,17 +522,17 @@ const WordListCard = ({
       }`}
     >
       <TypeBadge type={entry.type} />
-      <div className="flex flex-1 flex-col gap-1.5">
-        <div className="flex items-center gap-2">
-          <span className="text-lg font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="break-keep [overflow-wrap:anywhere] text-lg font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
             {entry.word}
           </span>
           <ArrowIcon
             size={16}
-            className="text-[color:var(--color-text-body)]"
+            className="shrink-0 text-[color:var(--color-text-body)]"
           />
           <span
-            className={`text-lg font-bold font-['Pretendard'] leading-5 ${meta.textClass}`}
+            className={`break-keep [overflow-wrap:anywhere] text-lg font-bold font-['Pretendard'] leading-5 ${meta.textClass}`}
           >
             {entry.pronunciation}
           </span>
@@ -569,7 +553,6 @@ const ScoreDonut = ({ score }: { score: number }) => {
   const [animatedScore, setAnimatedScore] = useState(0);
 
   useEffect(() => {
-    // 0으로 리셋한 다음 프레임에 목표 점수로 올려야 transition이 실제로 재생된다.
     setAnimatedScore(0);
     const raf = requestAnimationFrame(() => {
       requestAnimationFrame(() => setAnimatedScore(score));
@@ -591,7 +574,6 @@ const ScoreDonut = ({ score }: { score: number }) => {
           <stop offset="100%" stopColor="var(--color-brand-primary)" />
         </linearGradient>
       </defs>
-      {/* 배경 트랙 */}
       <circle
         cx={SIZE / 2}
         cy={SIZE / 2}
@@ -601,7 +583,6 @@ const ScoreDonut = ({ score }: { score: number }) => {
         className="text-slate-500/15"
         strokeWidth={STROKE}
       />
-      {/* 진행률 - 12시 방향에서 시작해서 시계방향으로 채워짐 */}
       <circle
         cx={SIZE / 2}
         cy={SIZE / 2}
@@ -633,7 +614,6 @@ const CoachViewPage = () => {
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const clearFocusTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // 탭 밑줄 위치 - 고정 px 대신 실제 탭 버튼 크기를 측정해서 반응형으로 정확히 맞춘다.
   const tabButtonRefs = useRef<Record<TabKey, HTMLButtonElement | null>>({
     viewer: null,
     words: null,
@@ -651,24 +631,18 @@ const CoachViewPage = () => {
     return () => window.removeEventListener("resize", updateUnderline);
   }, [activeTab]);
 
-  // "실시간 평가받기"는 이 페이지 안에서 직접 녹음 파일을 API로 보내고 응답을 받는다.
-  // (FeedbackLoading/FeedbackPage로 이동했다가 state로 점수를 받아오는 방식이 아님 —
-  //  그 페이지들은 다른 담당자 영역이라 이 페이지 로직과 무관하다.)
   const [evalStatus, setEvalStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [score, setScore] = useState<number | null>(null);
   const [evalError, setEvalError] = useState<string | null>(null);
-  // VoiceRecorder에서 녹음이 끝날 때마다 최신 녹음본을 여기 보관해뒀다가, 평가 요청 시 사용한다.
   const lastRecordingRef = useRef<{ blob: Blob; durationSeconds: number } | null>(null);
 
   const handleCheckScript = () => {};
   const handleDownload = () => {};
 
-  // "파일로 평가받기" — 파일 업로드로 평가받는 플로우로 이동 (다른 담당자 영역)
   const handleFileEvaluation = () => {
     navigate("/feedback-fileupload");
   };
 
-  // "실시간 평가받기" — 방금 녹음한 오디오를 실제 발음 평가 API로 전송하고, 응답 점수를 그대로 반영한다.
   const handleRealtimeEvaluation = async () => {
     const recording = lastRecordingRef.current;
     if (!recording) {
@@ -681,29 +655,7 @@ const CoachViewPage = () => {
     setEvalError(null);
 
     try {
-      // [MOCK] 실제 발음 평가 API가 준비되기 전까지는 mockEvaluateRecording으로 흉내낸다.
       const resultScore = await mockEvaluateRecording(recording);
-
-      /* 실제 API 연동 시 위 mockEvaluateRecording 호출을 지우고 아래 코드로 교체하면 됨:
-      const formData = new FormData();
-      formData.append("audio", recording.blob, "recording.webm");
-      formData.append("durationSeconds", String(recording.durationSeconds));
-
-      const res = await fetch("/api/pronunciation/evaluate", {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) {
-        throw new Error(`평가 요청에 실패했습니다. (status: ${res.status})`);
-      }
-      const data = await res.json();
-      // TODO: 실제 응답 형태에 맞게 필드명 조정 (예: data.result.score 등)
-      const resultScore = data?.score;
-      if (typeof resultScore !== "number") {
-        throw new Error("평가 응답에서 점수를 찾을 수 없습니다.");
-      }
-      */
-
       setScore(resultScore);
       setEvalStatus("done");
     } catch (err) {
@@ -715,7 +667,6 @@ const CoachViewPage = () => {
     }
   };
 
-  // 사이드바의 "상세 분석 보기" — 상세 피드백 페이지로 이동 (다른 담당자 영역)
   const handleViewDetailedAnalysis = () => {
     navigate("/feedback", { state: { score } });
   };
@@ -725,7 +676,6 @@ const CoachViewPage = () => {
     durationSeconds: number,
   ) => {
     lastRecordingRef.current = { blob: audioBlob, durationSeconds };
-    // 새로 녹음했으면 이전 평가 결과/에러는 더 이상 유효하지 않으니 초기화한다.
     setEvalStatus("idle");
     setEvalError(null);
     setScore(null);
@@ -827,11 +777,12 @@ const CoachViewPage = () => {
         </div>
       )}
 
+      {/* 하이라이트 요약 — 색상 배지(라벨) + 개수를 카드 안에 세로로 쌓은 3열 그리드 */}
       <div className="flex flex-col gap-4">
         <h3 className="pl-1 text-lg font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
           하이라이트 요약
         </h3>
-        <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-3 gap-2">
           {highlightSummary.map(({ type, count }) => {
             const meta = HIGHLIGHT_META[type];
             return (
@@ -842,19 +793,14 @@ const CoachViewPage = () => {
                   setActiveTab("words");
                   setWordFilter(type);
                 }}
-                className="flex h-9 items-center justify-between rounded-lg px-3 py-1.5 text-left shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 transition hover:bg-slate-50"
+                className="flex flex-col items-center justify-center gap-2 rounded-xl bg-[color:var(--color-white)] px-2 py-3 text-center shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 transition hover:bg-slate-50"
               >
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`size-2 rounded-full ${meta.bgClass.replace("/10", "")}`}
-                  />
-                  <span
-                    className={`text-base font-bold font-['Pretendard'] leading-4 ${meta.textClass}`}
-                  >
-                    {meta.label}
-                  </span>
-                </div>
-                <span className="text-base font-semibold font-['Pretendard'] leading-6 text-[color:var(--color-text-heading)]">
+                <span
+                  className={`inline-flex items-center justify-center rounded-sm px-2 py-1 text-xs font-bold font-['Pretendard'] leading-4 sm:text-sm ${meta.bgClass} ${meta.textClass} ${meta.shadow}`}
+                >
+                  {meta.shortLabel}
+                </span>
+                <span className="text-xl font-bold font-['Pretendard'] leading-6 text-[color:var(--color-text-heading)]">
                   {count}
                 </span>
               </button>
@@ -863,16 +809,17 @@ const CoachViewPage = () => {
         </div>
       </div>
 
+      {/* 발표 팁 — 팁마다 다른 색의 둥근 사각 아이콘 박스 */}
       <div className="flex flex-col gap-4">
         <h3 className="pl-1 text-lg font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
-          발음 팁
+          발표 팁
         </h3>
         <div className="flex flex-col gap-2.5">
           {pronunciationTips.map((tip) => {
             const Icon = tip.icon;
             return (
               <div key={tip.title} className="flex items-start gap-2.5">
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[color:var(--color-brand-primary)]/10 text-[color:var(--color-brand-primary)]">
+                <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-[color:var(--color-brand-primary)]/10 text-[color:var(--color-brand-primary)]">
                   <Icon size={16} />
                 </div>
                 <div className="flex flex-col gap-0.5 pt-0.5">
@@ -916,7 +863,6 @@ const CoachViewPage = () => {
         backgroundRepeat: "no-repeat",
       }}
     >
-      {/* 단어 목록 탭 진입 시 카드가 왼쪽에서 순차적으로 튀어 들어오는 stagger 애니메이션 */}
       <style>{`
         @keyframes wordCardSlideIn {
           from {
@@ -986,11 +932,11 @@ const CoachViewPage = () => {
           <section
             className={`flex ${PANEL_HEIGHT_CLASS} min-h-0 flex-col gap-3 rounded-[20px] bg-[color:var(--color-white)] px-4 py-5 sm:px-6 sm:py-7`}
           >
-            <div className="flex items-center gap-1 pl-1">
-              <h3 className="text-base font-bold font-['Pretendard'] leading-4 text-[color:var(--color-text-heading)] sm:text-lg">
+            <div className="flex flex-wrap items-center gap-x-1 gap-y-1 pl-1">
+              <h3 className="break-keep text-base font-bold font-['Pretendard'] leading-4 text-[color:var(--color-text-heading)] sm:text-lg">
                 전체 대본_하이라이트 적용
               </h3>
-              <div className="-my-2">
+              <div className="shrink-0 -my-2">
                 <MainChip
                   text="AI 생성"
                   scale={0.7}
@@ -1083,8 +1029,6 @@ const CoachViewPage = () => {
                   </div>
                 ) : (
                   filteredWordEntries.map((entry, idx) => {
-                    // 같은 단어가 대본에 여러 번 나와도, 목록에서 클릭하면 항상
-                    // "맨 위(가장 먼저 나오는)" 위치로 이동시킨다.
                     const topOccurrenceId = occurrenceIdsByWord.get(entry.word)?.[0] ?? entry.id;
                     return (
                       <div

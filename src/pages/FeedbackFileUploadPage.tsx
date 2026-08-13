@@ -5,7 +5,7 @@ import bgSvg from '../assets/select-page-background.svg';
 import FileUpload from '../components/FileUpload';
 import { recordEvaluation, type EvaluationResult } from '../apis/feedback';
 
-export const FeedbackPage: React.FC = () => {
+export const FeedbackFileUploadPage: React.FC = () => {
   const navigate = useNavigate();
 
   const [file, setFile] = useState<File | null>(null);
@@ -85,6 +85,7 @@ export const FeedbackPage: React.FC = () => {
                 setErrorMessage('');
                 setFile(selectedFile);
               }}
+              onError={(message) => setErrorMessage(message)}
             />
           </div>
         </div>
@@ -150,4 +151,4 @@ export const FeedbackPage: React.FC = () => {
   );
 };
 
-export default FeedbackPage;
+export default FeedbackFileUploadPage;

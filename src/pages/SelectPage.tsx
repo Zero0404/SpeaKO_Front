@@ -1,4 +1,5 @@
 import type { FC, KeyboardEvent } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 // 에셋 import
@@ -47,6 +48,7 @@ const FEATURES: FeatureCardData[] = [
 
 const SelectPage: FC = () => {
   const navigate = useNavigate();
+  const [hoveredCardId, setHoveredCardId] = useState<string | null>(null);
 
   const handleCardKeyDown = (event: KeyboardEvent<HTMLDivElement>, route: string) => {
     if (event.key === "Enter" || event.key === " ") {
@@ -64,19 +66,19 @@ const SelectPage: FC = () => {
       <div aria-hidden="true" className="absolute w-[1225.4px] h-[644px] left-[1444px] top-[1276.36px] origin-top-left rotate-[-89.58deg] bg-radial-[at_26%_83%] from-[var(--color-brand-light)]/40 to-white/40 rounded-full blur-[300px] pointer-events-none" />
       <div aria-hidden="true" className="absolute w-[981.94px] h-[725.37px] left-[-466px] top-[407.23px] origin-top-left rotate-[-37.90deg] bg-radial-[at_55%_63%] from-[var(--color-brand-light)]/40 to-white/40 rounded-full blur-[350px] pointer-events-none" />
 
-      {/* 상단 네비게이션 바 자리 — Navbar.tsx의 h-20 sm:h-24 lg:h-28 과 맞춤 */}
+      {/* 상단 네비게이션 바 자리 — Navbar.tsx 높이와 맞춤 */}
       <div className="relative w-full h-20 sm:h-24 lg:h-28" />
 
       {/* 헤더 영역 */}
       <div className="relative w-full flex flex-col items-center gap-4 sm:gap-5 px-4 pt-8 sm:pt-10">
         <MainChip text="Welcome To SpeaKO" />
         {/* 모바일/태블릿에서는 자연스럽게 줄바꿈, lg 이상에서만 한 줄로 고정 */}
-        <h1 className="text-center whitespace-normal lg:whitespace-nowrap px-2 text-2xl sm:text-4xl lg:text-6xl">
+        <h1 className="text-center whitespace-normal lg:whitespace-nowrap break-keep px-2 text-2xl sm:text-4xl lg:text-6xl">
           <span className="text-[var(--color-text-heading)] font-bold font-['Pretendard'] leading-snug lg:leading-[83.70px]">오늘 어떤 </span>
           <span className="text-[var(--color-brand-primary)] font-bold font-['Pretendard'] leading-snug lg:leading-[83.70px]">발표 연습</span>
           <span className="text-[var(--color-text-heading)] font-bold font-['Pretendard'] leading-snug lg:leading-[83.70px]">을 시작할까요?</span>
         </h1>
-        <p className="w-full max-w-[813px] mx-auto text-center text-[var(--color-text-body)] text-base sm:text-lg lg:text-2xl font-medium font-['Pretendard'] leading-6 sm:leading-7 lg:leading-8">
+        <p className="w-full max-w-[813px] mx-auto text-center break-keep text-[var(--color-text-body)] text-base sm:text-lg lg:text-2xl font-medium font-['Pretendard'] leading-6 sm:leading-7 lg:leading-8">
           대본 작성이 막막할 때도, 실전 무대 전 확실한 피드백이 필요할 때도<br className="hidden sm:block" />
           SpeaKO의 지능형 AI 코치가 1:1 맞춤형으로 밀착 가이드합니다.
         </p>
@@ -91,33 +93,31 @@ const SelectPage: FC = () => {
             tabIndex={0}
             onClick={() => navigate(feature.route)}
             onKeyDown={(event) => handleCardKeyDown(event, feature.route)}
-            className="group w-full p-6 sm:p-8 md:h-110 md:pl-10 md:pr-5 md:py-10 bg-gradient-to-br from-white/10 to-[var(--color-brand-primary)]/10 hover:bg-[var(--color-white)] rounded-[20px] outline outline-1 outline-offset-[-1px] outline-white hover:shadow-xl cursor-pointer transition-all duration-300 -translate-y-0 hover:-translate-y-2 grid gap-8 [grid-template-areas:'content'_'image'_'button'] md:grid-cols-[1fr_auto] md:grid-rows-[auto_1fr] md:gap-x-10 md:gap-y-0 md:[grid-template-areas:'content_image'_'button_image']"
+            onMouseEnter={() => setHoveredCardId(feature.id)}
+            onMouseLeave={() => setHoveredCardId(null)}
+            onFocus={() => setHoveredCardId(feature.id)}
+            onBlur={() => setHoveredCardId(null)}
+            className="group w-full h-auto lg:h-110 p-6 sm:p-8 lg:pl-10 lg:pr-5 lg:py-10 bg-gradient-to-br from-white/10 to-[var(--color-brand-primary)]/10 hover:bg-[var(--color-white)] rounded-[20px] outline outline-1 outline-offset-[-1px] outline-white hover:shadow-xl cursor-pointer transition-all duration-300 -translate-y-0 hover:-translate-y-2 overflow-hidden flex flex-col lg:flex-row justify-between items-center gap-8 lg:gap-0"
           >
-            {/* 배지 + 제목 + 설명 — 모바일: 맨 위 / 데스크톱: 왼쪽 위 */}
-            <div className="[grid-area:content] flex flex-col justify-start items-start gap-5 sm:gap-7">
-              <SubChip text={feature.badge} />
-              <div className="flex flex-col justify-start items-start gap-3 sm:gap-5 md:pl-1">
-                <h2 className="text-[var(--color-text-heading)] text-2xl sm:text-3xl md:text-4xl font-bold font-['Pretendard'] leading-tight md:leading-10">{feature.title}</h2>
-                <p className="w-full md:w-96 text-[var(--color-text-body)] text-base sm:text-lg md:text-xl font-medium font-['Pretendard'] leading-6 sm:leading-7 md:leading-8">{feature.description}</p>
+            <div className="w-full lg:self-stretch flex flex-col justify-between items-start gap-8 lg:gap-0">
+              <div className="flex flex-col justify-start items-start gap-5 sm:gap-7">
+                <SubChip text={feature.badge} />
+                <div className="flex flex-col justify-start items-start gap-3 sm:gap-5 lg:pl-1">
+                  <h2 className="text-[var(--color-text-heading)] text-2xl sm:text-3xl lg:text-4xl font-bold font-['Pretendard'] leading-tight lg:leading-10">{feature.title}</h2>
+                  <p className="w-full lg:w-96 break-keep text-[var(--color-text-body)] text-base sm:text-lg lg:text-xl font-medium font-['Pretendard'] leading-6 sm:leading-7 lg:leading-8">{feature.description}</p>
+                </div>
               </div>
-            </div>
-
-            {/* 일러스트 — 모바일: 가운데 / 데스크톱: 오른쪽(양쪽 행에 걸쳐 표시) */}
-            <div className="[grid-area:image] w-full md:w-72 p-2.5 flex items-center justify-center">
-              <img
-                src={feature.image}
-                alt={feature.imageAlt}
-                className="h-40 w-40 sm:h-52 sm:w-52 md:h-64 md:w-auto object-contain"
+              <HoverButton
+                label={feature.buttonLabel}
+                isParentHovered={hoveredCardId === feature.id}
+                onClick={() => navigate(feature.route)}
+                className="w-full sm:w-72"
               />
             </div>
 
-            {/* 버튼 — 모바일: 맨 아래(일러스트 밑) / 데스크톱: 왼쪽 아래, 항상 브랜드 그라디언트 */}
-            <HoverButton
-              label={feature.buttonLabel}
-              isActive
-              onClick={() => navigate(feature.route)}
-              className="[grid-area:button] w-full sm:w-72 md:self-end"
-            />
+            <div className="w-40 sm:w-56 lg:w-72 h-40 sm:h-56 lg:h-64 p-2.5 flex flex-col justify-center items-center overflow-hidden shrink-0">
+              <img src={feature.image} alt={feature.imageAlt} className="self-stretch h-full object-contain" />
+            </div>
           </div>
         ))}
       </div>
