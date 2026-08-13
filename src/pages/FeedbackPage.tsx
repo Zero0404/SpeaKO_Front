@@ -116,17 +116,9 @@ export const FeedbackPage: React.FC = () => {
   // 목데이터를 사용합니다. 실제 값과 목데이터를 섞어서 "가짜인데 진짜처럼" 보여주지
   // 않도록, 원본 텍스트처럼 서버가 아예 안 주는 필드는 목데이터일 때만 채웁니다.
   const overallScore = evaluationResult?.totalScore ?? 87;
-  const pronunciationScore = evaluationResult?.pronunciationScore ?? null;
   const recognizedText = evaluationResult?.recognizedText ?? MOCK_RECOGNIZED_TEXT;
   const feedbackDetail = evaluationResult?.feedbackDetail ?? null;
-  const fillerWordCount = evaluationResult?.fillerWordCount ?? null;
-  const pauseScore = evaluationResult?.pauseScore ?? null;
   const audioFileName = evaluationResult?.audioFileName ?? resultState?.file?.name ?? null;
-
-  const fillerWordDetail = useMemo(
-    () => parseJsonArraySafely(evaluationResult?.fillerWordDetail),
-    [evaluationResult?.fillerWordDetail],
-  );
 
   const scoreFeedback = getScoreFeedback(overallScore);
 
@@ -299,19 +291,7 @@ export const FeedbackPage: React.FC = () => {
             />
           </div>
 
-          <div className="flex flex-wrap gap-4">
-            {pronunciationScore !== null && (
-              <MetricCard label="발음 정확도" value={`${pronunciationScore}점`} />
-            )}
-            {fillerWordCount !== null && (
-              <MetricCard
-                label="필러워드"
-                value={`${fillerWordCount}회`}
-                sub={fillerWordDetail.length > 0 ? `${fillerWordDetail.length}개 구간 감지` : undefined}
-              />
-            )}
-            {pauseScore !== null && <MetricCard label="침묵/포즈 점수" value={`${pauseScore}점`} />}
-          </div>
+        
 
           {feedbackDetail ? (
             <p className="text-[14px] text-[#27272A] leading-relaxed whitespace-pre-line">{feedbackDetail}</p>

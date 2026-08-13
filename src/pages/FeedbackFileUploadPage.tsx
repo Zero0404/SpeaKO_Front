@@ -27,14 +27,13 @@ export const FeedbackFileUploadPage: React.FC = () => {
     setIsSubmitting(true);
 
     try {
-      // ⚠️ userId / scriptId는 여전히 1로 고정되어 있습니다 (authStore에 userId
-      // 필드가 없어서 실제 로그인 사용자 id를 여기서 가져올 방법이 없습니다).
-      // 파일이 서버에 도착하고 평가가 진행되는 것 자체는 이 값으로도 정상 동작
-      // 확인됨 — 다만 실제 로그인 사용자와 다른 값으로 기록된다는 점은 남아있는
-      // 이슈입니다. authStore/apiClient는 건드리지 않기로 했으므로 그대로 둡니다.
+      // ⚠️ userId는 여전히 1로 고정되어 있습니다 (authStore에 userId 필드가 없어서
+      // 실제 로그인 사용자 id를 여기서 가져올 방법이 없습니다 
+      // ⚠️ scriptId: 151은 "진짜 값"이 아니라 테스트용 임시 하드코딩입니다.
+ 
       const result: EvaluationResult = await recordEvaluation({
-        userId: 1,
-        scriptId: 1,
+        userId: 22, // ⚠️ 실제 로그인 사용자 id를 가져올 방법이 없어서 임시로 151로 고정
+        scriptId: 199, // ⚠️ 실제 scriptId를 가져올 방법이 없어서 임시로 151로 고정
         file,
       });
 

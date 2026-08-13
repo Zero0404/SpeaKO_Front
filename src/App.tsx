@@ -38,7 +38,7 @@ const App = () => {
 
           <Route path="/feedback-fileupload" element={<FeedbackFileUploadPage />} />
           <Route path="/feedback-loading" element={<FeedbackLoading />} />
-          <Route path="/feedback" element={<FeedbackPage />} />
+          <Route path="/feedback-result" element={<FeedbackPage />} />
           </Routes>
 
       </div>
