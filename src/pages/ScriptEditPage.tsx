@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Download,
@@ -146,13 +146,7 @@ const ScriptEditPage = () => {
 
   const { result, hasSourceFile, topic, status, error, regenerate } = useScriptJobStore();
 
-  // ⚠️ status는 "지금 요청이 진행 중/성공/실패했는지"만 나타내는 값이고,
-  // "화면에 보여줄 실제 데이터가 있는지"는 별개입니다.
-  // 예전에는 hasRealData가 status === "success"까지 같이 요구해서,
-  // 재생성 요청이 실패하거나(status: 'error') 진행 중일 때(status: 'running')
-  // 이미 잘 떠 있던 대본 화면이 통째로 빈 상태로 바뀌어버리는 문제가 있었습니다.
-  // result가 있으면(=한 번이라도 생성에 성공했으면) 계속 그 데이터를 보여주고,
-  // 에러/로딩 여부는 아래 isRegenerating / error 배너로 따로 표시합니다.
+
   const hasRealData = result !== null;
   const isRegenerating = status === "running";
   const regenerateFailed = status === "error" && Boolean(error);
@@ -163,7 +157,6 @@ const ScriptEditPage = () => {
   const [fullScript, setFullScript] = useState("");
 
   const [regenMode, setRegenMode] = useState<RegenMode>("full");
-  const regenerateModeRef = useRef<RegenMode>("full");
   const [presentationTime, setPresentationTime] = useState("5분");
   const [speakingStyle, setSpeakingStyle] = useState<SpeakingStyle>(null);
   const [regenRequest, setRegenRequest] = useState("");
