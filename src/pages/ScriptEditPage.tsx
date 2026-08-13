@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Download,
@@ -158,43 +158,66 @@ const ScriptEditPage = () => {
   const regenerateFailed = status === "error" && Boolean(error);
 
   // 실데이터가 없을 때만 쓰는 임시 모의 데이터 (기존 "PPT O/X 화면 보기 (임시)" 토글용)
-  const [mockSlides, setMockSlides] = useState<SlideItem[]>([]);
+  const [slides, setSlides] = useState<SlideItem[]>([]);
   const [selectedSlideId, setSelectedSlideId] = useState<string | null>(null);
   const [fullScript, setFullScript] = useState("");
 
   const [regenMode, setRegenMode] = useState<RegenMode>("full");
+  const regenerateModeRef = useRef<RegenMode>("full");
   const [presentationTime, setPresentationTime] = useState("5분");
   const [speakingStyle, setSpeakingStyle] = useState<SpeakingStyle>(null);
   const [regenRequest, setRegenRequest] = useState("");
+  
 
 
 
   useEffect(() => {
-    if (!hasRealData || !result) return;
+    if (!result) return;
 
-    if (hasSourceFile) {
-      const realSlides: SlideItem[] = [...result.slides]
-        .sort((a, b) => a.slideOrder - b.slideOrder)
-        .map((s) => ({
-          id: `slide-${s.slideId}`,
-          slideId: s.slideId,
-          scriptId: s.scriptId,
-          index: s.slideOrder,
-          title: s.slideTitle,
-          script: s.content,
-        }));
-      setMockSlides(realSlides);
-      setSelectedSlideId((prev) => prev ?? realSlides[0]?.id ?? null);
-    } else {
-      setFullScript(result.slides[0]?.content ?? "");
-    }
+    const uniqueSlides = Array.from(
+      new Map(
+        [...result.slides]
+          .sort((a, b) => {
+            if (a.slideOrder !== b.slideOrder) {
+              return a.slideOrder - b.slideOrder;
+            }
 
+            return b.version - a.version;
+          })
+          .map((slide) => [slide.slideOrder, slide])
+      ).values()
+    );
+
+    const nextSlides: SlideItem[] = uniqueSlides.map((slide) => ({
+      id: `slide-${slide.slideId}`,
+      slideId: slide.slideId,
+      scriptId: slide.scriptId ?? undefined,
+      index: slide.slideOrder,
+      title: slide.slideTitle ?? "",
+      script: slide.content ?? "",
+    }));
+
+    setSlides(nextSlides);
+
+    setSelectedSlideId((prev) => {
+      if (prev && nextSlides.some((slide) => slide.id === prev)) {
+        return prev;
+      }
+
+      return nextSlides[0]?.id ?? null;
+    });
 
     setPresentationTime(`${result.duration}분`);
-  }, [hasRealData, result, hasSourceFile]);
 
-  const hasSlides = hasRealData ? hasSourceFile : mockSlides.length > 0;
-  const slides = mockSlides;
+    if (!hasSourceFile) {
+      setFullScript(
+        uniqueSlides.map((slide) => slide.content ?? "").join("\n\n")
+      );
+    }
+  }, [result, hasSourceFile]);
+
+  const hasSlides = slides.length > 0;
+
 
   const selectedSlide = useMemo(
     () => slides.find((s) => s.id === selectedSlideId) ?? null,
@@ -209,7 +232,7 @@ const ScriptEditPage = () => {
       title: "슬라이드 제목이 들어갑니다",
       script: "",
     }));
-    setMockSlides(mock);
+    setSlides([]);
     setSelectedSlideId(mock[0].id);
   }, []);
 
@@ -217,7 +240,7 @@ const ScriptEditPage = () => {
   const handleTogglePreview = () => {
     if (hasRealData) return;
     if (hasSlides) {
-      setMockSlides([]);
+      setSlides([]);
       setSelectedSlideId(null);
     } else {
       loadMockSlides();
@@ -226,31 +249,61 @@ const ScriptEditPage = () => {
 
   const updateSelectedScript = (value: string) => {
     if (!selectedSlideId) return;
-    setMockSlides((prev) =>
+    setSlides((prev) =>
       prev.map((s) => (s.id === selectedSlideId ? { ...s, script: value } : s))
     );
   };
 
   const handleAddSlide = () => {
-    setMockSlides((prev) => {
-      const next: SlideItem = {
-        id: `slide-${Date.now()}`,
-        index: prev.length + 1,
-        title: "슬라이드 제목이 들어갑니다",
-        script: "",
-      };
-      return [...prev, next];
-    });
+    setSlides((prev) => {
+    const next: SlideItem = {
+      id: `slide-${Date.now()}`,
+      index: prev.length + 1,
+      title: "슬라이드 제목이 들어갑니다",
+      script: "",
+    };
+    return [...prev, next];
+  });
   };
 
   const handleRegenerate = async () => {
-    if (regenMode === "partial" && !selectedSlide?.scriptId) return;
+    if (regenMode === "partial" && !selectedSlide?.scriptId) {
+      return;
+    }
+
+    if (slides.length === 0) {
+      return;
+    }
+
+    const currentScript =
+      regenMode === "partial"
+        ? selectedSlide?.script ?? ""
+        : [...slides]
+            .sort((a, b) => a.index - b.index)
+            .map((slide) => slide.script)
+            .join("\n\n");
+
+    if (!currentScript.trim()) {
+      return;
+    }
 
     await regenerate({
-      scriptId: regenMode === "partial" ? selectedSlide?.scriptId : undefined,
-      duration: parseInt(presentationTime.replace("분", ""), 10),
-      tone: speakingStyle ?? "formal",
-      requirement: regenRequest.trim() || undefined,
+      scriptId:
+        regenMode === "partial"
+          ? selectedSlide?.scriptId
+          : undefined,
+
+      duration:
+        regenMode === "full"
+          ? parseInt(presentationTime.replace("분", ""), 10)
+          : undefined,
+
+      tone: speakingStyle ?? undefined,
+
+      extraRequirement:
+        regenRequest.trim() || undefined,
+
+      currentScript,
     });
   };
 

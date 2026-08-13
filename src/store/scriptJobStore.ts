@@ -18,10 +18,11 @@ interface RunCreateInput {
 }
 
 interface RegenerateInput {
-  scriptId?: number; // 부분 재생성 대상 슬라이드, 없으면 전체 재생성
-  duration: number;
-  tone: ToneType;
-  requirement?: string;
+  scriptId?: number;
+  duration?: number;
+  tone?: ToneType;
+  extraRequirement?: string;
+  currentScript: string;
 }
 
 interface ScriptJobState {
@@ -130,46 +131,72 @@ export const useScriptJobStore = create<ScriptJobState>()((set, get) => ({
     }
   },
 
-  regenerate: async ({ scriptId, duration, tone, requirement }) => {
-    const presentationId = get().presentationId;
-    if (!presentationId) {
-      set({ status: 'error', error: '재생성할 발표 자료를 찾을 수 없습니다.' });
-      return;
-    }
+    regenerate: async ({
+      scriptId,
+      duration,
+      tone,
+      extraRequirement,
+      currentScript,
+    }) => {
+      const presentationId = get().presentationId;
 
-    set({ status: 'running', error: null });
-
-    try {
-      const result = await regenerateScript({
-        presentationId,
-        scriptId,
-        duration,
-        tone,
-        requirement,
-      });
+      if (!presentationId) {
+        set({
+          status: "error",
+          error: "재생성할 발표 자료를 찾을 수 없습니다.",
+        });
+        return;
+      }
 
       set({
-        status: 'success',
-        result,
-        presentationId: result.presentationId,
-        topic: result.topic || get().topic,
-        hasSourceFile: Boolean(result.fileUrl),
+        status: "running",
+        error: null,
       });
-    } catch (err) {
-      set({
-        status: 'error',
-        error: toErrorMessage(err, '대본 재생성에 실패했습니다.'),
-      });
-    }
-  },
+
+      try {
+        // 1. 재생성 POST
+        const regenerated = await regenerateScript({
+          presentationId,
+          scriptId,
+          duration,
+          tone,
+          extraRequirement,
+          currentScript,
+        });
+
+        console.log("[재생성 POST 응답]", regenerated);
+
+        // 2. 재생성 완료 후 최신 데이터 재조회
+        const result = await getPresentation(presentationId);
+
+        console.log("[재생성 후 GET 응답]", result);
+        console.log("[재조회된 slides]", result.slides);
+
+        // 3. 최신 GET 결과를 Zustand에 저장
+        set({
+          status: "success",
+          result,
+          presentationId: result.presentationId,
+          topic: result.topic || get().topic,
+          hasSourceFile: Boolean(result.fileUrl),
+        });
+      } catch (err) {
+        set({
+          status: "error",
+          error: toErrorMessage(err, "대본 재생성에 실패했습니다."),
+        });
+      }
+    },
 
   fetchResult: async (presentationId) => {
-    set({ status: 'running', error: null });
+    set({
+      status: 'running',
+      error: null,
+    });
 
     try {
-      // 새로고침 등으로 다시 들어온 경우에도, 아직 생성이 안 끝났을 수 있으니
-      // 완료될 때까지 기다렸다가 채워진 결과를 반영한다.
       const result = await waitForGeneratedScript(presentationId);
+
       set({
         status: 'success',
         result,
