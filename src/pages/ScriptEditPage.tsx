@@ -12,7 +12,7 @@ import VoiceRecorder from "../components/VoiceRecorder";
 import TaskChip from "../components/TaskChip";
 import MainChip from "../components/MainChip";
 import { useScriptJobStore } from "../store/scriptJobStore";
-import type { ToneType } from "../apis/script";
+import type { ToneType } from "../apis/script.api";
 
 interface SlideItem {
   id: string;
@@ -54,18 +54,32 @@ const ScriptPanel = ({
       <p className="text-sm font-semibold text-[color:var(--color-text-heading)]">
         {label}
       </p>
-      <MainChip
-        text="AI 생성"
+      {/* MainChip은 scale prop이 없으면 내부 inline style이 transform: scale(1)로
+          고정돼서, className으로 넘긴 scale-* 유틸은 inline style에 밀려 항상 무시됩니다.
+          (inline style은 어떤 class보다도 우선순위가 높음)
+          그래서 MainChip 자체에 className scale을 주는 대신, 감싸는 wrapper에
+          transform을 걸어서 실제로 작아지도록 합니다. */}
+      <div
         className="
+        origin-left
         scale-50
         sm:scale-[0.65]
         lg:scale-75
         "
-      />
+      >
+        <MainChip text="AI 생성" />
+      </div>
     </div>
 
     <div className="mb-[2px] h-[34px] w-full overflow-hidden sm:h-[42px] xl:h-[50px]">
-      <div className="w-[166.6667%] origin-top-left scale-[0.6] sm:w-[133.3333%] sm:scale-75 xl:w-[111.1111%] xl:scale-90">
+      <div
+        className="
+        w-[166.6667%] origin-top-left scale-[0.6]
+        sm:w-[133.3333%] sm:scale-75
+        xl:w-[111.1111%] xl:scale-90
+        [&_p]:min-w-0 [&_p]:flex-1 [&_p]:truncate
+        "
+      >
         <VoiceRecorder message="녹음 후 직접 들어보며 자연스러운지 확인해보세요." />
       </div>
     </div>
@@ -97,20 +111,21 @@ const StyleCard = ({
     type="button"
     onClick={onClick}
     style={active ? undefined : { border: "1px solid rgba(128, 136, 146, 1)" }}
-    className={`flex h-auto min-h-[110px] w-full flex-col items-center justify-center gap-2 rounded-[16px] p-3 text-center transition-all sm:min-h-[130px] ${
+    className={`flex h-auto min-h-[110px] w-full flex-col items-center justify-center rounded-[16px] p-3 text-center transition-all sm:min-h-[130px] ${
       active
-        ? "border border-[#5b6cfb] bg-[#EEF2FF] shadow-sm"
+        ? "border border-[#5b6cfb] bg-[#EEF2FF] shadow-[0_0_16px_2px_rgba(91,108,251,0.18)]"
         : "bg-white hover:border-slate-400"
     }`}
   >
+    {/* AiSetPage 발표 스타일 카드와 동일한 톤: 아이콘 44px, mb-3/mb-1 간격, 활성 시 글로우 섀도 */}
     <span
-      className="flex h-9 w-9 items-center justify-center rounded-full"
+      className="mb-3 flex h-10 w-10 items-center justify-center rounded-full sm:h-11 sm:w-11"
       style={{ backgroundColor: "rgba(159, 160, 253, 0.25)" }}
     >
       <span style={{ color: "rgba(91, 108, 251, 1)" }}>{icon}</span>
     </span>
     <span
-      className={`text-sm font-bold ${
+      className={`mb-1 text-sm font-bold ${
         active ? "text-[#4338CA]" : "text-slate-800"
       }`}
     >
@@ -129,10 +144,18 @@ const StyleCard = ({
 const ScriptEditPage = () => {
   const navigate = useNavigate();
 
-  const { result, hasSourceFile, topic, status, regenerate } = useScriptJobStore();
+  const { result, hasSourceFile, topic, status, error, regenerate } = useScriptJobStore();
 
-  const hasRealData = status === "success" && result !== null;
+  // ⚠️ status는 "지금 요청이 진행 중/성공/실패했는지"만 나타내는 값이고,
+  // "화면에 보여줄 실제 데이터가 있는지"는 별개입니다.
+  // 예전에는 hasRealData가 status === "success"까지 같이 요구해서,
+  // 재생성 요청이 실패하거나(status: 'error') 진행 중일 때(status: 'running')
+  // 이미 잘 떠 있던 대본 화면이 통째로 빈 상태로 바뀌어버리는 문제가 있었습니다.
+  // result가 있으면(=한 번이라도 생성에 성공했으면) 계속 그 데이터를 보여주고,
+  // 에러/로딩 여부는 아래 isRegenerating / error 배너로 따로 표시합니다.
+  const hasRealData = result !== null;
   const isRegenerating = status === "running";
+  const regenerateFailed = status === "error" && Boolean(error);
 
   // 실데이터가 없을 때만 쓰는 임시 모의 데이터 (기존 "PPT O/X 화면 보기 (임시)" 토글용)
   const [mockSlides, setMockSlides] = useState<SlideItem[]>([]);
@@ -143,7 +166,7 @@ const ScriptEditPage = () => {
   const [presentationTime, setPresentationTime] = useState("5분");
   const [speakingStyle, setSpeakingStyle] = useState<SpeakingStyle>(null);
   const [regenRequest, setRegenRequest] = useState("");
-  
+
 
 
   useEffect(() => {
@@ -235,7 +258,7 @@ const ScriptEditPage = () => {
     !isRegenerating && (regenMode === "full" || Boolean(selectedSlide?.scriptId));
 
   return (
-    <div className="flex w-full flex-col bg-slate-50 pt-28 lg:h-screen">
+    <div className="flex w-full flex-col bg-slate-50 pt-24 sm:pt-28 lg:pt-32 lg:h-screen">
       {/* 상단 바 */}
       <div className="flex shrink-0 flex-col gap-2 border-b border-gray-100 bg-white px-4 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-3 lg:px-8">
         <p className="text-sm font-semibold text-[color:var(--color-text-heading)]">
@@ -256,9 +279,8 @@ const ScriptEditPage = () => {
             icon={Volume2}
             label="발표코칭"
             onClick={() => navigate("/coach-loading")}
-            className="scale-90 origin-right"
           />
-          <TaskChip icon={Download} label="다운로드" className="scale-90 origin-right" />
+          <TaskChip icon={Download} label="다운로드" />
         </div>
       </div>
 
@@ -463,6 +485,10 @@ const ScriptEditPage = () => {
               className="min-h-[120px] flex-1 resize-none rounded-xl border border-gray-200 p-4 text-sm outline-none transition focus:border-[color:var(--color-brand-primary)] sm:min-h-[140px]"
             />
           </div>
+
+          {regenerateFailed && (
+            <p className="text-xs font-medium text-red-500">{error}</p>
+          )}
 
           <button
             type="button"
