@@ -1,8 +1,7 @@
 import axios from "axios";
 import { useAuthStore } from "../store/authStore";
 
-
-const baseURL = import.meta.env.PROD ? "" : "http://15.164.171.107:8080";
+const baseURL = import.meta.env.PROD ? "" : "http://13.209.87.115:8080";
 
 const apiClient = axios.create({
   baseURL,
