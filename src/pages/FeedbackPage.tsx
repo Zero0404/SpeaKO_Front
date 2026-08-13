@@ -2,15 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 // 에셋 및 컴포넌트 불러오기
-import bgSvg from '../assets/select-page-background.svg';
+import bgSvg from '../assets/select-page-background.png';
 import MainChip from '../components/MainChip';
 import type { EvaluationResult } from '../apis/feedback';
 
-// FeedbackLoading -> navigate('/feedback-result', { state: { evaluationResult, file } })
-// 로 넘어온 실제 평가 결과. (이전에는 이 페이지가 { score, aiComment, originalText,
-// recognizedText } 같은 평평한 필드를 기대하고 있었는데, 실제로 전달되는 값은
-// evaluationResult 하나로 감싸져 있어서 실제 API 결과가 화면에 전혀 반영되지
-// 않는 버그가 있었습니다. 아래에서 evaluationResult를 직접 읽도록 고쳤습니다.
 interface FeedbackResultState {
   evaluationResult?: EvaluationResult;
   file?: File;

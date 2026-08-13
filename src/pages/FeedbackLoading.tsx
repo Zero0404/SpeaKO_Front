@@ -16,9 +16,7 @@ const STEPS: LoadingStepInfo[] = [
   { label: '완료' },
 ];
 
-// '완료' 단계가 된 뒤, 버튼을 안 눌러도 자동으로 결과 화면으로 넘어가기까지 대기하는 시간.
-// 0으로 하면 '완료' 표시가 눈에 보이지도 않고 바로 넘어가버려서, 완료됐다는 걸
-// 잠깐이라도 보여주기 위해 약간의 딜레이를 둡니다.
+
 const AUTO_NAVIGATE_DELAY_MS = 800;
 
 export const FeedbackLoading: React.FC<FeedbackLoadingProps> = ({
