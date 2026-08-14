@@ -23,9 +23,26 @@ SpeaKO는 발표를 준비하는 사람들을 위한 AI 코칭 서비스입니�
 - **아이콘**: lucide-react
 - **폰트**: Pretendard
 
-## 폴더 구조
+## 코드 스타일 및 네이밍 규칙
+
+사람마다 들여쓰기나 따옴표 스타일이 다르면, 코드 리뷰 시 실제 로직이 아니라 스타일 차이 때문에 변경사항(diff)이 지저분해집니다. 자동 도구로 통일해 소모적인 논쟁을 방지합니다.
+
+| 항목 | 규칙 |
+| :--- | :--- |
+| **자동 포맷팅** | ESLint + Prettier 설치, 저장 시 자동 적용되도록 설정 |
+| **컴포넌트 이름** | PascalCase (예: `LoginForm.tsx`) |
+| **함수/변수 이름** | camelCase (예: `getUserInfo`) |
+| **상수 이름** | UPPER_SNAKE_CASE (예: `MAX_LOGIN_COUNT`) |
+
+## 설치 방법 (프로젝트에 아직 없다면)
+
+```bash
+npm install -D eslint prettier
 
 ```
+
+### 폴더 구조
+```text
 src/
  ├── pages/         # 페이지 단위 컴포넌트 (라우팅되는 화면)
  │    ├── HomePage.tsx
@@ -66,7 +83,7 @@ src/
  ├── types/         # 타입 정의
  │    ├── user.types.ts   # User, LoginRequest 등 유저 관련 타입
  │    └── page.types.ts   # PageStatus, SelectOption 등 페이지 관련 타입
- ├── apis/          # 서버 통신 로직 (도메인별 파일 분리)
+ ├── apis/          # 서버 통신 로직 (도메인별 파일 분리 권장)
  │    ├── auth.api.ts
  │    └── script.api.ts
  ├── App.tsx        # 라우팅 설정하는 최상위 컴포넌트
@@ -74,7 +91,13 @@ src/
  ├── App.css
  └── index.css      # 전역 스타일
 ```
-
+- 새 파일을 어디에 둘지 헷갈리면: 화면 전체 단위면 pages/, 여러 곳에서 재사용될 것 같은 작은 단위면 components/, 페이지 위를 덮는 팝업이면 modals/.
+- `hooks/`, `utils/`는 지금 파일이 없어도 폴더는 미리 만들어두고 나중에 반복되는 로직(날짜 포맷팅, 상태 관리 등)이 생기면 여기로
+- `types/`, `apis/`는 파일 하나로 뭉치면 금방 길어지는 폴더니까 처음부터 `user.types.ts`, `auth.api.ts`처럼 도메인 단위로 나눠둡니다.
+   - types/는 실제로 동작하는 코드가 아니라, 여러 파일에서 공통으로 쓰는 데이터 형태(타입)를 한 곳에 모아두는 폴더입니다. 예를 들어 User 타입을 LoginPage.tsx, MyPage.tsx, Navbar.tsx에서 각각 따로 적으면 나중에 필드 하나 추가할 때 다 찾아 고쳐야함. types/에 모아두고 import해서 쓰면 한 곳만 고치면 됩니다.
+ 
+⚠️ 파일명에 (나중에 없앨 수도 있음) 같은 임시 메모가 있는 파일은 만들지 않습니다. 확정 안 된 계획은 파일명이 아니라 이슈나 코드 주석에 남긴다.
+  
 ## 페이지 설명
 
 `App.tsx`에 라우팅이 아직 등록되지 않은 페이지도 있어, 경로 대신 페이지별 역할을 기준으로 정리했습니다.
@@ -117,6 +140,14 @@ src/
   --color-inactive-bg: rgba(255, 255, 255, 0.8); /* bg-white/80 */
   --transition-hover: all 300ms ease; /* transition-all duration-300 */
 ```
+
+## 환경설정 & 배포
+API 키 같은 민감 정보가 실수로 GitHub에 올라가면 보안 사고로 이어질 수 있다. 한번 공개 저장소에 올라간 정보는 히스토리에서 완전히 지우기도 어려우므로, 애초에 올라가지 않도록 규칙을 지키는 것이 중요하다.
+| 항목 | 규칙 |
+| :--- | :--- |
+| **.env 파일** | 절대 커밋 금지 |
+| **.env.example** | 실제 값은 빼고, 어떤 환경변수가 필요한지만 적어서 공유 |
+| **배포 전 체크** | 빌드 에러 없는지, console.log 지웠는지 확인 후 배포 |
 
 ## 시작하기
 
