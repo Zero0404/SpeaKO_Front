@@ -25,6 +25,7 @@ export interface PresentationResult {
   tone: string;
   fileUrl: string;
   slides: SlideResult[];
+  hasFile: boolean; // ← 추가
 }
 
 // GET /api/presentations/{id} 명세에서 확인된 공통 응답 봉투(envelope).
@@ -207,4 +208,128 @@ export async function regenerateScript(
   }
 
   return data.result as PresentationResult;
+}
+
+
+export interface ApiSuccessResponse<T> {
+  code: string;
+  message: string;
+  result: T;
+  success: true;
+}
+
+export interface ApiErrorResponse {
+  code: string;
+  message: string;
+  result: null;
+  success: false;
+}
+
+export type ApiResponse<T> = ApiSuccessResponse<T> | ApiErrorResponse;
+
+/* ────────────────────────────────────────────────────────────
+   3. 전체 대본 조회 — GET /api/presentations/{presentationId}/full-script
+   ──────────────────────────────────────────────────────────── */
+
+export interface FullScriptSlide {
+  slideId: number;
+  slideOrder: number;
+  slideTitle: string | null;
+  rawText: string | null;
+  scriptId: number;
+  content: string;
+  version: number;
+}
+
+export interface FullScriptResult {
+  presentationId: number;
+  topic: string;
+  duration: number;
+  fileUrl: string;
+  combinedScript: string;
+  slideScripts: FullScriptSlide[];
+}
+
+export async function getFullScript(presentationId: number): Promise<FullScriptResult> {
+  const response = await fetch(`${API_BASE_URL}/api/presentations/${presentationId}/full-script`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getAuthHeader(),
+    },
+  });
+
+  const data = await parseJsonSafely(response);
+
+  if (!response.ok || data?.success === false || data?.isSuccess === false) {
+    const message = data?.message ?? '전체 대본 조회에 실패했습니다.';
+    throw new Error(message);
+  }
+
+  // ⚠️ 명세서상으로는 { code, message, result, success }로 감싸져 와야 하지만,
+  // 실제 응답은 envelope 없이 result 내용이 바로 최상위로 오는 걸 확인했습니다.
+  // (createPresentation과 동일하게) result가 있으면 그 안의 값을, 없으면 응답 자체를 결과로 사용합니다.
+  const result = (data?.result ?? data) as FullScriptResult;
+
+  if (!result?.presentationId) {
+    throw new Error('전체 대본 데이터가 없습니다.');
+  }
+
+  return result;
+}
+
+/* ────────────────────────────────────────────────────────────
+   4. 일반 대본 다운로드 — GET /api/presentations/{presentationId}/download/script
+   ⚠️ 이 엔드포인트는 JSON이 아니라 text/plain 파일 스트림(.txt)을 그대로 내려줍니다.
+   성공 시 Content-Disposition 헤더에 파일명이 담겨 오고, 실패 시(400/404)에만
+   기존과 같은 { code, message, result, success } JSON 에러 바디가 옵니다.
+   ──────────────────────────────────────────────────────────── */
+
+export interface DownloadedScriptFile {
+  blob: Blob;
+  filename: string;
+}
+
+// Content-Disposition: attachment; filename=script.txt (또는 filename="script.txt",
+// filename*=UTF-8''script.txt 형태)에서 파일명만 뽑아낸다.
+function extractFilenameFromDisposition(disposition: string | null): string | null {
+  if (!disposition) return null;
+
+  const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch {
+      return utf8Match[1];
+    }
+  }
+
+  const plainMatch = disposition.match(/filename="?([^";]+)"?/i);
+  return plainMatch?.[1] ?? null;
+}
+
+export async function downloadScript(presentationId: number): Promise<DownloadedScriptFile> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/presentations/${presentationId}/download/script`,
+    {
+      method: 'GET',
+      headers: {
+        ...getAuthHeader(),
+      },
+    }
+  );
+
+  if (!response.ok) {
+    // 실패 케이스는 명세상 JSON 에러 바디로 온다.
+    const data = await parseJsonSafely(response);
+    const message = data?.message ?? '대본 다운로드에 실패했습니다.';
+    throw new Error(message);
+  }
+
+  const blob = await response.blob();
+  const filename =
+    extractFilenameFromDisposition(response.headers.get('Content-Disposition')) ??
+    'script.txt';
+
+  return { blob, filename };
 }

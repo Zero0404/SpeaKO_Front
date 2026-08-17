@@ -2,12 +2,15 @@ import { create } from 'zustand';
 import {
   createPresentation,
   getPresentation,
+  getFullScript,
   regenerateScript,
   type PresentationResult,
+  type FullScriptResult,
   type ToneType,
 } from '../apis/script.api';
 
 export type ScriptJobStatus = 'idle' | 'running' | 'success' | 'error' | 'paywall';
+export type FullScriptStatus = 'idle' | 'loading' | 'success' | 'error';
 
 interface RunCreateInput {
   file: File | null;
@@ -30,10 +33,17 @@ interface ScriptJobState {
   error: string | null;
   result: PresentationResult | null;
   presentationId: number | null;
-  /** 이번 발표에 원본 슬라이드 파일(PPT/PDF)이 있었는지 — 있으면 슬라이드별 화면, 없으면 전체 대본 화면 */
+  /** 이번 발표에 원본 슬라이드 파일(PPT/PDF)이 있었는지 — 있으면 슬라이드별 화면, 없으면 전체 대본 화면.
+   *  백엔드가 응답에 내려주는 result.hasFile을 그대로 신뢰한다 (fileUrl은 파일 없는 케이스에도
+   *  채워질 수 있어서 hasFile 판단 기준으로 쓰지 않는다). */
   hasSourceFile: boolean;
   /** ScriptEditPage 상단 등에 표시할 발표 주제 */
   topic: string;
+
+  /** "대본확인" 버튼 → GET /full-script 결과 (PPT X 전체 대본 화면 전환용) */
+  fullScript: FullScriptResult | null;
+  fullScriptStatus: FullScriptStatus;
+  fullScriptError: string | null;
 
   /** AiSetPage: 새 대본 생성 요청 시작 */
   runCreate: (input: RunCreateInput) => Promise<void>;
@@ -41,6 +51,8 @@ interface ScriptJobState {
   regenerate: (input: RegenerateInput) => Promise<void>;
   /** AiLoading: presentationId만 갖고 있고 result가 없을 때(새로고침 등) 다시 조회 */
   fetchResult: (presentationId: number) => Promise<void>;
+  /** ScriptEditPage: "대본확인" 버튼 → 전체 대본(합쳐진 스크립트) 조회 */
+  fetchFullScript: (presentationId: number) => Promise<void>;
   /** 새 job을 시작하기 전 상태 초기화(필요할 때 사용) */
   reset: () => void;
 }
@@ -52,6 +64,9 @@ const initialState = {
   presentationId: null as number | null,
   hasSourceFile: false,
   topic: '',
+  fullScript: null as FullScriptResult | null,
+  fullScriptStatus: 'idle' as FullScriptStatus,
+  fullScriptError: null as string | null,
 };
 
 function toErrorMessage(err: unknown, fallback: string): string {
@@ -121,7 +136,9 @@ export const useScriptJobStore = create<ScriptJobState>()((set, get) => ({
         result,
         presentationId: result.presentationId,
         topic: result.topic || title,
-        hasSourceFile: Boolean(result.fileUrl),
+        // fileUrl은 파일 없는 케이스(topic-only)에도 채워져 내려오므로 판단 기준으로 쓰지 않는다.
+        // 백엔드가 명시적으로 내려주는 hasFile을 그대로 신뢰한다.
+        hasSourceFile: Boolean(result.hasFile),
       });
     } catch (err) {
       set({
@@ -131,62 +148,62 @@ export const useScriptJobStore = create<ScriptJobState>()((set, get) => ({
     }
   },
 
-    regenerate: async ({
-      scriptId,
-      duration,
-      tone,
-      extraRequirement,
-      currentScript,
-    }) => {
-      const presentationId = get().presentationId;
+  regenerate: async ({
+    scriptId,
+    duration,
+    tone,
+    extraRequirement,
+    currentScript,
+  }) => {
+    const presentationId = get().presentationId;
 
-      if (!presentationId) {
-        set({
-          status: "error",
-          error: "재생성할 발표 자료를 찾을 수 없습니다.",
-        });
-        return;
-      }
-
+    if (!presentationId) {
       set({
-        status: "running",
-        error: null,
+        status: "error",
+        error: "재생성할 발표 자료를 찾을 수 없습니다.",
+      });
+      return;
+    }
+
+    set({
+      status: "running",
+      error: null,
+    });
+
+    try {
+      // 1. 재생성 POST
+      const regenerated = await regenerateScript({
+        presentationId,
+        scriptId,
+        duration,
+        tone,
+        extraRequirement,
+        currentScript,
       });
 
-      try {
-        // 1. 재생성 POST
-        const regenerated = await regenerateScript({
-          presentationId,
-          scriptId,
-          duration,
-          tone,
-          extraRequirement,
-          currentScript,
-        });
+      console.log("[재생성 POST 응답]", regenerated);
 
-        console.log("[재생성 POST 응답]", regenerated);
+      // 2. 재생성 완료 후 최신 데이터 재조회
+      const result = await getPresentation(presentationId);
 
-        // 2. 재생성 완료 후 최신 데이터 재조회
-        const result = await getPresentation(presentationId);
+      console.log("[재생성 후 GET 응답]", result);
+      console.log("[재조회된 slides]", result.slides);
 
-        console.log("[재생성 후 GET 응답]", result);
-        console.log("[재조회된 slides]", result.slides);
-
-        // 3. 최신 GET 결과를 Zustand에 저장
-        set({
-          status: "success",
-          result,
-          presentationId: result.presentationId,
-          topic: result.topic || get().topic,
-          hasSourceFile: Boolean(result.fileUrl),
-        });
-      } catch (err) {
-        set({
-          status: "error",
-          error: toErrorMessage(err, "대본 재생성에 실패했습니다."),
-        });
-      }
-    },
+      // 3. 최신 GET 결과를 Zustand에 저장
+      set({
+        status: "success",
+        result,
+        presentationId: result.presentationId,
+        topic: result.topic || get().topic,
+        hasSourceFile: Boolean(result.hasFile),
+      });
+    } catch (err) {
+      set({
+        status: "error",
+        error: toErrorMessage(err, "대본 재생성에 실패했습니다."),
+      });
+    }
+  },
 
   fetchResult: async (presentationId) => {
     set({
@@ -202,12 +219,30 @@ export const useScriptJobStore = create<ScriptJobState>()((set, get) => ({
         result,
         presentationId: result.presentationId,
         topic: result.topic || get().topic,
-        hasSourceFile: Boolean(result.fileUrl),
+        hasSourceFile: Boolean(result.hasFile),
       });
     } catch (err) {
       set({
         status: 'error',
         error: toErrorMessage(err, '발표 자료 조회에 실패했습니다.'),
+      });
+    }
+  },
+
+  fetchFullScript: async (presentationId) => {
+    set({ fullScriptStatus: 'loading', fullScriptError: null });
+
+    try {
+      const result = await getFullScript(presentationId);
+
+      set({
+        fullScriptStatus: 'success',
+        fullScript: result,
+      });
+    } catch (err) {
+      set({
+        fullScriptStatus: 'error',
+        fullScriptError: toErrorMessage(err, '전체 대본 조회에 실패했습니다.'),
       });
     }
   },
