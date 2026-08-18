@@ -16,6 +16,7 @@ import MainChip from "../components/MainChip";
 import { useScriptJobStore } from "../store/scriptJobStore";
 import { downloadScript } from "../apis/script.api";
 import type { PresentationResult, ToneType } from "../apis/script.api";
+import { createCustomPresentation } from "../apis/coach.api";
 
 interface SlideItem {
   id: string;
@@ -227,6 +228,10 @@ const ScriptEditPage = () => {
   // "다운로드" 버튼 → GET /download/script (텍스트 파일 스트림)
   const [isDownloadingScript, setIsDownloadingScript] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  // "발표코칭" 버튼 → POST /custom으로 지금 화면의 대본을 새로 등록하는 동안의 상태
+  const [isStartingCoach, setIsStartingCoach] = useState(false);
+  const [coachError, setCoachError] = useState<string | null>(null);
 
   // 이전/다음(undo·redo)용 히스토리. 리렌더를 유발하지 않는 ref로 들고 있다가
   // 변경이 필요할 때만 bump()로 강제 리렌더한다.
@@ -623,6 +628,60 @@ const ScriptEditPage = () => {
     }
   };
 
+  // "발표코칭" → CoachLoading으로 이동.
+  //
+  // ⚠️ 원래는 이 페이지의 presentationId(POST /api/presentations, 즉 AI 대본 생성으로
+  // 만든 것)를 그대로 CoachLoading에 넘기고, CoachLoading이 GET /highlights로
+  // 하이라이팅을 조회하는 구조였다. 근데 실제로 확인해보니 AI 생성 대본 쪽
+  // presentationId에는 하이라이팅 분석이 아예 안 붙어있어서(200 OK에 scripts: []만
+  // 옴), 항상 실패했다.
+  //
+  // 백엔드 확인 결과 POST /api/presentations/custom(코치용 직접 업로드/입력)으로
+  // 만든 presentationId에는 하이라이팅이 정상적으로 붙는다. 그래서 여기서는 AI
+  // 생성 대본의 presentationId를 재사용하는 대신, 지금 화면에 보이는 대본 텍스트를
+  // scriptText로 실어서 /custom에 새로 등록하고, 그 응답으로 받은 새
+  // presentationId로 CoachLoading을 호출한다.
+  //
+  // 부수 효과로, "이전/다음"(undo/redo)이나 textarea 직접 수정처럼 서버에 아직
+  // 저장되지 않은 로컬 변경사항도 여기서 함께 서버로 올라가기 때문에, 발표코칭은
+  // 항상 "지금 화면에 보이는 대본 그대로" 하이라이팅된다.
+  const handleStartCoaching = async () => {
+    if (!presentationId || isStartingCoach) return;
+
+    const currentScriptText = isFullScriptReadOnly
+      ? combinedScriptText
+      : hasSourceFile
+        ? [...slides]
+            .sort((a, b) => a.index - b.index)
+            .map((slide) => slide.script)
+            .join("\n\n")
+        : fallbackFullScript;
+
+    if (!currentScriptText.trim()) {
+      setCoachError("발표코칭을 시작할 대본 내용이 없어요.");
+      return;
+    }
+
+    setCoachError(null);
+    setIsStartingCoach(true);
+
+    try {
+      const created = await createCustomPresentation({
+        scriptText: currentScriptText,
+        topic: topic.trim() || undefined,
+      });
+      navigate("/coach-loading", {
+        state: { presentationId: created.presentationId },
+      });
+    } catch (err) {
+      setCoachError(
+        err instanceof Error ? err.message : "발표코칭을 시작하지 못했습니다.",
+      );
+    } finally {
+      setIsStartingCoach(false);
+    }
+  };
+
   const canRegenerate =
     !isRegenerating &&
     (regenMode === "full" || (canUsePartialRegen && Boolean(selectedSlide?.scriptId)));
@@ -663,8 +722,9 @@ const ScriptEditPage = () => {
               )}
               <TaskChip
                 icon={Volume2}
-                label="발표코칭"
-                onClick={() => navigate("/coach-loading")}
+                label={isStartingCoach ? "시작 중..." : "발표코칭"}
+                disabled={!presentationId || isStartingCoach}
+                onClick={handleStartCoaching}
               />
               <TaskChip
                 icon={Download}
@@ -685,6 +745,12 @@ const ScriptEditPage = () => {
       {downloadError && (
         <p className="px-4 pt-2 text-xs font-medium text-red-500 sm:px-6 lg:px-8">
           {downloadError}
+        </p>
+      )}
+
+      {coachError && (
+        <p className="px-4 pt-2 text-xs font-medium text-red-500 sm:px-6 lg:px-8">
+          {coachError}
         </p>
       )}
 

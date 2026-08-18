@@ -5,6 +5,10 @@ import { useNavigate } from 'react-router-dom';
 import FileUpload from '../components/FileUpload';
 import TextInput from '../components/TextInput';
 
+// API / 스토어 불러오기
+import { createCustomPresentation } from '../apis/coach.api';
+import { useAuthStore } from '../store/authStore';
+
 // 에셋 불러오기
 import bgSvg from '../assets/select-page-background.png';
 
@@ -15,16 +19,48 @@ export const CoachSetPage: React.FC = () => {
   // 상태 관리
   const [file, setFile] = useState<File | null>(null);
   const [scriptText, setScriptText] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // 필수 조건: 파일 업로드 또는 대본 텍스트 입력 중 하나만 있으면 됨
   const isFormValid = Boolean(file) || scriptText.trim() !== '';
 
-  // [발음 코칭 받기] 버튼 클릭 시 → 로딩 페이지로 이동
-  const handleStartCoach = () => {
-    if (!isFormValid) {
+  const handleStartCoach = async () => {
+    if (!isFormValid || isSubmitting) {
       return;
     }
-    navigate('/coach-loading');
+
+    setErrorMessage('');
+
+    const accessToken = useAuthStore.getState().accessToken;
+    if (!accessToken) {
+      setErrorMessage('로그인이 필요합니다. 다시 로그인한 뒤 시도해주세요.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const result = await createCustomPresentation({
+        scriptFile: file ?? undefined,
+        scriptText: scriptText.trim() || undefined,
+      });
+
+      // ⚠️ POST /custom 응답에는 대본 원문(content)/하이라이팅이 들어있지 않다 — 파일
+      // 업로드·저장만 처리하고 끝나는 API라 그렇다(응답에 scripts가 아예 없고 topic/
+      // duration/tone/fileUrl/slides 같은 메타데이터만 온다). 실제 대본 내용과 하이라이팅은
+      // GET /api/presentations/{id}/highlights를 따로 호출해야만 받을 수 있어서, 여기서는
+      // presentationId만 CoachLoading에 넘긴다. CoachLoading이 그 id로 GET을 호출한다.
+      navigate('/coach-loading', {
+        state: { presentationId: result.presentationId },
+      });
+    } catch (err) {
+      setErrorMessage(
+        err instanceof Error ? err.message : '대본 업로드 중 오류가 발생했습니다.',
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -152,10 +188,14 @@ export const CoachSetPage: React.FC = () => {
           </main>
 
           {/* 하단 오른쪽 [발음 코칭 받기] 버튼 */}
-          <div className="flex justify-end w-full">
+          <div className="flex flex-col items-end gap-2 w-full">
+            {errorMessage && (
+              <p className="text-xs font-bold text-red-500 text-right">{errorMessage}</p>
+            )}
             <button
               type="button"
               onClick={handleStartCoach}
+              disabled={!isFormValid || isSubmitting}
               style={{
                 width: '250px',
                 height: '60px',
@@ -169,10 +209,14 @@ export const CoachSetPage: React.FC = () => {
                 color: isFormValid ? 'var(--color-white)' : '#9CA3AF',
               }}
               className={`flex items-center justify-between font-semibold text-base shadow-sm border border-gray-100 transition-all duration-300 box-border ${
-                isFormValid ? 'cursor-pointer hover:shadow-md' : 'cursor-not-allowed pointer-events-none'
+                isFormValid && !isSubmitting
+                  ? 'cursor-pointer hover:shadow-md'
+                  : 'cursor-not-allowed pointer-events-none'
               }`}
             >
-              <span className="text-base font-semibold">발음 코칭 받기</span>
+              <span className="text-base font-semibold">
+                {isSubmitting ? '업로드 중...' : '발음 코칭 받기'}
+              </span>
               <span className="text-xl font-light">&gt;</span>
             </button>
           </div>
