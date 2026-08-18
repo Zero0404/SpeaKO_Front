@@ -16,6 +16,8 @@ export interface SlideResult {
   scriptId: number;
   content: string;
   version: number;
+  hasThumbnail: boolean;           
+  thumbnailBase64?: string | null; 
 }
 
 export interface PresentationResult {
@@ -25,7 +27,8 @@ export interface PresentationResult {
   tone: string;
   fileUrl: string;
   slides: SlideResult[];
-  hasFile: boolean; // ← 추가
+  hasFile: boolean; 
+  thumbnailStatus?: string; 
 }
 
 // GET /api/presentations/{id} 명세에서 확인된 공통 응답 봉투(envelope).
