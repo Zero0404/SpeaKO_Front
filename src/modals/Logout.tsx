@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { CircleAlert } from "lucide-react";
 import ConfirmShell from "./ConfirmShell";
-import { logoutApi, ApiError } from "../apis/apiclient";
+import { logoutApi } from "../apis/apiclient";
 import { useAuthStore } from "../store/authStore";
 
 interface LogoutProps {
@@ -12,20 +12,21 @@ interface LogoutProps {
 
 const Logout = ({ onClose, onConfirm }: LogoutProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-
   const handleConfirm = async () => {
     if (isSubmitting) return;
-    setErrorMessage("");
     setIsSubmitting(true);
+
     try {
       await logoutApi();
+    } catch (err) {
+      console.warn(
+        "[Logout] 서버 로그아웃 요청이 실패했지만, 로컬 로그인 상태는 그대로 정리합니다:",
+        err,
+      );
+    } finally {
       useAuthStore.getState().logout();
       onConfirm?.();
       onClose();
-    } catch (err) {
-      setErrorMessage(err instanceof ApiError ? err.message : "로그아웃에 실패했습니다.");
-      setIsSubmitting(false);
     }
   };
 
@@ -33,7 +34,7 @@ const Logout = ({ onClose, onConfirm }: LogoutProps) => {
     <ConfirmShell
       icon={<CircleAlert size={40} className="text-rose-500" strokeWidth={2} />}
       title="로그아웃 하시겠습니까?"
-      description={errorMessage || "로그아웃하시면 서비스 이용을 위해 다시 로그인해야 합니다"}
+      description="로그아웃하시면 서비스 이용을 위해 다시 로그인해야 합니다"
       confirmLabel={isSubmitting ? "로그아웃 중..." : "로그아웃"}
       onCancel={onClose}
       onConfirm={handleConfirm}

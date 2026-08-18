@@ -11,7 +11,7 @@ interface FeedbackResultState {
   file?: File;
 }
 
-// API 연동 전 || 이 페이지에 바로 진입해서 테스트할 때 보여줄 목데이터
+
 const MOCK_RECOGNIZED_TEXT = `안녕하세요, 여러분!\n오늘 저희는 특별한 주제로 여러분께 소개해드리고자 이 자리에 섰습니다.\n지금부터 보여드릴 내용은 다소 난해하게 느껴질 수도 있지만, 흥미로운 점들이 많이 담겨 있으니 끝까지 함께 해주시길 바랍니다.\n\n먼저 첫 번째 슬라이드를 통해 기본적인 구성 요소를 알아보도록 하겠습니다.\n여기에는 다양한 기호와 문자들이 조합되어 있는데요, 이는 저희 주제에서 자주 등장하는 심벌들입니다. 이 심벌들은 각각의 의미를 가지고 있으며, 앞으로의 설명에서도 반복해서 등장할 것 입니다.\n특정 기호나 숫자들은 특정한 개념이나 방향을 나타고 있습니다.\n\n다음 두 번째 슬라이드로 넘어가면, 조금 더 복잡한 형태의 패턴이 나타나고 있습니다.\n이 패턴들은 단순한 배열 이상의 의미를 가지며, 서로 다른 요소들이 어떻게 연결되고 상호작용하는지 보여줍니다.\n이러한 패턴을 이해함으로써, 전체적인 구조와 원리를 파악하는데 큰 도움이 될 것 입니다.\n\n...(하이라이팅이 적용된 대본이 들어갑니다)`;
 
 const getScoreFeedback = (value: number) => {
@@ -32,12 +32,7 @@ const getScoreFeedback = (value: number) => {
 
 
 
-/**
- * 발음 종합 점수 도넛 차트.
- * CoachViewPage의 ScoreDonut과 동일한 방식(SVG stroke-dashoffset 애니메이션)을 사용해
- * 앱 전체에서 점수 도넛의 두께/애니메이션이 일관되게 보이도록 맞췄습니다.
- * mount 시 0%에서 목표 점수까지 시계방향으로 자연스럽게 채워집니다.
- */
+
 const ScoreDonut = ({ score }: { score: number }) => {
   const [animatedScore, setAnimatedScore] = useState(0);
 
@@ -91,9 +86,7 @@ export const FeedbackPage: React.FC = () => {
   const resultState = (location.state as FeedbackResultState | null) ?? null;
   const evaluationResult = resultState?.evaluationResult ?? null;
 
-  // 실제 서버 응답이 있으면 그 값을, 없으면(예: 이 페이지로 직접 진입해서 테스트하는 경우)
-  // 목데이터를 사용합니다. 실제 값과 목데이터를 섞어서 "가짜인데 진짜처럼" 보여주지
-  // 않도록, 원본 텍스트처럼 서버가 아예 안 주는 필드는 목데이터일 때만 채웁니다.
+
   const overallScore = evaluationResult?.totalScore ?? 87;
   const recognizedText = evaluationResult?.recognizedText ?? MOCK_RECOGNIZED_TEXT;
   const feedbackDetail = evaluationResult?.feedbackDetail ?? null;

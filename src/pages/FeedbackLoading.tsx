@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import LoadingScreen, { type LoadingStepInfo } from '../components/LoadingScreen';
 import { recordEvaluation, type EvaluationResult } from '../apis/feedback';
@@ -37,6 +37,14 @@ interface FeedbackLoadingState {
   file: File;
   /** 평가가 끝난 뒤 이동할 경로. 안 주면 기존처럼 /feedback-result로 간다. */
   nextPath?: string;
+  /**
+   * CoachViewPage에서 넘어온 경우, 그 페이지가 들고 있던 실제 대본(presentation) 데이터를
+   * 그대로 실어서 보낸다. 이 페이지는 그 값의 실제 타입(CustomPresentationResult)을 알
+   * 필요가 없어서(다른 흐름에서는 아예 안 옴) unknown으로 받아뒀다가, 평가가 끝나면 손대지
+   * 않고 그대로 다음 페이지에 돌려준다. 이게 없으면 CoachViewPage가 "실시간 평가받기" →
+   * 로딩 → 복귀 과정에서 대본 데이터를 잃어버리고 다시 목데이터로 돌아가 버린다.
+   */
+  presentation?: unknown;
 }
 
 export const FeedbackLoading: React.FC<FeedbackLoadingProps> = ({
@@ -51,18 +59,15 @@ export const FeedbackLoading: React.FC<FeedbackLoadingProps> = ({
   // 1: 파일 수령, 2: 음성 분석(실제 요청이 나가 있는 동안 여기 머무른다), 3: 피드백 생성, 4: 완료
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [error, setError] = useState<string | null>(null);
-  const hasStartedRef = useRef(false);
 
   useEffect(() => {
     if (!isOpen) return;
-    if (hasStartedRef.current) return;
 
     if (!requestState?.file || !requestState?.userId || !requestState?.scriptId) {
       setError('평가에 필요한 정보가 없어요. 이전 화면으로 돌아가 다시 시도해주세요.');
       return;
     }
 
-    hasStartedRef.current = true;
     let cancelled = false;
 
     const run = async () => {
@@ -87,7 +92,11 @@ export const FeedbackLoading: React.FC<FeedbackLoadingProps> = ({
               return;
             }
             navigate(requestState.nextPath ?? '/feedback-result', {
-              state: { evaluationResult: result, file: requestState.file },
+              state: {
+                evaluationResult: result,
+                file: requestState.file,
+                presentation: requestState.presentation,
+              },
             });
           }, RESULT_STEP_DELAY_MS);
         }, RESULT_STEP_DELAY_MS);
