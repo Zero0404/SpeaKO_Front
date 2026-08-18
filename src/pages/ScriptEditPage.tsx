@@ -24,6 +24,8 @@ interface SlideItem {
   index: number;
   title: string;
   script: string;
+  hasThumbnail: boolean;           
+  thumbnailBase64?: string | null; 
 }
 
 type RegenMode = "full" | "partial";
@@ -31,29 +33,42 @@ type SpeakingStyle = ToneType | null;
 
 const PRESENTATION_TIME_OPTIONS = ["5분", "10분", "15분"];
 
-// PresentationResult → SlideItem[] 변환. useEffect와 handleRegenerate(히스토리 push) 양쪽에서 재사용.
+
 function buildSlidesFromResult(result: PresentationResult): SlideItem[] {
+  if (!result?.slides || !Array.isArray(result.slides)) return [];
+
+  // 1. slideOrder 기준으로 오름차순 정렬 (slideOrder가 같으면 version 내림차순)
+  const sortedSlides = [...result.slides].sort((a, b) => {
+    if (a.slideOrder !== b.slideOrder) {
+      return a.slideOrder - b.slideOrder;
+    }
+    return b.version - a.version;
+  });
+
+  // 2. slideOrder 대신 고유한 slideId를 Map의 키로 사용하여 슬라이드가 덮어씌워지는 현상 방지
   const uniqueSlides = Array.from(
-    new Map(
-      [...result.slides]
-        .sort((a, b) => {
-          if (a.slideOrder !== b.slideOrder) {
-            return a.slideOrder - b.slideOrder;
-          }
-          return b.version - a.version;
-        })
-        .map((slide) => [slide.slideOrder, slide])
-    ).values()
+    new Map(sortedSlides.map((slide) => [slide.slideId, slide])).values()
   );
 
-  return uniqueSlides.map((slide) => ({
+  return uniqueSlides.map((slide, index) => ({
     id: `slide-${slide.slideId}`,
     slideId: slide.slideId,
     scriptId: slide.scriptId ?? undefined,
-    index: slide.slideOrder,
-    title: slide.slideTitle ?? "",
+    index: slide.slideOrder ?? index + 1, // slideOrder가 이상할 경우를 대비한 폴백
+    title: slide.slideTitle ?? `${index + 1}번째 슬라이드`,
     script: slide.content ?? "",
+    hasThumbnail: Boolean(slide.hasThumbnail),
+    thumbnailBase64: slide.thumbnailBase64 ?? null,
   }));
+
+}
+
+// base64 문자열이 이미 data URI 형태("data:image/...")로 오는 경우와
+// 순수 base64만 오는 경우를 둘 다 방어적으로 처리.
+function resolveThumbnailSrc(base64?: string | null): string | null {
+  if (!base64) return null;
+  if (base64.startsWith("data:")) return base64;
+  return `data:image/png;base64,${base64}`;
 }
 
 const ScriptPanel = ({
@@ -283,6 +298,8 @@ const ScriptEditPage = () => {
       index: i + 1,
       title: "슬라이드 제목이 들어갑니다",
       script: "",
+      hasThumbnail: false,
+      thumbnailBase64: null,
     }));
     setSlides([]);
     setSelectedSlideId(mock[0].id);
@@ -312,6 +329,8 @@ const ScriptEditPage = () => {
         index: prev.length + 1,
         title: "슬라이드 제목이 들어갑니다",
         script: "",
+        hasThumbnail: false,
+        thumbnailBase64: null,
       };
       return [...prev, next];
     });
@@ -685,6 +704,7 @@ const ScriptEditPage = () => {
             <div className="flex-1 space-y-2 overflow-y-auto p-3">
               {slides.map((slide) => {
                 const isSelected = slide.id === selectedSlideId;
+                const thumbSrc = resolveThumbnailSrc(slide.thumbnailBase64);
                 return (
                   <button
                     key={slide.id}
@@ -699,7 +719,19 @@ const ScriptEditPage = () => {
                     <span className="w-5 shrink-0 text-xs font-semibold text-[color:var(--color-text-body)]">
                       {String(slide.index).padStart(2, "0")}
                     </span>
-                    <div className="h-12 w-20 shrink-0 rounded-md bg-gray-100 sm:h-[52px] sm:w-[92px]" />
+                    <div className="h-12 w-20 shrink-0 overflow-hidden rounded-md bg-gray-100 sm:h-[52px] sm:w-[92px]">
+                      {thumbSrc ? (
+                        <img
+                          src={thumbSrc}
+                          alt={`슬라이드 ${slide.index} 썸네일`}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-[10px] text-gray-400">
+                          미리보기 없음
+                        </div>
+                      )}
+                    </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[13px] font-medium text-[color:var(--color-text-heading)]">
                         {slide.title}
@@ -729,10 +761,18 @@ const ScriptEditPage = () => {
         <section className="flex min-w-0 flex-col gap-4 lg:overflow-y-auto">
           {showSlideMode ? (
             <>
-              <div className="flex min-h-[180px] flex-1 items-center justify-center rounded-2xl bg-white shadow-sm sm:min-h-[220px] lg:min-h-[240px]">
-                <p className="text-sm text-[color:var(--color-text-body)]">
-                  슬라이드 미리보기
-                </p>
+              <div className="flex min-h-[180px] flex-1 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-sm sm:min-h-[220px] lg:min-h-[240px]">
+                {selectedSlide && resolveThumbnailSrc(selectedSlide.thumbnailBase64) ? (
+                  <img
+                    src={resolveThumbnailSrc(selectedSlide.thumbnailBase64)!}
+                    alt={`슬라이드 ${selectedSlide.index} 미리보기`}
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  <p className="text-sm text-[color:var(--color-text-body)]">
+                    {selectedSlide ? "이 슬라이드는 미리보기 이미지가 없습니다." : "슬라이드 미리보기"}
+                  </p>
+                )}
               </div>
               <ScriptPanel
                 label="해당 슬라이드 대본"
