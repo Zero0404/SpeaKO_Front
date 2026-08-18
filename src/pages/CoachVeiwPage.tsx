@@ -13,6 +13,10 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  Check,
+  Plus,
+  Minus,
   ChevronRight as ArrowIcon,
 } from "lucide-react";
 import ViewPageBackground from "../assets/background_gradiant.png";
@@ -150,6 +154,30 @@ const scriptParagraphs: ScriptParagraph[] = [
   ],
   [{ text: "...(하이라이팅이 적용된 대본이 들어갑니다)" }],
 ];
+
+interface VoiceOption {
+  id: string;
+  name: string;
+  style: string;
+  gender: "남성" | "여성";
+}
+
+// TODO(백엔드 연동): 클로바보이스 TTS가 붙으면 id를 실제 클로바보이스 voiceId(예: nara,
+// nminyoung 등)로 교체하면 됩니다. 지금은 목소리 선택 UI와 재생 흐름만 먼저 완성해둔
+// 상태라, 재생 자체는 브라우저 내장 음성합성(Web Speech API)으로 대체합니다.
+const VOICE_OPTIONS: VoiceOption[] = [
+  { id: "donghyun", name: "동현", style: "활기찬", gender: "남성" },
+  { id: "daesung", name: "대성", style: "차분한", gender: "남성" },
+  { id: "heri", name: "혜리", style: "활기찬", gender: "여성" },
+  { id: "goeun", name: "고은", style: "차분한", gender: "여성" },
+];
+
+const VOICE_STYLE_TONE: Record<string, { pitch: number; rateMultiplier: number }> = {
+  "활기찬": { pitch: 1.15, rateMultiplier: 1.05 },
+  "차분한": { pitch: 0.9, rateMultiplier: 0.95 },
+};
+
+const SPEED_OPTIONS = [0.5, 0.75, 1, 1.5, 2] as const;
 
 const wordEntries: WordEntry[] = [
   {
@@ -600,6 +628,134 @@ const ScoreDonut = ({ score }: { score: number }) => {
   );
 };
 
+/**
+ * "AI 대본 듣기"의 목소리 선택 드롭다운.
+ * 커스텀 드롭다운이라 바깥을 클릭하면 닫히도록 별도 처리한다.
+ */
+const VoiceSelectDropdown = ({
+  voices,
+  selectedId,
+  onSelect,
+}: {
+  voices: VoiceOption[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const selected = voices.find((voice) => voice.id === selectedId) ?? voices[0];
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-[color:var(--color-white)] px-3 py-2 text-sm font-semibold font-['Pretendard'] text-[color:var(--color-text-heading)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 transition hover:bg-slate-50"
+      >
+        <AudioLines size={16} className="shrink-0 text-[color:var(--color-brand-primary)]" />
+        {selected.name} · {selected.style}
+        <ChevronDown
+          size={16}
+          className={`shrink-0 text-[color:var(--color-text-body)] transition-transform ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {isOpen && (
+        <div className="absolute left-0 top-[calc(100%+8px)] z-20 w-56 overflow-hidden rounded-xl bg-[color:var(--color-white)] py-1.5 shadow-[0px_6px_20px_0px_rgba(30,41,59,0.18)] outline outline-1 outline-offset-[-1px] outline-slate-500/10">
+          {voices.map((voice) => {
+            const isSelected = voice.id === selectedId;
+            return (
+              <button
+                key={voice.id}
+                type="button"
+                onClick={() => {
+                  onSelect(voice.id);
+                  setIsOpen(false);
+                }}
+                className={`flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-['Pretendard'] transition ${
+                  isSelected ? "bg-[color:var(--color-brand-primary)]/5" : "hover:bg-slate-50"
+                }`}
+              >
+                <AudioLines size={16} className="shrink-0 text-[color:var(--color-brand-primary)]" />
+                <span className="flex-1 font-semibold text-[color:var(--color-text-heading)]">
+                  {voice.name} · {voice.style}
+                </span>
+                {isSelected ? (
+                  <Check size={16} className="shrink-0 text-[color:var(--color-brand-primary)]" />
+                ) : (
+                  <span className="shrink-0 text-xs font-medium text-[color:var(--color-text-body)]">
+                    {voice.gender}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * "AI 대본 듣기"의 배속 조절 스테퍼. SPEED_OPTIONS 배열 안에서만 +/- 로 이동한다.
+ */
+const SpeedStepper = ({
+  speed,
+  onChange,
+}: {
+  speed: number;
+  onChange: (value: number) => void;
+}) => {
+  const index = SPEED_OPTIONS.indexOf(speed as (typeof SPEED_OPTIONS)[number]);
+  const canDecrease = index > 0;
+  const canIncrease = index >= 0 && index < SPEED_OPTIONS.length - 1;
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="whitespace-nowrap text-sm font-medium font-['Pretendard'] text-[color:var(--color-text-body)]">
+        느리게
+      </span>
+      <button
+        type="button"
+        disabled={!canDecrease}
+        onClick={() => canDecrease && onChange(SPEED_OPTIONS[index - 1])}
+        aria-label="재생 속도 느리게"
+        className="flex size-7 shrink-0 items-center justify-center rounded-full text-[color:var(--color-text-heading)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+      >
+        <Minus size={14} />
+      </button>
+      <span className="w-8 shrink-0 text-center text-sm font-bold font-['Pretendard'] text-[color:var(--color-text-heading)]">
+        {speed}
+      </span>
+      <button
+        type="button"
+        disabled={!canIncrease}
+        onClick={() => canIncrease && onChange(SPEED_OPTIONS[index + 1])}
+        aria-label="재생 속도 빠르게"
+        className="flex size-7 shrink-0 items-center justify-center rounded-full text-[color:var(--color-text-heading)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+      >
+        <Plus size={14} />
+      </button>
+      <span className="whitespace-nowrap text-sm font-medium font-['Pretendard'] text-[color:var(--color-text-body)]">
+        빠르게
+      </span>
+    </div>
+  );
+};
+
 /* ────────────────────────────────────────────────────────────
    메인 페이지
    ──────────────────────────────────────────────────────────── */
@@ -635,6 +791,67 @@ const CoachViewPage = () => {
   const [score, setScore] = useState<number | null>(null);
   const [evalError, setEvalError] = useState<string | null>(null);
   const lastRecordingRef = useRef<{ blob: Blob; durationSeconds: number } | null>(null);
+
+  // ── AI 대본 듣기 (클로바보이스 TTS로 하이라이트 단어 읽어주기) ──────────
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string>(VOICE_OPTIONS[2].id);
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
+  const [ttsStatus, setTtsStatus] = useState<"idle" | "unsupported">("idle");
+  const availableVoicesRef = useRef<SpeechSynthesisVoice[]>([]);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      setTtsStatus("unsupported");
+      return;
+    }
+    const loadVoices = () => {
+      availableVoicesRef.current = window.speechSynthesis.getVoices();
+    };
+    loadVoices();
+    window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
+    return () => {
+      window.speechSynthesis.removeEventListener("voiceschanged", loadVoices);
+      window.speechSynthesis.cancel();
+    };
+  }, []);
+
+  // 브라우저가 제공하는 음성 목록에는 성별 메타데이터가 없어서, 이름에 포함된 키워드로
+  // 최대한 추정한다. (TODO: 클로바보이스 TTS 연동 시 이 추정 로직은 제거하고 voice.id를
+  // 그대로 서버에 전달하면 된다.)
+  const findBrowserVoice = (gender: VoiceOption["gender"]) => {
+    const voices = availableVoicesRef.current;
+    if (voices.length === 0) return undefined;
+    const koreanVoices = voices.filter((v) => v.lang?.toLowerCase().startsWith("ko"));
+    const pool = koreanVoices.length > 0 ? koreanVoices : voices;
+    const genderHints =
+      gender === "여성" ? ["female", "여", "yuna", "sora"] : ["male", "남", "shinji", "minsu"];
+    return (
+      pool.find((v) => genderHints.some((hint) => v.name.toLowerCase().includes(hint))) ?? pool[0]
+    );
+  };
+
+  // 하이라이트된 단어를 클릭했을 때, 선택한 목소리/속도로 그 단어만 읽어준다.
+  const speakWord = (word: string) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+      setTtsStatus("unsupported");
+      return;
+    }
+    window.speechSynthesis.cancel();
+
+    const voice = VOICE_OPTIONS.find((v) => v.id === selectedVoiceId) ?? VOICE_OPTIONS[0];
+    const tone = VOICE_STYLE_TONE[voice.style] ?? { pitch: 1, rateMultiplier: 1 };
+
+    // TODO(백엔드 연동): 실제로는 여기서 클로바보이스 TTS API를 호출해 받아온 오디오를
+    // 재생해야 한다 (voiceId: voice.id, speed: playbackSpeed, text: word). 지금은 브라우저
+    // 내장 음성합성(Web Speech API)으로 대체한다.
+    const utterance = new SpeechSynthesisUtterance(word);
+    utterance.lang = "ko-KR";
+    utterance.rate = Math.min(2, Math.max(0.5, playbackSpeed * tone.rateMultiplier));
+    utterance.pitch = tone.pitch;
+    const browserVoice = findBrowserVoice(voice.gender);
+    if (browserVoice) utterance.voice = browserVoice;
+
+    window.speechSynthesis.speak(utterance);
+  };
 
   const handleCheckScript = () => {};
   const handleDownload = () => {};
@@ -686,6 +903,13 @@ const CoachViewPage = () => {
     setFocusedId(id);
     if (clearFocusTimer.current) clearTimeout(clearFocusTimer.current);
     clearFocusTimer.current = setTimeout(() => setFocusedId(null), 2000);
+  };
+
+  // 대본 뷰어의 하이라이트 단어 또는 단어 목록 카드를 클릭했을 때 공통으로 실행:
+  // 1) 선택한 목소리/속도로 그 단어를 읽어주고, 2) 대본 ↔ 단어 목록 간 포커스를 이동한다.
+  const handleHighlightClick = (word: string, id: string, targetTab: TabKey) => {
+    speakWord(word);
+    focusHighlight(id, targetTab);
   };
 
   useEffect(() => {
@@ -945,6 +1169,48 @@ const CoachViewPage = () => {
               </div>
             </div>
             <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
+
+            {/* AI 대본 듣기 — 대본 속 하이라이트 단어를 클릭하면 선택한 목소리/속도로 클로바보이스가 읽어준다 */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl bg-[color:var(--color-white)] px-4 py-3 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 sm:px-5">
+              <div className="flex items-center gap-1.5">
+                <AudioLines size={18} className="shrink-0 text-[color:var(--color-brand-primary)]" />
+                <span className="whitespace-nowrap text-base font-bold font-['Pretendard'] leading-4 text-[color:var(--color-text-heading)]">
+                  AI 대본 듣기
+                </span>
+                <span className="hidden whitespace-nowrap text-xs font-medium font-['Pretendard'] text-[color:var(--color-text-body)] md:inline">
+                  하이라이트 단어를 클릭하면 읽어드려요
+                </span>
+              </div>
+
+              <div className="hidden h-5 w-px bg-slate-500/20 sm:block" />
+
+              <div className="flex items-center gap-2">
+                <span className="whitespace-nowrap text-sm font-medium font-['Pretendard'] text-[color:var(--color-text-body)]">
+                  목소리
+                </span>
+                <VoiceSelectDropdown
+                  voices={VOICE_OPTIONS}
+                  selectedId={selectedVoiceId}
+                  onSelect={setSelectedVoiceId}
+                />
+              </div>
+
+              <div className="hidden h-5 w-px bg-slate-500/20 sm:block" />
+
+              <div className="flex items-center gap-2">
+                <span className="whitespace-nowrap text-sm font-medium font-['Pretendard'] text-[color:var(--color-text-body)]">
+                  속도
+                </span>
+                <SpeedStepper speed={playbackSpeed} onChange={setPlaybackSpeed} />
+              </div>
+
+              {ttsStatus === "unsupported" && (
+                <span className="text-xs font-medium font-['Pretendard'] text-red-500">
+                  이 브라우저는 음성 재생을 지원하지 않아요.
+                </span>
+              )}
+            </div>
+
             <div className="min-h-0 flex-1 overflow-y-auto rounded-xl bg-[color:var(--color-white)] p-4 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 sm:p-6">
               <div className="flex flex-col gap-5 text-base font-semibold font-['Pretendard'] leading-8 text-[color:var(--color-text-heading)]">
                 {scriptParagraphs.map((paragraph, pIdx) => (
@@ -965,9 +1231,7 @@ const CoachViewPage = () => {
                           <HighlightSpan
                             type={segment.highlight}
                             isFocused={focusedId === segment.id}
-                            onClick={() =>
-                              focusHighlight(segment.id as string, "words")
-                            }
+                            onClick={() => speakWord(segment.text)}
                             prevId={prevId}
                             nextId={nextId}
                             onNavigate={(id) => focusHighlight(id, "viewer")}
@@ -1042,7 +1306,9 @@ const CoachViewPage = () => {
                         <WordListCard
                           entry={entry}
                           isFocused={focusedId === topOccurrenceId}
-                          onClick={() => focusHighlight(topOccurrenceId, "viewer")}
+                          onClick={() =>
+                            handleHighlightClick(entry.word, topOccurrenceId, "viewer")
+                          }
                         />
                       </div>
                     );
