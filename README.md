@@ -37,7 +37,6 @@ SpeaKO는 발표를 준비하는 사람들을 위한 AI 코칭 서비스입니�
 src/
  ├── pages/         # 페이지 단위 컴포넌트 (라우팅되는 화면)
  │    ├── HomePage.tsx
- │    ├── MyPage.tsx
  │    ├── AiSetPage.tsx
  │    ├── AiLoading.tsx
  │    ├── ScriptEditPage.tsx
@@ -76,17 +75,17 @@ src/
  │    ├── authStore.ts
  │    ├── uiStore.tsx
  │    ├── scriptJobStore.ts
-  │    └── uiStore.ts
-├── apis
+ │    └── uiStore.ts
+ ├── apis
  │    ├── apiclient.ts
  │    ├── client.tsx
  │    ├── coach.api.ts
  │    ├── script.api.ts
-  │    └── feedback.ts
+ │    └── feedback.ts
  ├── types   # 타입 정의
  │    └── api.types.ts
  ├── utils
-  │    └── getErrorMessage.ts
+ │    └── getErrorMessage.ts
  ├── App.tsx        # 라우팅 설정하는 최상위 컴포넌트
  ├── main.tsx       # 앱 진입점 (React를 HTML에 연결)
  ├── App.css
