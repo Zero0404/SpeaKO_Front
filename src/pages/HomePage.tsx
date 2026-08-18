@@ -1,6 +1,6 @@
 import type { FC } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
 import {
   Upload,
@@ -13,6 +13,7 @@ import {
   Volume2,
   Highlighter,
   CheckCircle2,
+  X,
 } from "lucide-react";
 
 import mainfunctionbackground from "../assets/Homepage-Section3.png";
@@ -126,6 +127,8 @@ const REVEAL_START_DELAY = 80; // ms, 스냅 완료 후 카드 등장까지의 �
 const HomePage: FC = () => {
   const [isTopButtonVisible, setIsTopButtonVisible] = useState(false);
   const [activeSection, setActiveSection] = useState(0); // 0: Hero, 1: Why, 2: Main Function
+  // Footer "업데이트 소식" 클릭 시 띄우는 안내 팝업
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 
   const navigate = useNavigate();
   // 로그인 여부에 따라 "파일 업로드하고 시작하기" 클릭 시 동작을 분기합니다.
@@ -300,6 +303,21 @@ const HomePage: FC = () => {
       });
     }
   }, [location.hash, animateTo]);
+
+  // Footer "주요 기능" / "사용 가이드" → Main Function(3번째) 섹션으로 이동
+  const handleFeaturesClick = () => {
+    animateTo(2);
+  };
+
+  // Footer "요금 안내" → PricingPage로 이동
+  const handlePricingClick = () => {
+    navigate("/pricing");
+  };
+
+  // Footer "업데이트 소식" → 준비 중 안내 팝업
+  const handleUpdatesClick = () => {
+    setIsUpdateModalOpen(true);
+  };
 
   return (
     <div className="w-full">
@@ -610,28 +628,34 @@ const HomePage: FC = () => {
             </h4>
             <ul className="mt-4 space-y-3 text-sm text-[var(--color-text-body)]">
               <li>
-                <Link
-                  to="/#features"
+                {/* Main Function(3번째) 섹션으로 스크롤 이동 */}
+                <button
+                  type="button"
+                  onClick={handleFeaturesClick}
                   className="transition hover:text-[var(--color-brand-primary)]"
                 >
                   주요 기능
-                </Link>
+                </button>
               </li>
               <li>
-                <Link
-                  to="/pricing"
+                {/* PricingPage로 이동 */}
+                <button
+                  type="button"
+                  onClick={handlePricingClick}
                   className="transition hover:text-[var(--color-brand-primary)]"
                 >
                   요금 안내
-                </Link>
+                </button>
               </li>
               <li>
-                <Link
-                  to="/updates"
+                {/* 준비 중 안내 팝업 */}
+                <button
+                  type="button"
+                  onClick={handleUpdatesClick}
                   className="transition hover:text-[var(--color-brand-primary)]"
                 >
                   업데이트 소식
-                </Link>
+                </button>
               </li>
             </ul>
           </div>
@@ -643,16 +667,22 @@ const HomePage: FC = () => {
             </h4>
             <ul className="mt-4 space-y-3 text-sm text-[var(--color-text-body)]">
               <li>
-                {/* 아직 연결할 페이지가 없어 클릭해도 아무 동작 안 함 */}
-                <span className="cursor-default">사용 가이드</span>
+                {/* Main Function(3번째) 섹션으로 스크롤 이동 */}
+                <button
+                  type="button"
+                  onClick={handleFeaturesClick}
+                  className="transition hover:text-[var(--color-brand-primary)]"
+                >
+                  사용 가이드
+                </button>
               </li>
               <li>
-                <Link
-                  to="/privacy"
+                <a
+                  href="/privacy"
                   className="transition hover:text-[var(--color-brand-primary)]"
                 >
                   개인정보처리방침
-                </Link>
+                </a>
               </li>
             </ul>
           </div>
@@ -688,6 +718,41 @@ const HomePage: FC = () => {
             TOP
           </span>
         </button>
+      )}
+
+      {/* Footer "업데이트 소식" 클릭 시 뜨는 준비 중 안내 팝업 */}
+      {isUpdateModalOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-4"
+          onClick={() => setIsUpdateModalOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative flex w-full max-w-sm flex-col items-center gap-5 rounded-2xl bg-white px-8 py-9 text-center shadow-xl"
+          >
+            <button
+              type="button"
+              onClick={() => setIsUpdateModalOpen(false)}
+              aria-label="닫기"
+              className="absolute right-4 top-4 text-slate-400 transition hover:text-slate-600"
+            >
+              <X size={18} />
+            </button>
+
+            <p className="text-base font-semibold text-[var(--color-text-heading)]">
+              업데이트 중인 기능입니다
+            </p>
+
+            <button
+              type="button"
+              onClick={() => setIsUpdateModalOpen(false)}
+              style={{ backgroundImage: "var(--gradient-brand-active)" }}
+              className="w-full rounded-xl py-3 text-sm font-semibold text-white shadow-md transition hover:scale-[1.02]"
+            >
+              확인
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

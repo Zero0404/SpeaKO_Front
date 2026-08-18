@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { ReactNode } from "react";
 import {
   ChevronRight,
@@ -36,7 +37,6 @@ interface SetModalProps {
   user: UserInfo;
   plan?: PlanInfo;
   onSaveProfile?: (data: { nickname: string; email: string }) => void;
-  onPlanClick?: () => void;
   onScriptHistoryClick?: () => void;
   onCoachHistoryClick?: () => void;
   onDeleteAccountClick?: () => void;
@@ -91,13 +91,13 @@ const SetModal = ({
   user,
   plan = { name: "Free 플랜", usagePercent: 20 },
   onSaveProfile,
-  onPlanClick,
-  onScriptHistoryClick,
-  onCoachHistoryClick,
   onDeleteAccountClick,
 }: SetModalProps) => {
+  const navigate = useNavigate();
+
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
   const [fieldModal, setFieldModal] = useState<FieldModal>(null);
+  const [isUpdatingModalOpen, setIsUpdatingModalOpen] = useState(false);
 
   // authStore가 계정 정보의 단일 소스. 값이 없을 때만 부모가 넘긴 user prop으로 fallback.
   const storeUser = useAuthStore((state) => state.user);
@@ -208,7 +208,10 @@ const SetModal = ({
                   </span>
                   <button
                     type="button"
-                    onClick={onPlanClick}
+                    onClick={() => {
+                      onClose();
+                      navigate("/pricing");
+                    }}
                     className="flex h-11 items-center justify-between rounded-lg bg-gradient-to-br from-indigo-300 to-indigo-500 px-4 text-left text-white transition hover:brightness-105"
                   >
                     <span className="text-sm font-semibold font-['Pretendard']">{plan.name}</span>
@@ -239,12 +242,13 @@ const SetModal = ({
               <div className="flex flex-col gap-2">
                 <button
                   type="button"
-                  onClick={onScriptHistoryClick}
+                  onClick={() => setIsUpdatingModalOpen(true)}
                   className="flex items-center gap-3 rounded-lg border border-stone-200 p-3 text-left transition hover:bg-neutral-50"
                 >
                   <span className="glass-icon-box flex size-10 shrink-0 items-center justify-center rounded-xl">
                     <FileText size={18} className="text-[color:var(--color-brand-primary)]" />
                   </span>
+
                   <span className="flex flex-1 flex-col gap-0.5">
                     <span className="text-sm font-semibold leading-4 text-zinc-800 font-['Pretendard']">
                       대본 생성 기록
@@ -253,17 +257,19 @@ const SetModal = ({
                       작성했던 대본을 다시 확인합니다.
                     </span>
                   </span>
+
                   <ChevronRight size={16} className="shrink-0 text-slate-400" />
                 </button>
 
                 <button
                   type="button"
-                  onClick={onCoachHistoryClick}
+                  onClick={() => setIsUpdatingModalOpen(true)}
                   className="flex items-center gap-3 rounded-lg border border-stone-200 p-3 text-left transition hover:bg-neutral-50"
                 >
                   <span className="glass-icon-box flex size-10 shrink-0 items-center justify-center rounded-xl">
                     <Mic size={18} className="text-[color:var(--color-brand-primary)]" />
                   </span>
+
                   <span className="flex flex-1 flex-col gap-0.5">
                     <span className="text-sm font-semibold leading-4 text-zinc-800 font-['Pretendard']">
                       발표 코칭 내역
@@ -272,6 +278,7 @@ const SetModal = ({
                       AI 발음 피드백 결과를 확인합니다.
                     </span>
                   </span>
+
                   <ChevronRight size={16} className="shrink-0 text-slate-400" />
                 </button>
               </div>
@@ -312,6 +319,43 @@ const SetModal = ({
             setFieldModal(null);
           }}
         />
+      )}
+
+      {isUpdatingModalOpen && (
+        <ModalShell
+          onClose={() => setIsUpdatingModalOpen(false)}
+          maxWidthClassName="max-w-[400px]"
+          paddingClassName="p-6"
+        >
+          <div className="flex flex-col items-center gap-4 text-center">
+            <div className="glass-icon-box flex size-14 items-center justify-center rounded-full">
+              <Cloud
+                size={26}
+                className="text-[color:var(--color-brand-primary)]"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <h3 className="text-lg font-bold text-zinc-800 font-['Pretendard']">
+                업데이트 중인 기능입니다
+              </h3>
+
+              <p className="text-sm leading-5 text-slate-500 font-['Pretendard']">
+                해당 기능은 현재 준비 중입니다.
+                <br />
+                조금만 기다려주세요.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsUpdatingModalOpen(false)}
+              className="w-full rounded-xl bg-gradient-to-br from-indigo-300 to-indigo-500 py-3 text-sm font-semibold text-white transition hover:brightness-105"
+            >
+              확인
+            </button>
+          </div>
+        </ModalShell>
       )}
     </>
   );

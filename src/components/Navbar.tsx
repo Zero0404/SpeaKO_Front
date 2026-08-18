@@ -121,14 +121,6 @@ const Navbar = () => {
                     onClose={() => setIsAccountMenuOpen(false)}
                     onOpenSettings={(tab) => setSettingsTab(tab)}
                     onLogoutClick={() => setIsLogoutOpen(true)}
-                    onContactClick={() => {
-                      // TODO: 문의하기 플로우 연동
-                      console.log("문의하기");
-                    }}
-                    onNotificationClick={() => {
-                      // TODO: 알림 플로우 연동
-                      console.log("알림");
-                    }}
                   />
                 )}
               </div>

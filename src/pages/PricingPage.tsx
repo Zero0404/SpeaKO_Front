@@ -179,8 +179,8 @@ const PricingPage: React.FC = () => {
         aria-hidden="true"
         className="absolute inset-0 h-full w-full object-cover"
       />
-
-      <div className="relative flex flex-col items-center px-4 pb-24 pt-32 sm:pt-36 lg:pt-44">
+      
+      <div className="relative flex flex-col items-center px-4 pb-24 pt-36 sm:pt-40 lg:pt-44">
         <MainChip text="Pricing Plans" />
 
         <h1 className="mt-6 text-center text-2xl font-bold text-[color:var(--color-text-heading)] sm:text-3xl lg:text-4xl">
