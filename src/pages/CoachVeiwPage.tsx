@@ -1,20 +1,29 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
+  Info,
   Download,
   Volume2,
   AudioLines,
   Ear,
   BarChart3,
+  CheckCircle2,
   Timer,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  Check,
+  Plus,
+  Minus,
   ChevronRight as ArrowIcon,
 } from "lucide-react";
 import ViewPageBackground from "../assets/background_gradiant.png";
 import MainChip from "../components/MainChip";
+import VoiceRecorder from "../components/VoiceRecorder";
 import TaskChip from "../components/TaskChip";
+import { useAuthStore } from "../store/authStore";
+import type { EvaluationResult } from "../apis/feedback";
 import type {
   CustomPresentationResult,
   PresentationScript,
@@ -91,6 +100,25 @@ const HIGHLIGHT_META: Record<
 const MOCK_SCRIPT_PARAGRAPHS: ScriptParagraph[] = [
   [{ text: "...(하이라이팅이 적용된 대본이 들어갑니다)" }],
 ];
+
+interface VoiceOption {
+  id: string;
+  name: string;
+  style: string;
+  gender: "남성" | "여성";
+}
+
+// ⚠️ 실제 TTS 재생(클로바보이스/Web Speech API)은 이 페이지에서 뺐다 — "AI 대본 듣기"는
+// UI(목소리/속도 선택)만 남겨두고, 소리가 실제로 나오는 부분은 없앤 상태다. 목소리를
+// 고르고 재생 버튼을 눌러도 소리는 나지 않는다.
+const VOICE_OPTIONS: VoiceOption[] = [
+  { id: "donghyun", name: "동현", style: "활기찬", gender: "남성" },
+  { id: "daesung", name: "대성", style: "차분한", gender: "남성" },
+  { id: "heri", name: "혜리", style: "활기찬", gender: "여성" },
+  { id: "goeun", name: "고은", style: "차분한", gender: "여성" },
+];
+
+const SPEED_OPTIONS = [0.5, 0.75, 1, 1.5, 2] as const;
 
 const MOCK_WORD_ENTRIES: WordEntry[] = [
   {
@@ -192,7 +220,15 @@ const mapHighlightCategory = (category: HighlightCategory): HighlightType => {
 // PresentationScript(content 문자열 + positionStart/positionEnd 기준 highlights)를
 // 화면이 실제로 렌더링하는 ScriptParagraph[]로 변환한다.
 // - highlight 구간은 그대로 하이라이트 segment로 만들고, 그 사이사이는 일반 텍스트 segment로 채운다.
-// - 일반 텍스트 안에 있는 줄바꿈("\n")을 기준으로 문단을 나눈다.
+// - ⚠️ 원문 대본에는 문장마다 줄바꿈("\n")이 하나씩 들어있는 경우가 많은데, 이걸 그대로
+//   문단 구분으로 쓰면 문장 하나가 곧 문단 하나가 돼버려서 줄이 다 짧게 끝나고 대본 뷰어
+//   박스 폭을 아무리 넓혀도 줄이 채워지지 않는 것처럼 보인다. 그래서 실제 문단(큰 gap-5
+//   간격) 구분은 빈 줄(연속된 줄바꿈, "\n\n" 이상)일 때만 한다.
+//   ⚠️ 그렇다고 문장 사이의 단일 줄바꿈을 완전히 없애버리면(공백으로 치환) 반대로 원문에
+//   \n\n이 아예 없는 대본에서는 전체가 줄바꿈 하나 없는 하나의 거대한 문단으로 뭉쳐버려서
+//   너무 빽빽해 보인다. 그래서 단일 개행은 지우지 않고 그대로 text에 남겨뒀다가, 렌더링
+//   단계에서 같은 문단 안의 "줄바꿈(<br/>)"으로 표시한다 — 문단 간격(gap-5)만큼 크게 벌어지진
+//   않지만, 원문에 있던 문장 단위 줄바꿈은 화면에도 그대로 살아있게 된다.
 const contentToParagraphs = (script: PresentationScript): ScriptParagraph[] => {
   const { content, highlights, scriptId } = script;
   const sortedHighlights = [...highlights].sort(
@@ -222,10 +258,14 @@ const contentToParagraphs = (script: PresentationScript): ScriptParagraph[] => {
       paragraphs[paragraphs.length - 1].push(segment);
       continue;
     }
-    const lines = segment.text.split("\n");
-    lines.forEach((line, idx) => {
+    // 빈 줄(연속된 개행)일 때만 새 문단을 시작한다. 문단 안에 남아있는 단일 개행은 지우지
+    // 않고 그대로 둔다 — 렌더링할 때 <br/>로 표시해서 원문의 문장 단위 줄바꿈을 살린다.
+    const chunks = segment.text.split(/\n{2,}/);
+    chunks.forEach((chunk, idx) => {
       if (idx > 0) paragraphs.push([]);
-      if (line) paragraphs[paragraphs.length - 1].push({ text: line });
+      // 문단 앞뒤에 남은 단일 개행(예: 빈 줄 바로 앞/뒤)만 정리하고, 문단 내부의 개행은 유지한다.
+      const trimmedChunk = chunk.replace(/^\n+/, "").replace(/\n+$/, "");
+      if (trimmedChunk) paragraphs[paragraphs.length - 1].push({ text: trimmedChunk });
     });
   }
   return paragraphs.filter((paragraph) => paragraph.length > 0);
@@ -524,6 +564,215 @@ const WordListCard = ({
   );
 };
 
+const getScoreFeedback = (value: number) => {
+  if (value >= 90) {
+    return {
+      message: "완벽해요! 🎉",
+      detail: "발음이 아주 정확하고 자연스러워요.\n지금처럼만 유지하면 돼요!",
+    };
+  }
+  if (value >= 75) {
+    return {
+      message: "훌륭해요! 👏",
+      detail:
+        "전반적으로 안정적인 발표에요.\n장단음에 대한 부분만 좀 더 연습하면\n더 완벽한 발표를 할 수 있을 것 같아요!",
+    };
+  }
+  if (value >= 50) {
+    return {
+      message: "좋아요, 조금만 더! 💪",
+      detail: "기본기는 탄탄해요.\n하이라이트된 단어들 위주로 반복 연습해보세요.",
+    };
+  }
+  return {
+    message: "연습이 더 필요해요 🙂",
+    detail: "하이라이트된 단어들을 천천히 다시 들어보면서\n발음을 교정해보세요.",
+  };
+};
+
+/**
+ * 발음 종합 점수 도넛 차트.
+ * mount(또는 score 변경) 시 0%에서 목표 점수까지 시계방향으로 채워지는 애니메이션.
+ */
+const ScoreDonut = ({ score }: { score: number }) => {
+  const [animatedScore, setAnimatedScore] = useState(0);
+
+  useEffect(() => {
+    setAnimatedScore(0);
+    const raf = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setAnimatedScore(score));
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [score]);
+
+  const SIZE = 112;
+  const STROKE = 9;
+  const radius = (SIZE - STROKE) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - animatedScore / 100);
+
+  return (
+    <svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`} className="shrink-0">
+      <defs>
+        <linearGradient id="scoreDonutGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="var(--color-brand-light)" />
+          <stop offset="100%" stopColor="var(--color-brand-primary)" />
+        </linearGradient>
+      </defs>
+      <circle
+        cx={SIZE / 2}
+        cy={SIZE / 2}
+        r={radius}
+        fill="none"
+        stroke="currentColor"
+        className="text-slate-500/15"
+        strokeWidth={STROKE}
+      />
+      <circle
+        cx={SIZE / 2}
+        cy={SIZE / 2}
+        r={radius}
+        fill="none"
+        stroke="url(#scoreDonutGradient)"
+        strokeWidth={STROKE}
+        strokeLinecap="round"
+        strokeDasharray={circumference}
+        strokeDashoffset={offset}
+        transform={`rotate(-90 ${SIZE / 2} ${SIZE / 2})`}
+        style={{ transition: "stroke-dashoffset 1.2s cubic-bezier(0.22, 1, 0.36, 1)" }}
+      />
+    </svg>
+  );
+};
+
+/**
+ * "AI 대본 듣기"의 목소리 선택 드롭다운. (UI만 — 선택해도 실제 재생되는 소리는 없다.)
+ * 커스텀 드롭다운이라 바깥을 클릭하면 닫히도록 별도 처리한다.
+ */
+const VoiceSelectDropdown = ({
+  voices,
+  selectedId,
+  onSelect,
+}: {
+  voices: VoiceOption[];
+  selectedId: string;
+  onSelect: (id: string) => void;
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const selected = voices.find((voice) => voice.id === selectedId) ?? voices[0];
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen((prev) => !prev)}
+        className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-[color:var(--color-white)] px-3 py-2 text-sm font-semibold font-['Pretendard'] text-[color:var(--color-text-heading)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 transition hover:bg-slate-50"
+      >
+        <AudioLines size={16} className="shrink-0 text-[color:var(--color-brand-primary)]" />
+        {selected.name} · {selected.style}
+        <ChevronDown
+          size={16}
+          className={`shrink-0 text-[color:var(--color-text-body)] transition-transform ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+
+      {isOpen && (
+        <div className="absolute left-0 top-[calc(100%+8px)] z-20 w-56 overflow-hidden rounded-xl bg-[color:var(--color-white)] py-1.5 shadow-[0px_6px_20px_0px_rgba(30,41,59,0.18)] outline outline-1 outline-offset-[-1px] outline-slate-500/10">
+          {voices.map((voice) => {
+            const isSelected = voice.id === selectedId;
+            return (
+              <button
+                key={voice.id}
+                type="button"
+                onClick={() => {
+                  onSelect(voice.id);
+                  setIsOpen(false);
+                }}
+                className={`flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-['Pretendard'] transition ${
+                  isSelected ? "bg-[color:var(--color-brand-primary)]/5" : "hover:bg-slate-50"
+                }`}
+              >
+                <AudioLines size={16} className="shrink-0 text-[color:var(--color-brand-primary)]" />
+                <span className="flex-1 font-semibold text-[color:var(--color-text-heading)]">
+                  {voice.name} · {voice.style}
+                </span>
+                {isSelected ? (
+                  <Check size={16} className="shrink-0 text-[color:var(--color-brand-primary)]" />
+                ) : (
+                  <span className="shrink-0 text-xs font-medium text-[color:var(--color-text-body)]">
+                    {voice.gender}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
+ * "AI 대본 듣기"의 배속 조절 스테퍼. SPEED_OPTIONS 배열 안에서만 +/- 로 이동한다. (UI만.)
+ */
+const SpeedStepper = ({
+  speed,
+  onChange,
+}: {
+  speed: number;
+  onChange: (value: number) => void;
+}) => {
+  const index = SPEED_OPTIONS.indexOf(speed as (typeof SPEED_OPTIONS)[number]);
+  const canDecrease = index > 0;
+  const canIncrease = index >= 0 && index < SPEED_OPTIONS.length - 1;
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className="whitespace-nowrap text-sm font-medium font-['Pretendard'] text-[color:var(--color-text-body)]">
+        느리게
+      </span>
+      <button
+        type="button"
+        disabled={!canDecrease}
+        onClick={() => canDecrease && onChange(SPEED_OPTIONS[index - 1])}
+        aria-label="재생 속도 느리게"
+        className="flex size-7 shrink-0 items-center justify-center rounded-full text-[color:var(--color-text-heading)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+      >
+        <Minus size={14} />
+      </button>
+      <span className="w-8 shrink-0 text-center text-sm font-bold font-['Pretendard'] text-[color:var(--color-text-heading)]">
+        {speed}
+      </span>
+      <button
+        type="button"
+        disabled={!canIncrease}
+        onClick={() => canIncrease && onChange(SPEED_OPTIONS[index + 1])}
+        aria-label="재생 속도 빠르게"
+        className="flex size-7 shrink-0 items-center justify-center rounded-full text-[color:var(--color-text-heading)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-30"
+      >
+        <Plus size={14} />
+      </button>
+      <span className="whitespace-nowrap text-sm font-medium font-['Pretendard'] text-[color:var(--color-text-body)]">
+        빠르게
+      </span>
+    </div>
+  );
+};
+
 /* ────────────────────────────────────────────────────────────
    메인 페이지
    ──────────────────────────────────────────────────────────── */
@@ -560,9 +809,24 @@ const CoachViewPage = () => {
     null,
   );
 
+  // 실시간 평가는 이 페이지 안에서 로딩하지 않고 /feedback-loading으로 이동해서
+  // 실제 평가 요청을 진행한 뒤, 끝나면 evaluationResult를 들고 이 페이지로 되돌아온다.
+  const [evalStatus, setEvalStatus] = useState<"idle" | "done" | "error">("idle");
+  const [score, setScore] = useState<number | null>(null);
+  const [evalError, setEvalError] = useState<string | null>(null);
+  const [evaluationResult, setEvaluationResult] = useState<EvaluationResult | null>(null);
+  const [evaluatedFile, setEvaluatedFile] = useState<File | null>(null);
+  const lastRecordingRef = useRef<{ blob: Blob; durationSeconds: number } | null>(null);
+
+  // ── AI 대본 듣기 UI 상태 (실제 소리 재생 로직은 없음 — 선택 상태만 들고 있는다) ──
+  const [selectedVoiceId, setSelectedVoiceId] = useState<string>(VOICE_OPTIONS[2].id);
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
+
   useEffect(() => {
     const state = location.state as
       | {
+          evaluationResult?: EvaluationResult;
+          file?: File;
           presentation?: CustomPresentationResult;
         }
       | null
@@ -571,6 +835,14 @@ const CoachViewPage = () => {
     if (state?.presentation) {
       setPresentationData(state.presentation);
     }
+
+    if (state?.evaluationResult) {
+      setEvaluationResult(state.evaluationResult);
+      setEvaluatedFile(state.file ?? null);
+      setScore(state.evaluationResult.totalScore);
+      setEvalStatus("done");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const { scriptParagraphs, wordEntries: derivedWordEntries } = useMemo(() => {
@@ -600,11 +872,78 @@ const CoachViewPage = () => {
     [derivedWordEntries],
   );
 
+  // ⚠️ 다운로드는 다른 팀원이 맡은 부분이라 여기서는 손대지 않는다.
   const handleDownload = () => {};
 
+  // "파일로 평가받기"는 이 페이지에 로드된 실제 대본을 기준으로 비교 평가해야 해서,
+  // scriptId를 들고 FeedbackFileUploadPage로 넘겨준다. (presentationData가 없는 경우
+  // — 목데이터로 대체된 상태 — 에는 임시 하드코딩 151로 폴백한다.)
   const handleFileEvaluation = () => {
     const scriptId = presentationData?.scripts[0]?.scriptId ?? 151;
     navigate("/feedback-fileupload", { state: { scriptId } });
+  };
+
+  // "실시간 평가받기"를 누르면 이 페이지 안에서 로딩을 보여주지 않고, 실제 평가 요청을
+  // /feedback-loading 페이지로 넘겨서 진행한다. 로딩이 끝나면 그 페이지가 evaluationResult를
+  // 들고 nextPath("/coach-view")로 다시 이 페이지에 돌아온다 (위쪽 useEffect가 받아서 채운다).
+  const handleRealtimeEvaluation = () => {
+    const recording = lastRecordingRef.current;
+    if (!recording) {
+      setEvalStatus("error");
+      setEvalError("먼저 대본을 녹음한 뒤 평가를 요청해주세요.");
+      return;
+    }
+
+    const userId = useAuthStore.getState().user?.userId;
+    if (!userId) {
+      setEvalStatus("error");
+      setEvalError("로그인이 필요합니다. 다시 로그인한 뒤 시도해주세요.");
+      return;
+    }
+
+    setEvalError(null);
+
+    const file = new File(
+      [recording.blob],
+      "realtime-recording.webm",
+      { type: recording.blob.type || "audio/webm" },
+    );
+
+    // presentationData가 있으면(실제 업로드/생성된 대본으로 들어온 경우) 그 대본의 진짜
+    // scriptId를 쓴다. 여러 슬라이드(scripts)가 있을 수 있는데, 지금 화면은 한 화면에
+    // 다 이어붙여 보여주고 있어서 일단 첫 번째 scriptId를 쓴다. presentationData가 없는
+    // 경우(직접 URL 진입 등)에는 FeedbackFileUploadPage와 동일한 임시 하드코딩(151)으로 폴백한다.
+    const scriptId = presentationData?.scripts[0]?.scriptId ?? 151;
+
+    // presentation도 같이 실어 보내서, 평가가 끝나고 이 페이지로 되돌아왔을 때 대본이
+    // 목데이터로 리셋되지 않게 한다. (FeedbackLoading이 그대로 되돌려준다.)
+    navigate("/feedback-loading", {
+      state: {
+        userId,
+        scriptId,
+        file,
+        nextPath: "/coach-view",
+        presentation: presentationData,
+      },
+    });
+  };
+
+  const handleViewDetailedAnalysis = () => {
+    navigate("/feedback-result", {
+      state: { evaluationResult, file: evaluatedFile ?? undefined },
+    });
+  };
+
+  const handleRecordingComplete = (
+    audioBlob: Blob,
+    durationSeconds: number,
+  ) => {
+    lastRecordingRef.current = { blob: audioBlob, durationSeconds };
+    setEvalStatus("idle");
+    setEvalError(null);
+    setScore(null);
+    setEvaluationResult(null);
+    setEvaluatedFile(null);
   };
 
   const focusHighlight = (id: string, targetTab: TabKey) => {
@@ -614,7 +953,9 @@ const CoachViewPage = () => {
     clearFocusTimer.current = setTimeout(() => setFocusedId(null), 2000);
   };
 
-  // 단어 목록 카드를 클릭하면 대본 뷰어의 해당 위치로 포커스를 이동한다.
+  // 단어 목록 카드 / 대본 뷰어의 하이라이트 단어를 클릭하면 포커스만 이동한다.
+  // ⚠️ 예전에는 여기서 speakWord(word)로 실제 소리를 재생했지만, 지금은 "AI 대본 듣기"의
+  // 실제 재생 로직 자체를 뺐기 때문에 포커스 이동만 남아있다.
   const handleHighlightClick = (id: string, targetTab: TabKey) => {
     focusHighlight(id, targetTab);
   };
@@ -646,6 +987,59 @@ const CoachViewPage = () => {
     <aside
       className={`flex ${PANEL_HEIGHT_CLASS} min-h-0 flex-col gap-4 overflow-y-auto rounded-[20px] bg-[color:var(--color-white)] px-4 py-5 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 sm:px-6 sm:py-6`}
     >
+      {evalStatus !== "idle" && (
+        <div className="flex flex-col gap-4 pb-4">
+          <div className="flex items-center justify-between pl-1">
+            <h3 className="text-lg font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
+              발음 종합 점수
+            </h3>
+            {evalStatus === "done" && (
+              <button
+                type="button"
+                onClick={handleViewDetailedAnalysis}
+                className="flex items-center gap-1 text-sm font-medium font-['Pretendard'] text-[color:var(--color-brand-primary)] transition hover:opacity-80"
+              >
+                상세 분석 보기
+                <ArrowIcon size={16} />
+              </button>
+            )}
+          </div>
+
+          {evalStatus === "error" && evalError && (
+            <p className="pl-1 text-sm font-medium font-['Pretendard'] text-red-500">{evalError}</p>
+          )}
+
+          {evalStatus === "done" && score !== null && (
+            <div className="flex flex-col items-center gap-2 py-2 text-center sm:flex-row sm:items-center sm:gap-4 sm:text-left">
+              <div className="relative flex shrink-0 items-center justify-center">
+                <ScoreDonut score={score} />
+                <div className="absolute flex flex-col items-center">
+                  <span className="text-center">
+                    <span className="text-2xl font-semibold font-['Pretendard'] text-[color:var(--color-brand-primary)]">
+                      {score}
+                    </span>
+                    <span className="text-lg font-semibold font-['Pretendard'] text-[color:var(--color-brand-primary)]">
+                      점
+                    </span>
+                  </span>
+                  <span className="text-xs font-medium font-['Pretendard'] text-[color:var(--color-text-body)]">
+                    /100
+                  </span>
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <p className="text-lg font-semibold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
+                  {getScoreFeedback(score).message}
+                </p>
+                <p className="whitespace-pre-line text-sm font-medium font-['Pretendard'] leading-6 text-[color:var(--color-text-body)]">
+                  {getScoreFeedback(score).detail}
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* 하이라이트 요약 — 색상 배지(라벨) + 개수를 카드 안에 세로로 쌓은 3열 그리드 */}
       <div className="flex flex-col gap-4">
         <h3 className="pl-1 text-lg font-bold font-['Pretendard'] leading-5 text-[color:var(--color-text-heading)]">
@@ -705,6 +1099,14 @@ const CoachViewPage = () => {
         </div>
       </div>
 
+      <button
+        type="button"
+        onClick={handleRealtimeEvaluation}
+        className="mt-auto flex w-full items-center justify-center gap-1.5 rounded-lg bg-gradient-to-r from-[color:var(--color-brand-light)] to-[color:var(--color-brand-primary)] py-2.5 text-sm font-bold font-['Pretendard'] text-[color:var(--color-white)] transition hover:opacity-90"
+      >
+        <CheckCircle2 size={18} />
+        실시간 평가받기
+      </button>
     </aside>
   );
 
@@ -795,6 +1197,44 @@ const CoachViewPage = () => {
                 />
               </div>
             </div>
+            <VoiceRecorder onRecordingComplete={handleRecordingComplete} />
+
+            {/* AI 대본 듣기 — UI만 남아있고, 실제 소리 재생 로직은 없다 */}
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-xl bg-[color:var(--color-white)] px-4 py-3 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 sm:px-5">
+              <div className="flex items-center gap-1.5">
+                <AudioLines size={18} className="shrink-0 text-[color:var(--color-brand-primary)]" />
+                <span className="whitespace-nowrap text-base font-bold font-['Pretendard'] leading-4 text-[color:var(--color-text-heading)]">
+                  AI 대본 듣기
+                </span>
+                <Info size={14} className="shrink-0 text-[color:var(--color-text-body)]" />
+                <span className="hidden whitespace-nowrap text-xs font-medium font-['Pretendard'] text-[color:var(--color-text-body)] md:inline">
+                  하이라이팅을 클릭하면 설정된 옵션으로 들을 수 있어요
+                </span>
+              </div>
+
+              <div className="hidden h-5 w-px bg-slate-500/20 sm:block" />
+
+              <div className="flex items-center gap-2">
+                <span className="whitespace-nowrap text-sm font-medium font-['Pretendard'] text-[color:var(--color-text-heading)]">
+                  목소리
+                </span>
+                <VoiceSelectDropdown
+                  voices={VOICE_OPTIONS}
+                  selectedId={selectedVoiceId}
+                  onSelect={setSelectedVoiceId}
+                />
+              </div>
+
+              <div className="hidden h-5 w-px bg-slate-500/20 sm:block" />
+
+              <div className="flex items-center gap-2">
+                <span className="whitespace-nowrap text-sm font-medium font-['Pretendard'] text-[color:var(--color-text-heading)]">
+                  속도
+                </span>
+                <SpeedStepper speed={playbackSpeed} onChange={setPlaybackSpeed} />
+              </div>
+            </div>
+
             <div className="min-h-0 flex-1 overflow-y-auto rounded-xl bg-[color:var(--color-white)] p-4 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 sm:p-6">
 
               <div className="flex max-w-7xl flex-col gap-5 text-base font-semibold font-['Pretendard'] leading-8 text-[color:var(--color-text-heading)]">
@@ -802,7 +1242,19 @@ const CoachViewPage = () => {
                   <p key={pIdx}>
                     {paragraph.map((segment, sIdx) => {
                       if (!(segment.highlight && segment.id)) {
-                        return <span key={sIdx}>{segment.text}</span>;
+                        // 문단 내부에 남아있는 단일 개행("\n")을 <br/>로 바꿔서, 원문에
+                        // 있던 문장 단위 줄바꿈이 화면에도 그대로 보이게 한다.
+                        const lines = segment.text.split("\n");
+                        return (
+                          <span key={sIdx}>
+                            {lines.map((line, lIdx) => (
+                              <Fragment key={lIdx}>
+                                {lIdx > 0 && <br />}
+                                {line}
+                              </Fragment>
+                            ))}
+                          </span>
+                        );
                       }
                       const occIds = occurrenceIdsByWord.get(segment.text) ?? [];
                       const occIndex = occIds.indexOf(segment.id);
