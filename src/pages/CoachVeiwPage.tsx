@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -220,15 +220,21 @@ const mapHighlightCategory = (category: HighlightCategory): HighlightType => {
 // PresentationScript(content 문자열 + positionStart/positionEnd 기준 highlights)를
 // 화면이 실제로 렌더링하는 ScriptParagraph[]로 변환한다.
 // - highlight 구간은 그대로 하이라이트 segment로 만들고, 그 사이사이는 일반 텍스트 segment로 채운다.
-// - ⚠️ 원문 대본에는 문장마다 줄바꿈("\n")이 하나씩 들어있는 경우가 많은데, 이걸 그대로
-//   문단 구분으로 쓰면 문장 하나가 곧 문단 하나가 돼버려서 줄이 다 짧게 끝나고 대본 뷰어
-//   박스 폭을 아무리 넓혀도 줄이 채워지지 않는 것처럼 보인다. 그래서 실제 문단(큰 gap-5
-//   간격) 구분은 빈 줄(연속된 줄바꿈, "\n\n" 이상)일 때만 한다.
-//   ⚠️ 그렇다고 문장 사이의 단일 줄바꿈을 완전히 없애버리면(공백으로 치환) 반대로 원문에
-//   \n\n이 아예 없는 대본에서는 전체가 줄바꿈 하나 없는 하나의 거대한 문단으로 뭉쳐버려서
-//   너무 빽빽해 보인다. 그래서 단일 개행은 지우지 않고 그대로 text에 남겨뒀다가, 렌더링
-//   단계에서 같은 문단 안의 "줄바꿈(<br/>)"으로 표시한다 — 문단 간격(gap-5)만큼 크게 벌어지진
-//   않지만, 원문에 있던 문장 단위 줄바꿈은 화면에도 그대로 살아있게 된다.
+// - ⚠️ 원문 대본에는 문장마다 줄바꿈("\n")이 하나씩 들어있고, 진짜 문단 구분(빈 줄,
+//   "\n\n" 이상)은 아예 없다. 그래서 이 두 극단을 다 시도해봤는데 둘 다 문제가 있었다:
+//   1) 단일 개행을 <br/>로 그대로 살리면 → 문장이 끝날 때마다 박스 폭이 얼마가 남았든
+//      상관없이 강제로 줄바꿈돼서, 짧은 문장 뒤에 여백이 크게 남고 다음 문장은 새 줄에서
+//      시작한다. 결과적으로 텍스트가 폭을 못 채우고 한쪽에 몰려 보인다("줄간격 좁고
+//      한쪽에 몰려있다"는 게 이 증상).
+//   2) 단일 개행을 전부 공백으로 바꿔버리면 → \n\n이 아예 없는 대본이라 전체가 줄바꿈
+//      하나 없는 하나의 거대한 문단으로 뭉쳐서 너무 빽빽해 보인다("답답하다"는 게 이 증상).
+//   그래서 절충안으로, 문장 사이 단일 개행은 공백으로 이어붙여서 폭에 맞게 자연스럽게
+//   줄바꿈(wrap)되게 하되, SENTENCES_PER_GROUP 문장마다 한 번씩 새 문단(gap-5 간격)을
+//   시작해서 시각적으로 숨 쉴 틈을 준다. ⚠️ 이건 진짜 문단 의미 단위가 아니라 순전히
+//   가독성을 위한 프론트 전용 그룹핑이다 — 진짜 문단 구분이 필요하면 대본 자체에 빈 줄
+//   구조가 있어야 한다.
+const SENTENCES_PER_GROUP = 2;
+
 const contentToParagraphs = (script: PresentationScript): ScriptParagraph[] => {
   const { content, highlights, scriptId } = script;
   const sortedHighlights = [...highlights].sort(
@@ -253,19 +259,50 @@ const contentToParagraphs = (script: PresentationScript): ScriptParagraph[] => {
   }
 
   const paragraphs: ScriptParagraph[] = [[]];
+  // 지금 문단(paragraphs 마지막 원소) 안에서 단일 개행을 몇 번 만났는지 — 이게
+  // SENTENCES_PER_GROUP에 도달하면 새 문단을 시작한다.
+  let sentencesInCurrentGroup = 0;
+
+  // 같은 문단 안에서 일반 텍스트를 이어붙일 때, 직전 segment가 일반 텍스트면 공백으로
+  // 합치고(자연스러운 줄바꿈을 위해 하나의 span으로 유지), highlight 뒤에 이어지는
+  // 경우엔 새 segment로 추가한다.
+  const appendPlainText = (text: string) => {
+    if (!text) return;
+    const current = paragraphs[paragraphs.length - 1];
+    const last = current[current.length - 1];
+    if (last && !last.highlight) {
+      last.text += (last.text ? " " : "") + text;
+    } else {
+      current.push({ text });
+    }
+  };
+
   for (const segment of flatSegments) {
     if (segment.highlight) {
       paragraphs[paragraphs.length - 1].push(segment);
       continue;
     }
-    // 빈 줄(연속된 개행)일 때만 새 문단을 시작한다. 문단 안에 남아있는 단일 개행은 지우지
-    // 않고 그대로 둔다 — 렌더링할 때 <br/>로 표시해서 원문의 문장 단위 줄바꿈을 살린다.
-    const chunks = segment.text.split(/\n{2,}/);
-    chunks.forEach((chunk, idx) => {
-      if (idx > 0) paragraphs.push([]);
-      // 문단 앞뒤에 남은 단일 개행(예: 빈 줄 바로 앞/뒤)만 정리하고, 문단 내부의 개행은 유지한다.
-      const trimmedChunk = chunk.replace(/^\n+/, "").replace(/\n+$/, "");
-      if (trimmedChunk) paragraphs[paragraphs.length - 1].push({ text: trimmedChunk });
+
+    // 진짜 문단 구분(빈 줄, "\n\n" 이상)이 있으면 그룹 카운트와 상관없이 항상 새 문단을 연다.
+    const blocks = segment.text.split(/\n{2,}/);
+    blocks.forEach((block, blockIdx) => {
+      if (blockIdx > 0) {
+        paragraphs.push([]);
+        sentencesInCurrentGroup = 0;
+      }
+
+      // 문단 안에서는 단일 개행을 문장 경계로 보고, SENTENCES_PER_GROUP개마다 새 문단을 연다.
+      const sentences = block.split("\n");
+      sentences.forEach((sentence, sIdx) => {
+        if (sIdx > 0) {
+          sentencesInCurrentGroup += 1;
+          if (sentencesInCurrentGroup >= SENTENCES_PER_GROUP) {
+            paragraphs.push([]);
+            sentencesInCurrentGroup = 0;
+          }
+        }
+        appendPlainText(sentence.trim());
+      });
     });
   }
   return paragraphs.filter((paragraph) => paragraph.length > 0);
@@ -820,6 +857,9 @@ const CoachViewPage = () => {
   const [evaluatedFile, setEvaluatedFile] = useState<File | null>(null);
   const lastRecordingRef = useRef<{ blob: Blob; durationSeconds: number } | null>(null);
 
+  // "다운로드" — 브라우저 인쇄(→ PDF로 저장)로 처리한다. handleDownload 주석 참고.
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
   // ── AI 대본 듣기 (POST /api/audio/tts/highlight) ──────────────────────
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>(VOICE_OPTIONS[2].id);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
@@ -888,15 +928,40 @@ const CoachViewPage = () => {
     [derivedWordEntries],
   );
 
-  // ⚠️ 다운로드는 다른 팀원이 맡은 부분이라 여기서는 손대지 않는다.
-  const handleDownload = () => {};
+  // "다운로드" — 예전엔 GET /api/presentations/{presentationId}/download/highlighted로
+  // 하이라이팅이 적용된 대본을 .txt로 받았는데, .txt는 하이라이트 색상을 전혀 표현할 수
+  // 없어서(그냥 텍스트일 뿐) "하이라이팅 적용된 상태 그대로" 저장된다고 보기 어려웠다.
+  // 그래서 PDF로 바꿨는데, 백엔드가 서버에서 PDF를 새로 만들어주는 대신(그러려면 백엔드가
+  // 색상 포함 PDF 렌더링을 새로 구현해야 함), 지금 화면(대본 뷰어)에 이미 보이는 하이라이팅
+  // 그대로를 브라우저 인쇄 기능으로 PDF화하는 방식을 썼다 — 아래 printScriptParagraphs
+  // (하단 JSX의 "print:block" 영역)가 인쇄용 사본이고, 인쇄 시에는 나머지 화면은
+  // "print:hidden"으로 다 숨기고 그 사본만 보이게 한다. 사용자가 인쇄 미리보기에서
+  // "PDF로 저장"을 선택하면 완성된다(브라우저 표준 기능이라 별도 라이브러리 없이 동작).
+  const handleDownload = () => {
+    setDownloadError(null);
+    try {
+      window.print();
+    } catch (err) {
+      setDownloadError(
+        err instanceof Error ? err.message : "다운로드(인쇄) 중 오류가 발생했습니다.",
+      );
+    }
+  };
 
   // "파일로 평가받기"는 이 페이지에 로드된 실제 대본을 기준으로 비교 평가해야 해서,
-  // scriptId를 들고 FeedbackFileUploadPage로 넘겨준다. (presentationData가 없는 경우
-  // — 목데이터로 대체된 상태 — 에는 임시 하드코딩 151로 폴백한다.)
+  // presentationId를 들고 FeedbackFileUploadPage로 넘겨준다.
+  // ⚠️ POST /api/evaluations/record 스펙상 scriptId라는 필드는 없고, "이미 등록된 발표
+  // 자료"를 가리킬 땐 presentationId를 보내야 한다(예전엔 scriptId를 보내고 있었는데,
+  // 그래서 "presentationId, 대본 파일, 혹은 텍스트 중 하나는 반드시 제공되어야 합니다"
+  // 에러가 났었다). presentationData가 없는 경우(— 목데이터로 대체된 상태) — 에는 임시
+  // 하드코딩 151로 폴백한다.
+  // ⚠️ presentation(하이라이팅 포함 대본 원본)도 같이 실어 보낸다. FeedbackFileUploadPage →
+  // FeedbackLoading을 거쳐 최종적으로 FeedbackPage("최종 평가 결과")의 "원본 텍스트" 박스가
+  // 이 값으로 CoachViewPage와 동일한 하이라이팅을 그려야 하기 때문이다. 이 값이 없으면
+  // FeedbackPage는 하이라이팅 없이 원문 텍스트만 보여주는 것으로 폴백한다.
   const handleFileEvaluation = () => {
-    const scriptId = presentationData?.scripts[0]?.scriptId ?? 151;
-    navigate("/feedback-fileupload", { state: { scriptId } });
+    const presentationId = presentationData?.presentationId ?? 151;
+    navigate("/feedback-fileupload", { state: { presentationId, presentation: presentationData } });
   };
 
   // "실시간 평가받기"를 누르면 이 페이지 안에서 로딩을 보여주지 않고, 실제 평가 요청을
@@ -925,18 +990,20 @@ const CoachViewPage = () => {
       { type: recording.blob.type || "audio/webm" },
     );
 
-    // presentationData가 있으면(실제 업로드/생성된 대본으로 들어온 경우) 그 대본의 진짜
-    // scriptId를 쓴다. 여러 슬라이드(scripts)가 있을 수 있는데, 지금 화면은 한 화면에
-    // 다 이어붙여 보여주고 있어서 일단 첫 번째 scriptId를 쓴다. presentationData가 없는
-    // 경우(직접 URL 진입 등)에는 FeedbackFileUploadPage와 동일한 임시 하드코딩(151)으로 폴백한다.
-    const scriptId = presentationData?.scripts[0]?.scriptId ?? 151;
+    // ⚠️ POST /api/evaluations/record는 scriptId가 아니라 presentationId를 받는다(예전엔
+    // scriptId를 보내고 있었는데, 그래서 "presentationId, 대본 파일, 혹은 텍스트 중
+    // 하나는 반드시 제공되어야 합니다" 에러가 났었다). presentationData가 있으면(실제
+    // 업로드/생성된 대본으로 들어온 경우) 그 발표 자료의 presentationId를 쓴다.
+    // presentationData가 없는 경우(직접 URL 진입 등)에는 FeedbackFileUploadPage와 동일한
+    // 임시 하드코딩(151)으로 폴백한다.
+    const presentationId = presentationData?.presentationId ?? 151;
 
     // presentation도 같이 실어 보내서, 평가가 끝나고 이 페이지로 되돌아왔을 때 대본이
     // 목데이터로 리셋되지 않게 한다. (FeedbackLoading이 그대로 되돌려준다.)
     navigate("/feedback-loading", {
       state: {
         userId,
-        scriptId,
+        presentationId,
         file,
         nextPath: "/coach-view",
         presentation: presentationData,
@@ -944,9 +1011,19 @@ const CoachViewPage = () => {
     });
   };
 
+  // ⚠️ presentation도 같이 실어 보낸다 — FeedbackPage의 "원본 텍스트" 박스가 이 값으로
+  // CoachViewPage와 동일한 하이라이팅을 그린다(위 handleFileEvaluation과 동일한 이유).
+  // entry: "realtime"도 같이 보낸다 — 이 버튼은 실시간 평가 결과를 보여주는 거라서,
+  // FeedbackPage의 "다시 테스트" 버튼을 누르면 파일 재업로드 화면이 아니라 이 페이지
+  // (CoachViewPage)로 돌아와서 다시 녹음할 수 있어야 한다.
   const handleViewDetailedAnalysis = () => {
     navigate("/feedback-result", {
-      state: { evaluationResult, file: evaluatedFile ?? undefined },
+      state: {
+        evaluationResult,
+        file: evaluatedFile ?? undefined,
+        presentation: presentationData,
+        entry: "realtime",
+      },
     });
   };
 
@@ -1189,8 +1266,9 @@ const CoachViewPage = () => {
   );
 
   return (
+    <>
     <div
-      className="flex min-h-screen w-full flex-col overflow-visible px-4 py-6 sm:px-6 sm:py-8 xl:h-screen xl:overflow-hidden xl:px-12 xl:py-10"
+      className="flex min-h-screen w-full flex-col overflow-visible px-4 py-6 sm:px-6 sm:py-8 xl:h-screen xl:overflow-hidden xl:px-12 xl:py-10 print:hidden"
       style={{
         backgroundImage: `url(${ViewPageBackground})`,
         backgroundSize: "cover",
@@ -1208,6 +1286,11 @@ const CoachViewPage = () => {
           to {
             opacity: 1;
             transform: translateX(0);
+          }
+        }
+        @media print {
+          @page {
+            margin: 20mm 16mm;
           }
         }
       `}</style>
@@ -1229,9 +1312,16 @@ const CoachViewPage = () => {
             label="파일로 평가받기"
             onClick={handleFileEvaluation}
           />
-          <TaskChip icon={Download} label="다운로드" onClick={handleDownload} />
+          <TaskChip
+            icon={Download}
+            label="다운로드"
+            onClick={handleDownload}
+          />
         </div>
       </div>
+      {downloadError && (
+        <p className="mt-2 text-xs font-medium text-red-500">{downloadError}</p>
+      )}
 
       <div className="relative mt-6 flex border-b border-slate-500/25">
         {(
@@ -1325,19 +1415,9 @@ const CoachViewPage = () => {
                   <p key={pIdx}>
                     {paragraph.map((segment, sIdx) => {
                       if (!(segment.highlight && segment.id)) {
-                        // 문단 내부에 남아있는 단일 개행("\n")을 <br/>로 바꿔서, 원문에
-                        // 있던 문장 단위 줄바꿈이 화면에도 그대로 보이게 한다.
-                        const lines = segment.text.split("\n");
-                        return (
-                          <span key={sIdx}>
-                            {lines.map((line, lIdx) => (
-                              <Fragment key={lIdx}>
-                                {lIdx > 0 && <br />}
-                                {line}
-                              </Fragment>
-                            ))}
-                          </span>
-                        );
+                        // 문장 사이는 이미 contentToParagraphs에서 공백으로 이어붙여뒀으니,
+                        // 여기서는 그냥 그대로 흘려보내고 줄바꿈은 브라우저가 폭에 맞춰 하게 둔다.
+                        return <span key={sIdx}>{segment.text}</span>;
                       }
                       const occIds = occurrenceIdsByWord.get(segment.text) ?? [];
                       const occIndex = occIds.indexOf(segment.id);
@@ -1442,6 +1522,53 @@ const CoachViewPage = () => {
         {summarySidebar}
       </div>
     </div>
+
+  
+    <div
+      className="hidden print:block"
+      style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
+    >
+      <h1 className="mb-1 text-xl font-bold text-black">
+        {"발표 대본"} — 하이라이팅 적용
+      </h1>
+      <p className="mb-4 text-xs text-slate-500">
+        장단음 / 연음 / 표기-발음 불일치가 색상으로 표시되어 있습니다.
+      </p>
+      <div className="mb-6 flex flex-wrap gap-3">
+        {(["duration", "liaison", "mismatch"] as HighlightType[]).map((type) => {
+          const meta = HIGHLIGHT_META[type];
+          return (
+            <span
+              key={type}
+              className={`inline-flex items-center gap-1 rounded-sm px-2 py-1 text-sm font-bold ${meta.bgClass} ${meta.textClass}`}
+            >
+              {meta.label}
+            </span>
+          );
+        })}
+      </div>
+      <div className="flex flex-col gap-4 text-[13px] leading-7 text-black">
+        {scriptParagraphs.map((paragraph, pIdx) => (
+          <p key={pIdx}>
+            {paragraph.map((segment, sIdx) => {
+              if (!(segment.highlight && segment.id)) {
+                return <span key={sIdx}>{segment.text}</span>;
+              }
+              const meta = HIGHLIGHT_META[segment.highlight];
+              return (
+                <span
+                  key={sIdx}
+                  className={`rounded-sm px-1 font-bold ${meta.bgClass} ${meta.textClass}`}
+                >
+                  {segment.text}
+                </span>
+              );
+            })}
+          </p>
+        ))}
+      </div>
+    </div>
+    </>
   );
 };
 
