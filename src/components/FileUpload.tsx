@@ -24,8 +24,8 @@ const TYPE_CONFIG: Record<FileUploadType, FileUploadConfig> = {
     height: '472px',
   },
   mp3: {
-    accept: '.mp3, .wav, .m4a, .webm',
-    subText: '음성 파일 선택 (MP3 / WAV / M4A / WEBM) · 최대 20MB',
+    accept: '.mp3, .m4a, .webm',
+    subText: '음성 파일 선택 (MP3 / M4A / WEBM) · 최대 20MB',
     width: '1440px',
     height: '472px',
   },

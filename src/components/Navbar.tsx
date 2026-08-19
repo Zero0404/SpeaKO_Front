@@ -67,7 +67,13 @@ const Navbar = () => {
   return (
     <>
       <header
-        className={`fixed top-0 left-0 right-0 z-50 w-full h-20 sm:h-24 lg:h-28 transition-colors duration-300 ${
+        // ⚠️ print:hidden을 추가했습니다. Navbar는 App.tsx에서 <Routes>보다 위, 모든 페이지에
+        // 공통으로 fixed 위치로 떠 있는 전역 레이아웃이라(각 페이지 컴포넌트의 자식이 아님),
+        // 페이지 쪽(CoachViewPage)에 print:hidden을 걸어도 Navbar에는 전혀 영향이 없었습니다.
+        // 그래서 "다운로드"(브라우저 인쇄→PDF) 기능을 썼을 때 상단 로고/로그인 버튼이 인쇄물에도
+        // 같이 찍혔습니다. 어느 페이지에서 인쇄하든 네비바가 찍히길 원하는 경우는 없을 것 같아
+        // 전역으로 숨겼습니다.
+        className={`fixed top-0 left-0 right-0 z-50 w-full h-20 sm:h-24 lg:h-28 transition-colors duration-300 print:hidden ${
           showNavbarBackground
             ? "bg-white/90 backdrop-blur-md shadow-sm"
             : "transparent-bg"

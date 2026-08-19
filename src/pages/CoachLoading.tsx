@@ -42,17 +42,6 @@ export const CoachLoadingModal: React.FC<CoachLoadingModalProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
-    // ⚠️ "한 번만 실행" 가드(hasStartedRef 같은 것)를 일부러 안 쓴다. React 18 개발 모드의
-    // <StrictMode>는 effect를 "마운트 → 정리 → 재마운트" 순서로 한 번 더 시뮬레이션해서
-    // 버그를 잡아내려고 하는데, 그 정리(cleanup) 시점에 cancelled를 true로 바꿔놓고
-    // "한 번만 실행" 가드가 재마운트를 막아버리면, 이미 걸어둔 타이머가 나중에 실행돼도
-    // cancelled 체크에 걸려서 그대로 멈춰버린다("텍스트 분석 중"에서 영영 안 넘어가던
-    // 원인이 이거였다). 그 대신 매 effect 실행마다 독립적인 cancelled 변수 + cleanup만
-    // 쓰면, StrictMode가 첫 번째 실행을 취소해도 재마운트된 두 번째 실행이 정상적으로
-    // 처음부터 다시 돌면서 끝까지 진행된다.
-
-    // 로딩(연출용 스텝 애니메이션)이 끝나면 자동으로 다음 화면으로 이동한다.
-    // (onClose/onNext prop으로 오버라이드해서 쓰는 경우엔 그쪽을 우선한다.)
     const goNext = (result: CustomPresentationResult) => {
       if (onClose) onClose();
       if (onNext) {
@@ -70,11 +59,15 @@ export const CoachLoadingModal: React.FC<CoachLoadingModalProps> = ({
     }
 
     let cancelled = false;
+    const controller = new AbortController();
 
     const run = async () => {
       setCurrentStep(2); // 텍스트 분석 중 — 실제 요청이 응답할 때까지 계속 이 단계에 머무른다.
       try {
-        const result = await getPresentationHighlights(requestState.presentationId!);
+        const result = await getPresentationHighlights(
+          requestState.presentationId!,
+          controller.signal,
+        );
         if (cancelled) return;
 
         // ⚠️ 서버가 200 OK + success: true로 응답해도 scripts가 빈 배열로 올 때가 있다 —
@@ -109,6 +102,7 @@ export const CoachLoadingModal: React.FC<CoachLoadingModalProps> = ({
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);

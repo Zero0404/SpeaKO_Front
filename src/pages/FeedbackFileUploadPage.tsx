@@ -1,22 +1,53 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 import bgSvg from '../assets/select-page-background.png';
 import FileUpload from '../components/FileUpload';
-import { recordEvaluation, type EvaluationResult } from '../apis/feedback';
+import { useAuthStore } from '../store/authStore';
+
+/**
+ * ⚠️ 이 페이지는 단독으로 쓰이지 않습니다. "파일로 평가받기"는 CoachViewPage에 이미
+ * 로드되어 있는 대본을 기준으로 업로드한 음성을 비교 평가하는 기능이라, 항상
+ * CoachViewPage에서 presentationId를 들고 이동해와야 합니다. (실시간 평가받기와
+ * 마찬가지로, "대본 없이 음성만으로" 평가받는 흐름은 이 서비스에 없습니다.)
+ *
+ * ⚠️ scriptId → presentationId로 필드명이 바뀌었습니다. POST /api/evaluations/record의
+ * 실제 스펙에는 scriptId라는 필드가 없고, "이미 등록된 발표 자료"를 가리킬 땐
+ * presentationId를 보내야 합니다.
+ */
+interface FeedbackFileUploadState {
+  presentationId?: number;
+  /**
+   * CoachViewPage가 들고 있던 실제 대본(하이라이팅 포함) 원본. 이 페이지는 이 값을 쓰지
+   * 않고, /feedback-loading을 거쳐 최종적으로 FeedbackPage("최종 평가 결과")의 "원본
+   * 텍스트" 박스가 CoachViewPage와 동일한 하이라이팅을 그리는 데 쓴다. 그래서 이 페이지는
+   * 타입을 알 필요 없이 unknown으로 받아뒀다가 손대지 않고 그대로 넘겨준다.
+   */
+  presentation?: unknown;
+}
 
 export const FeedbackFileUploadPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const requestState = location.state as FeedbackFileUploadState | null;
 
   const [file, setFile] = useState<File | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 파일 업로드 여부 확인
-  const isFormValid = Boolean(file);
+  const hasScript = Boolean(requestState?.presentationId);
 
-  // [평가 시작하기] 버튼 클릭 시 -> 실제로 서버에 평가 요청을 보낸다.
-  const handleStartFeedback = async () => {
+  // 파일 업로드 여부 확인 (+ CoachViewPage에서 scriptId를 들고 왔는지도 같이 확인)
+  const isFormValid = Boolean(file) && hasScript;
+
+  // [평가 시작하기] 버튼 클릭 시 -> 실제 평가 요청은 여기서 하지 않고, 필요한 값만 들고
+  // /feedback-loading으로 넘어간다. recordEvaluation() 호출 자체는 그 페이지가 진행하면서
+  // 실제 로딩 상태(성공/실패)를 화면에 그대로 보여준다.
+  //
+  // ⚠️ 이전에는 이 버튼을 누르는 순간 여기서 recordEvaluation()을 직접 호출하고 끝날 때까지
+  // 기다렸다가, 결과를 다 받은 뒤에야 /feedback-loading으로 이동했습니다. 그러다 보니
+  // /feedback-loading 화면은 이미 끝난 요청을 놓고 정해진 시간만큼 타이머만 돌리는
+  // "가짜 로딩"이었고, 업로드 페이지에서만 실제 대기 시간이 흘렀습니다.
+  const handleStartFeedback = () => {
     setErrorMessage('');
 
     if (!file) {
@@ -24,28 +55,36 @@ export const FeedbackFileUploadPage: React.FC = () => {
       return;
     }
 
-    setIsSubmitting(true);
-
-    try {
-      // ⚠️ userId는 여전히 1로 고정되어 있습니다 (authStore에 userId 필드가 없어서
-      // 실제 로그인 사용자 id를 여기서 가져올 방법이 없습니다 
-      // ⚠️ scriptId: 151은 "진짜 값"이 아니라 테스트용 임시 하드코딩입니다.
- 
-      const result: EvaluationResult = await recordEvaluation({
-        userId: 22, // ⚠️ 실제 로그인 사용자 id를 가져올 방법이 없어서 임시로 151로 고정
-        scriptId: 199, // ⚠️ 실제 scriptId를 가져올 방법이 없어서 임시로 151로 고정
-        file,
-      });
-
-      // 피드백 분석 로딩 페이지로 이동. 이미 받아온 실제 평가 결과를 같이 넘겨준다.
-      navigate('/feedback-loading', { state: { file, evaluationResult: result } });
-    } catch (err) {
+    if (!requestState?.presentationId) {
       setErrorMessage(
-        err instanceof Error ? err.message : '평가 요청 중 오류가 발생했습니다.',
+        '평가할 대본 정보가 없어요. 코칭 화면(CoachView)에서 "파일로 평가받기"로 다시 들어와주세요.',
       );
-    } finally {
-      setIsSubmitting(false);
+      return;
     }
+
+    // 로그인한 사용자의 실제 userId를 authStore에서 가져옵니다.
+    const userId = useAuthStore.getState().user?.userId;
+    if (!userId) {
+      setErrorMessage('로그인이 필요합니다. 다시 로그인한 뒤 시도해주세요.');
+      return;
+    }
+
+    // presentationId는 CoachViewPage가 지금 화면에 띄워놓은 실제 발표 자료의 ID다. 그래야
+    // recordEvaluation이 "이 음성 파일 vs 그 대본"으로 정확히 비교 평가할 수 있다.
+    // presentation은 그대로 다음 페이지(FeedbackLoading)로 전달만 한다 — 결국
+    // FeedbackPage의 "원본 텍스트" 박스가 하이라이팅을 그리는 데 쓴다.
+    // ⚠️ entry: 'file'도 같이 실어 보낸다. FeedbackPage의 "다시 테스트" 버튼이 이 값을 보고
+    // "파일로 평가받기"로 들어온 흐름인지, "실시간 평가받기"로 들어온 흐름인지 구분해서
+    // 각각 다른 화면(파일 재업로드 화면 / CoachViewPage)으로 돌아가야 하기 때문이다.
+    navigate('/feedback-loading', {
+      state: {
+        userId,
+        presentationId: requestState.presentationId,
+        file,
+        presentation: requestState.presentation,
+        entry: 'file',
+      },
+    });
   };
 
   return (
@@ -76,6 +115,13 @@ export const FeedbackFileUploadPage: React.FC = () => {
             음성 파일을 업로드해주세요.
           </p>
 
+          {!hasScript && (
+            <p className="mb-6 rounded-xl bg-red-50 px-4 py-3 text-xs font-medium text-red-500 sm:text-sm">
+              평가할 대본 정보가 없어요. 코칭 화면(CoachView)의 "파일로 평가받기" 버튼으로
+              들어와야 대본과 비교해서 평가할 수 있어요.
+            </p>
+          )}
+
           {/* 중앙 음성 파일 업로드 영역 및 TextInput 컴포넌트 활용 */}
           <div className="flex-1 flex flex-col items-center justify-center w-full gap-6 overflow-hidden">
             <FileUpload
@@ -98,7 +144,7 @@ export const FeedbackFileUploadPage: React.FC = () => {
           <button
             type="button"
             onClick={handleStartFeedback}
-            disabled={!isFormValid || isSubmitting}
+            disabled={!isFormValid}
             style={{
               width: '250px',
               height: '60px',
@@ -112,7 +158,7 @@ export const FeedbackFileUploadPage: React.FC = () => {
               color: isFormValid ? 'var(--color-white, #ffffff)' : '#9CA3AF',
             }}
             className={`group flex items-center justify-between shadow-md transition-all duration-300 box-border border border-slate-200 ${
-              isFormValid && !isSubmitting
+              isFormValid
                 ? 'cursor-pointer hover:shadow-xl hover:border-transparent'
                 : 'cursor-not-allowed pointer-events-none'
             }`}
@@ -130,7 +176,7 @@ export const FeedbackFileUploadPage: React.FC = () => {
             }}
           >
             <span className="text-sm sm:text-base font-bold transition-colors">
-              {isSubmitting ? '전송 중...' : '평가 시작하기'}
+              평가 시작하기
             </span>
             <svg
               className={`w-5 h-5 transition-colors shrink-0 ${
