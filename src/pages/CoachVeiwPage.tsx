@@ -2,7 +2,6 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
-  Info,
   Download,
   Volume2,
   AudioLines,
@@ -24,6 +23,7 @@ import VoiceRecorder from "../components/VoiceRecorder";
 import TaskChip from "../components/TaskChip";
 import { useAuthStore } from "../store/authStore";
 import type { EvaluationResult } from "../apis/feedback";
+import { fetchHighlightTtsAudio } from "../apis/coach.api";
 import type {
   CustomPresentationResult,
   PresentationScript,
@@ -108,14 +108,14 @@ interface VoiceOption {
   gender: "남성" | "여성";
 }
 
-// ⚠️ 실제 TTS 재생(클로바보이스/Web Speech API)은 이 페이지에서 뺐다 — "AI 대본 듣기"는
-// UI(목소리/속도 선택)만 남겨두고, 소리가 실제로 나오는 부분은 없앤 상태다. 목소리를
-// 고르고 재생 버튼을 눌러도 소리는 나지 않는다.
+// ⚠️ id는 화면 표시용이 아니라 POST /api/audio/tts/highlight 요청의 voice 값으로 그대로
+// 전송된다. 백엔드 확인 결과 voice 값은 "_energetic"/"_calm" 같은 스타일 접미사나 성별
+// 구분 없이, 그냥 이름 그대로("동현", "대성", "혜리", "고은")를 받는다.
 const VOICE_OPTIONS: VoiceOption[] = [
-  { id: "donghyun", name: "동현", style: "활기찬", gender: "남성" },
-  { id: "daesung", name: "대성", style: "차분한", gender: "남성" },
-  { id: "heri", name: "혜리", style: "활기찬", gender: "여성" },
-  { id: "goeun", name: "고은", style: "차분한", gender: "여성" },
+  { id: "동현", name: "동현", style: "활기찬", gender: "남성" },
+  { id: "대성", name: "대성", style: "차분한", gender: "남성" },
+  { id: "혜리", name: "혜리", style: "활기찬", gender: "여성" },
+  { id: "고은", name: "고은", style: "차분한", gender: "여성" },
 ];
 
 const SPEED_OPTIONS = [0.5, 0.75, 1, 1.5, 2] as const;
@@ -368,6 +368,7 @@ const LegendBadge = ({ type }: { type: HighlightType }) => {
 const HighlightSpan = ({
   type,
   isFocused,
+  isLoading,
   onClick,
   tooltip,
   prevId,
@@ -377,6 +378,7 @@ const HighlightSpan = ({
 }: {
   type: HighlightType;
   isFocused?: boolean;
+  isLoading?: boolean;
   onClick?: () => void;
   tooltip?: { word: string; pronunciation: string };
   prevId?: string;
@@ -454,9 +456,9 @@ const HighlightSpan = ({
       onClick={onClick}
       onMouseEnter={openTooltip}
       onMouseLeave={scheduleCloseTooltip}
-      className={`relative inline-block rounded-sm px-1 font-semibold leading-5 outline-none ${meta.bgClass} ${meta.textClass} ${meta.shadow} ${
+      className={`relative inline-block rounded-sm px-1 font-semibold leading-5 outline-none transition-opacity ${meta.bgClass} ${meta.textClass} ${meta.shadow} ${
         onClick ? "cursor-pointer" : ""
-      }`}
+      } ${isLoading ? "animate-pulse opacity-60" : ""}`}
     >
       {children}
 
@@ -818,10 +820,24 @@ const CoachViewPage = () => {
   const [evaluatedFile, setEvaluatedFile] = useState<File | null>(null);
   const lastRecordingRef = useRef<{ blob: Blob; durationSeconds: number } | null>(null);
 
-  // ── AI 대본 듣기 UI 상태 (실제 소리 재생 로직은 없음 — 선택 상태만 들고 있는다) ──
+  // ── AI 대본 듣기 (POST /api/audio/tts/highlight) ──────────────────────
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>(VOICE_OPTIONS[2].id);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
+  const [ttsLoadingId, setTtsLoadingId] = useState<string | null>(null);
+  const [ttsError, setTtsError] = useState<string | null>(null);
+  // 재생 중인 오디오를 들고 있다가, 새 단어를 클릭하면 이전 재생을 멈추고 새로 튼다.
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  // 마지막으로 만든 objectURL을 기억해뒀다가, 다음 재생 시작 시점에 정리한다.
+  // (ended/error 이벤트만 믿으면, 사용자가 재생 중간에 다른 단어를 눌러 오디오를
+  // 바로 교체할 때 이전 objectURL이 정리 안 되고 계속 쌓일 수 있다.)
+  const lastAudioUrlRef = useRef<string | null>(null);
 
+  // 이 페이지에 들어오는 경로는 두 가지다.
+  // 1) CoachLoading에서 하이라이팅이 적용된 실제 대본(presentation)을 들고 처음 들어오는 경우
+  // 2) /feedback-loading에서 실시간 평가를 마치고 nextPath: "/coach-view"로 되돌아오는 경우
+  //    (이때는 handleRealtimeEvaluation이 함께 실어보낸 presentation도 같이 되돌아온다 —
+  //    아니면 평가받을 때마다 대본이 목데이터로 리셋되는 문제가 생긴다.)
+  // 두 경우 다 location.state에 실려오는 필드만 다를 뿐이라 한 effect에서 같이 처리한다.
   useEffect(() => {
     const state = location.state as
       | {
@@ -953,12 +969,74 @@ const CoachViewPage = () => {
     clearFocusTimer.current = setTimeout(() => setFocusedId(null), 2000);
   };
 
-  // 단어 목록 카드 / 대본 뷰어의 하이라이트 단어를 클릭하면 포커스만 이동한다.
-  // ⚠️ 예전에는 여기서 speakWord(word)로 실제 소리를 재생했지만, 지금은 "AI 대본 듣기"의
-  // 실제 재생 로직 자체를 뺐기 때문에 포커스 이동만 남아있다.
-  const handleHighlightClick = (id: string, targetTab: TabKey) => {
+  // 대본 뷰어의 하이라이트 단어를 클릭하면, 현재 선택된 목소리/속도로 실제 TTS 음성을
+  // 요청해서 재생한다. (word가 아니라 highlight id 기준으로 로딩 상태를 표시해서, 같은
+  // 단어가 여러 번 나올 때 클릭한 그 자리만 로딩 표시가 뜨게 한다.)
+  const playHighlightAudio = async (word: string, id: string) => {
+    const presentationId = presentationData?.presentationId;
+    if (!presentationId) {
+      setTtsError("대본 정보가 없어서 음성을 재생할 수 없어요.");
+      return;
+    }
+
+    // 이전에 재생 중이던 오디오가 있으면 멈추고, 그때 만들어둔 objectURL도 정리한다.
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+    if (lastAudioUrlRef.current) {
+      URL.revokeObjectURL(lastAudioUrlRef.current);
+      lastAudioUrlRef.current = null;
+    }
+
+    setTtsError(null);
+    setTtsLoadingId(id);
+
+    try {
+      const audioBlob = await fetchHighlightTtsAudio({
+        presentationId,
+        word,
+        voice: selectedVoiceId,
+        speed: playbackSpeed,
+      });
+      const objectUrl = URL.createObjectURL(audioBlob);
+      lastAudioUrlRef.current = objectUrl;
+
+      const audio = new Audio(objectUrl);
+      // ⚠️ speed는 요청 body에도 실어 보내지만, 백엔드가 이 값을 실제로 TTS 생성 시점에
+      // 반영하는지 확실치 않다(반영 안 하면 항상 1배속 mp3만 내려올 수 있음). 그래서
+      // 브라우저 <audio>의 playbackRate로도 같은 값을 한 번 더 적용해서, 백엔드가
+      // speed를 무시하더라도 속도 조절 UI가 실제로 동작하도록 한다.
+      audio.playbackRate = playbackSpeed;
+      currentAudioRef.current = audio;
+      await audio.play();
+    } catch (err) {
+      setTtsError(err instanceof Error ? err.message : "음성 재생에 실패했습니다.");
+    } finally {
+      setTtsLoadingId(null);
+    }
+  };
+
+  // 대본 뷰어의 하이라이트 단어를 클릭하면: 1) 선택한 목소리/속도로 읽어주고,
+  // 2) 포커스(하이라이트 강조 + 단어 목록과의 위치 동기화)를 이동한다.
+  const handleHighlightClick = (word: string, id: string, targetTab: TabKey) => {
+    playHighlightAudio(word, id);
     focusHighlight(id, targetTab);
   };
+
+  // 단어 목록 카드를 클릭하면 대본 뷰어의 해당 위치로 포커스만 이동한다. (음성 재생은
+  // 대본 뷰어 안의 하이라이트 단어를 직접 클릭했을 때만 트리거된다.)
+  const handleWordCardClick = (id: string, targetTab: TabKey) => {
+    focusHighlight(id, targetTab);
+  };
+
+  // 페이지를 떠날 때 재생 중이던 오디오와 objectURL을 정리한다.
+  useEffect(() => {
+    return () => {
+      currentAudioRef.current?.pause();
+      if (lastAudioUrlRef.current) URL.revokeObjectURL(lastAudioUrlRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     if (!focusedId) return;
@@ -1206,16 +1284,15 @@ const CoachViewPage = () => {
                 <span className="whitespace-nowrap text-base font-bold font-['Pretendard'] leading-4 text-[color:var(--color-text-heading)]">
                   AI 대본 듣기
                 </span>
-                <Info size={14} className="shrink-0 text-[color:var(--color-text-body)]" />
                 <span className="hidden whitespace-nowrap text-xs font-medium font-['Pretendard'] text-[color:var(--color-text-body)] md:inline">
-                  하이라이팅을 클릭하면 설정된 옵션으로 들을 수 있어요
+                  하이라이트 단어를 클릭하면 읽어드려요
                 </span>
               </div>
 
               <div className="hidden h-5 w-px bg-slate-500/20 sm:block" />
 
               <div className="flex items-center gap-2">
-                <span className="whitespace-nowrap text-sm font-medium font-['Pretendard'] text-[color:var(--color-text-heading)]">
+                <span className="whitespace-nowrap text-sm font-medium font-['Pretendard'] text-[color:var(--color-text-body)]">
                   목소리
                 </span>
                 <VoiceSelectDropdown
@@ -1228,11 +1305,17 @@ const CoachViewPage = () => {
               <div className="hidden h-5 w-px bg-slate-500/20 sm:block" />
 
               <div className="flex items-center gap-2">
-                <span className="whitespace-nowrap text-sm font-medium font-['Pretendard'] text-[color:var(--color-text-heading)]">
+                <span className="whitespace-nowrap text-sm font-medium font-['Pretendard'] text-[color:var(--color-text-body)]">
                   속도
                 </span>
                 <SpeedStepper speed={playbackSpeed} onChange={setPlaybackSpeed} />
               </div>
+
+              {ttsError && (
+                <span className="text-xs font-medium font-['Pretendard'] text-red-500">
+                  {ttsError}
+                </span>
+              )}
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto rounded-xl bg-[color:var(--color-white)] p-4 shadow-[0px_0px_12px_0px_rgba(120,165,250,0.10)] outline outline-[0.5px] outline-offset-[-0.5px] outline-slate-500/20 sm:p-6">
@@ -1268,9 +1351,11 @@ const CoachViewPage = () => {
                           <HighlightSpan
                             type={segment.highlight}
                             isFocused={focusedId === segment.id}
+                            isLoading={ttsLoadingId === segment.id}
                             prevId={prevId}
                             nextId={nextId}
                             onNavigate={(id) => focusHighlight(id, "viewer")}
+                            onClick={() => handleHighlightClick(segment.text, segment.id!, "viewer")}
                             tooltip={
                               wordEntryById.get(segment.id)
                                 ? {
@@ -1343,7 +1428,7 @@ const CoachViewPage = () => {
                         <WordListCard
                           entry={entry}
                           isFocused={focusedId === topOccurrenceId}
-                          onClick={() => handleHighlightClick(topOccurrenceId, "viewer")}
+                          onClick={() => handleWordCardClick(topOccurrenceId, "viewer")}
                         />
                       </div>
                     );
