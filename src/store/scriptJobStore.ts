@@ -73,14 +73,27 @@ function toErrorMessage(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
 }
 
-// ── 대본 생성 완료 대기(폴링) ──────────────────────────────────────
-// POST /api/presentations는 요청을 접수만 하고, 실제 슬라이드별 대본은
-// 백엔드에서 비동기(AI 생성)로 나중에 채워집니다. 그래서 POST 응답을 바로
-// 최종 결과로 쓰면 아직 텍스트가 비어있는 스냅샷을 보여주게 됩니다.
-// presentationId를 받은 뒤 GET으로 다시 조회해서, 슬라이드 대본이 실제로
-// 채워질 때까지 몇 초 간격으로 재확인합니다.
+// Vercel rewrites 프록시가 백엔드 응답을 기다리다 먼저 끊어서 발생하는 502/timeout류
+// 에러인지 판별한다. 이 경우는 "진짜 실패"가 아니라 "응답이 늘어진 상황"이므로
+// 폴링으로 전환해서 계속 기다린다. (참고: axios의 timeout 설정을 늘려도 이 502 자체는
+// 해결되지 않는다 — Vercel 프록시가 자체 타임아웃으로 먼저 연결을 끊기 때문)
+function isProxyTimeoutLike(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const message = err.message;
+  return (
+    message.includes('502') ||
+    message.includes('Bad Gateway') ||
+    message.includes('timeout') ||
+    message.includes('Network Error')
+  );
+}
+
+// ── 대본 생성/재생성 완료 대기(폴링) ──────────────────────────────
+// POST /api/presentations, POST /regenerate 모두 실제 작업(AI 생성)은
+// 백엔드에서 비동기로 진행될 수 있어서, presentationId를 받은 뒤 GET으로
+// 다시 조회해서 완료 여부를 몇 초 간격으로 재확인한다.
 const POLL_INTERVAL_MS = 3000;
-const POLL_TIMEOUT_MS = 4 * 60 * 1000; // AiLoading 문구와 맞춘 최대 4분
+const POLL_TIMEOUT_MS = 6 * 60 * 1000; // 최대 6분까지 기다림 (AiLoading 문구와 별개로 재생성은 더 여유있게)
 
 function isGenerationComplete(result: PresentationResult): boolean {
   if (!result.slides || result.slides.length === 0) return false;
@@ -102,6 +115,41 @@ async function waitForGeneratedScript(presentationId: number): Promise<Presentat
     if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
       throw new Error('대본 생성이 예상보다 오래 걸리고 있어요. 잠시 후 다시 시도해주세요.');
     }
+    await wait(POLL_INTERVAL_MS);
+  }
+}
+
+// 재생성 전용 폴링: 이미 대본이 채워져 있는 상태에서 다시 재생성하는 것이므로
+// "content가 비어있지 않은지"가 아니라 "버전(version)이 이전보다 올라갔는지"로
+// 완료 여부를 판단한다.
+// - targetScriptId가 있으면(부분 재생성) 해당 slide만 확인
+// - 없으면(전체 재생성) 슬라이드 중 하나라도 버전이 오르면 완료로 간주
+async function waitForRegeneratedScript(
+  presentationId: number,
+  prevVersions: Map<number, number>,
+  targetScriptId?: number
+): Promise<PresentationResult> {
+  const startedAt = Date.now();
+
+  while (true) {
+    const result = await getPresentation(presentationId);
+
+    const changed = result.slides.some((slide) => {
+      if (targetScriptId !== undefined && slide.scriptId !== targetScriptId) {
+        return false;
+      }
+      const prevVersion = prevVersions.get(slide.slideId);
+      return prevVersion === undefined || slide.version > prevVersion;
+    });
+
+    if (changed) {
+      return result;
+    }
+
+    if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
+      throw new Error('재생성이 예상보다 오래 걸리고 있어요. 잠시 후 다시 확인해주세요.');
+    }
+
     await wait(POLL_INTERVAL_MS);
   }
 }
@@ -148,25 +196,26 @@ export const useScriptJobStore = create<ScriptJobState>()((set, get) => ({
     }
   },
 
-  regenerate: async ({
-    scriptId,
-    duration,
-    tone,
-    extraRequirement,
-    currentScript,
-  }) => {
+  regenerate: async ({ scriptId, duration, tone, extraRequirement, currentScript }) => {
     const presentationId = get().presentationId;
 
     if (!presentationId) {
       set({
-        status: "error",
-        error: "재생성할 발표 자료를 찾을 수 없습니다.",
+        status: 'error',
+        error: '재생성할 발표 자료를 찾을 수 없습니다.',
       });
       return;
     }
 
+    // 재생성 시도 전 현재 버전 스냅샷 저장 — 502로 응답이 끊겨도
+    // 이 스냅샷 기준으로 폴링하며 완료 여부를 판단한다.
+    const prevResult = get().result;
+    const prevVersions = new Map<number, number>(
+      prevResult?.slides.map((slide) => [slide.slideId, slide.version]) ?? []
+    );
+
     set({
-      status: "running",
+      status: 'running',
       error: null,
     });
 
@@ -181,27 +230,52 @@ export const useScriptJobStore = create<ScriptJobState>()((set, get) => ({
         currentScript,
       });
 
-      console.log("[재생성 POST 응답]", regenerated);
+      console.log('[재생성 POST 응답]', regenerated);
 
       // 2. 재생성 완료 후 최신 데이터 재조회
       const result = await getPresentation(presentationId);
 
-      console.log("[재생성 후 GET 응답]", result);
-      console.log("[재조회된 slides]", result.slides);
+      console.log('[재생성 후 GET 응답]', result);
+      console.log('[재조회된 slides]', result.slides);
 
       // 3. 최신 GET 결과를 Zustand에 저장
       set({
-        status: "success",
+        status: 'success',
         result,
         presentationId: result.presentationId,
         topic: result.topic || get().topic,
         hasSourceFile: Boolean(result.hasFile),
       });
     } catch (err) {
-      set({
-        status: "error",
-        error: toErrorMessage(err, "대본 재생성에 실패했습니다."),
-      });
+      // Vercel 프록시가 백엔드 응답을 기다리다 먼저 끊은 502/timeout류라면,
+      // 이미 백엔드에서는 재생성이 계속 진행 중일 가능성이 높다.
+      // 진짜 실패로 처리하지 않고 GET 폴링으로 전환해서 완료를 기다린다.
+      if (!isProxyTimeoutLike(err)) {
+        set({
+          status: 'error',
+          error: toErrorMessage(err, '대본 재생성에 실패했습니다.'),
+        });
+        return;
+      }
+
+      console.warn('[재생성] 502/timeout 감지 — GET 폴링으로 전환합니다.', err);
+
+      try {
+        const result = await waitForRegeneratedScript(presentationId, prevVersions, scriptId);
+
+        set({
+          status: 'success',
+          result,
+          presentationId: result.presentationId,
+          topic: result.topic || get().topic,
+          hasSourceFile: Boolean(result.hasFile),
+        });
+      } catch (pollErr) {
+        set({
+          status: 'error',
+          error: toErrorMessage(pollErr, '대본 재생성 확인에 실패했습니다.'),
+        });
+      }
     }
   },
 
