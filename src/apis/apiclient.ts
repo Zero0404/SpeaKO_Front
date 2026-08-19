@@ -1,7 +1,6 @@
 import axios from "axios";
 import { useAuthStore } from "../store/authStore";
 
-
 const baseURL = import.meta.env.PROD ? "" : "http://13.209.87.115:8080";
 
 const apiClient = axios.create({
@@ -11,12 +10,13 @@ const apiClient = axios.create({
   },
 });
 
-
 apiClient.interceptors.request.use((config) => {
   const token = useAuthStore.getState().accessToken;
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
   return config;
 });
 
@@ -24,10 +24,17 @@ function extractAccessToken(responseData: any): string | null {
   return responseData?.result?.accessToken ?? null;
 }
 
-function extractUserInfo(responseData: any): { email?: string; name?: string } {
+function extractUserInfo(responseData: any): {
+  userId?: number;
+  email?: string;
+  name?: string;
+} {
+  const userId = responseData?.result?.userId;
   const email = responseData?.result?.email;
   const name = responseData?.result?.name;
+
   return {
+    ...(userId !== undefined ? { userId } : {}),
     ...(email ? { email } : {}),
     ...(name ? { name } : {}),
   };
@@ -41,15 +48,19 @@ export const signupApi = async (data: {
   passwordCheck: string;
 }) => {
   const response = await apiClient.post("/api/auth/signup", data);
-  useAuthStore.getState().setUser({ name: data.name, email: data.email });
+
   return response.data;
 };
 
 // 로그인
-export const loginApi = async (data: { email: string; password: string }) => {
+export const loginApi = async (data: {
+  email: string;
+  password: string;
+}) => {
   const response = await apiClient.post("/api/auth/login", data);
 
   const token = extractAccessToken(response.data);
+
   if (token) {
     useAuthStore.getState().setAccessToken(token);
   } else {
@@ -59,16 +70,27 @@ export const loginApi = async (data: { email: string; password: string }) => {
     );
   }
 
-  const { email, name } = extractUserInfo(response.data);
-  useAuthStore.getState().setUser({
-    email: email ?? data.email,
-    name: name ?? useAuthStore.getState().user?.name ?? "",
-  });
+  const { userId, email, name } = extractUserInfo(response.data);
+  const currentUser = useAuthStore.getState().user;
+
+  if (userId !== undefined) {
+    useAuthStore.getState().setUser({
+      userId,
+      email: email ?? data.email,
+      name: name ?? currentUser?.name ?? "",
+    });
+  } else if (currentUser) {
+    useAuthStore.getState().setUser({
+      ...currentUser,
+      email: email ?? currentUser.email,
+      name: name ?? currentUser.name,
+    });
+  }
 
   return response.data;
 };
 
-// ── 공통 응답 언래핑 (code/message/result/success 형태) ──────────
+// ── 공통 응답 언래핑 ──────────────────────────────────────────────
 interface ApiResponse<T = null> {
   code: string;
   message: string;
@@ -78,34 +100,54 @@ interface ApiResponse<T = null> {
 
 export class ApiError extends Error {
   code: string;
+
   constructor(code: string, message: string) {
     super(message);
     this.code = code;
   }
 }
 
-async function request<T>(promise: Promise<{ data: ApiResponse<T> }>): Promise<T> {
+async function request<T>(
+  promise: Promise<{ data: ApiResponse<T> }>
+): Promise<T> {
   try {
     const { data } = await promise;
+
     if (!data.success) {
       throw new ApiError(data.code, data.message);
     }
+
     return data.result;
   } catch (err) {
     if (axios.isAxiosError(err) && err.response?.data) {
       const body = err.response.data as ApiResponse<T>;
-      throw new ApiError(body.code ?? "UNKNOWN_ERROR", body.message ?? "요청에 실패했습니다.");
+
+      throw new ApiError(
+        body.code ?? "UNKNOWN_ERROR",
+        body.message ?? "요청에 실패했습니다."
+      );
     }
+
     throw err;
   }
 }
 
 // ── MyPage: 개인정보 변경 ────────────────────────────────────────
 export const patchNameApi = (name: string) =>
-  request(apiClient.patch<ApiResponse>("/api/auth/name", { name }));
+  request(
+    apiClient.patch<ApiResponse>("/api/auth/name", { name })
+  );
 
-export const patchEmailApi = (newEmail: string, currentPassword: string) =>
-  request(apiClient.patch<ApiResponse>("/api/auth/email", { newEmail, currentPassword }));
+export const patchEmailApi = (
+  newEmail: string,
+  currentPassword: string
+) =>
+  request(
+    apiClient.patch<ApiResponse>("/api/auth/email", {
+      newEmail,
+      currentPassword,
+    })
+  );
 
 export const patchPasswordApi = (
   currentPassword: string,
@@ -121,7 +163,10 @@ export const patchPasswordApi = (
   );
 
 // ── 로그아웃 / 회원탈퇴 ───────────────────────────────────────────
-export const logoutApi = () => request(apiClient.post<ApiResponse>("/api/auth/logout"));
+export const logoutApi = () =>
+  request(
+    apiClient.post<ApiResponse>("/api/auth/logout")
+  );
 
 export const withdrawApi = (password: string) =>
   request(
